@@ -215,6 +215,8 @@ class Workspace:
                     c.sheet_si_so = rec.si_so
                     c.note = rec.note
         st.exists_in_book = ws is not None
+        if ws is None and src is not None:
+            st.template_date = sobook.sheet_date(src)
         if ws is not None and info:
             for mr in info.meal.rows:  # số vắng ghép đã ghi trong sổ (dùng khi chưa có danh sách ghép đủ)
                 if mr.code and mr.m_cell:
@@ -276,10 +278,8 @@ class Workspace:
         assert self.state is not None
         out = []
         for code, c in self.state.classes.items():
-            if c.sheet_si_so is not None and not c.keep_sheet_si_so:
-                ss = self.roster.si_so(code, self.day)
-                if ss != c.sheet_si_so:
-                    out.append((code, ss, c.sheet_si_so))
+            if self.state.si_so_mismatch(code):
+                out.append((code, self.roster.si_so(code, self.day), c.sheet_si_so))
         return out
 
     def keep_sheet_si_so(self, codes: list[str]) -> None:
@@ -336,6 +336,43 @@ class Workspace:
             ws = sobook.day_sheets(wb).get(self.day.day)
             info = sobook.analyze(ws) if ws is not None else None
         return [a for a in (self.page1_area(info), self.page2_area()) if a]
+
+    # ---------------------------------------------------------------- lịch thêm / cắt
+    def schedule(self, kind: str, code: str, ids: list[str], start: dt.date | None, end: dt.date | None = None,
+                 new_name: str = "", new_dob: str = "", add_note: bool = True) -> str:
+        """Đặt lịch cho các em (hoặc thêm em mới chưa có trong danh sách). Trả về ghi chú đã thêm vào cột H."""
+        from .core import schedule as sch
+        from .core.models import Student
+
+        students = [s for s in self.roster.students if s.id in ids]
+        if new_name:
+            s = Student(self.roster.next_id(), code, new_name, new_dob, ban_tru=False, ghi_chu="thêm bằng app")
+            self.roster.students.append(s)
+            students.append(s)
+        if not students:
+            return ""
+        sch.apply(self.roster, kind, students, start, end)
+        self.data_dirty = True
+        note = sch.note_text(kind, students, start, end) if add_note else ""
+        if note and self.state is not None and code in self.state.classes:
+            self.push_undo()
+            c = self.state.cd(code)
+            if note not in c.note:
+                c.note = f"{c.note}, {note}" if c.note else note
+        self.save_data()
+        return note
+
+    def cancel_schedule(self, item) -> None:
+        from .core import schedule as sch
+
+        sch.cancel(self.roster, item)
+        self.data_dirty = True
+        self.save_data()
+
+    def schedule_items(self):
+        from .core import schedule as sch
+
+        return sch.items(self.roster, self.day)
 
     # ---------------------------------------------------------------- ghi chú trong sổ
     def note_suggestions(self):

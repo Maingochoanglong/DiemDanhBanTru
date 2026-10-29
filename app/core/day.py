@@ -36,6 +36,7 @@ class DayState:
     exists_in_book: bool = False  # sheet ngày này đã có trong sổ
     pending: list[tuple[str, matcher.MatchResult]] = field(default_factory=list)  # tên cần xử lý
     manual_m: dict[str, int] = field(default_factory=dict)  # số em ghép vắng nhập tay theo mã nhóm
+    template_date: dt.date | None = None  # ngày của sheet mẫu (sổ hôm trước) khi tạo ngày mới
 
     # ---------- khởi tạo ----------
     @classmethod
@@ -257,11 +258,27 @@ class DayState:
                 out.append(f"GV báo vắng {c.teacher_total - c.teacher_present} em, đang ghi {n} tên")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
-        if c.sheet_si_so is not None and not c.keep_sheet_si_so:
-            ss = self.roster.si_so(code, self.date)
-            if ss != c.sheet_si_so:
-                out.append(f"Sĩ số theo danh sách {ss}, trong sổ đang ghi {c.sheet_si_so}")
+        if self.si_so_mismatch(code):
+            out.append(f"Sĩ số theo danh sách {self.roster.si_so(code, self.date)}, trong sổ đang ghi {c.sheet_si_so}")
         return out
+
+    def si_so_mismatch(self, code: str) -> bool:
+        """Danh sách và sổ lệch nhau thật (không tính phần thay đổi do lịch thêm/cắt đã đặt).
+
+        So sĩ số theo danh sách tại ngày của sheet mẫu với sĩ số ghi trong sheet mẫu: nếu khớp thì
+        mọi khác biệt hôm nay đều do lịch thêm/cắt có hiệu lực, app tự dùng sĩ số mới."""
+        c = self.cd(code)
+        if c.sheet_si_so is None or c.keep_sheet_si_so:
+            return False
+        return self.roster.si_so(code, self.template_date or self.date) != c.sheet_si_so
+
+    def scheduled_changes(self, code: str | None = None):
+        """Các em thêm/cắt có hiệu lực từ sau sheet mẫu tới hôm nay."""
+        from .schedule import changes_between
+
+        if self.exists_in_book or not self.template_date or self.template_date >= self.date:
+            return []
+        return changes_between(self.roster, self.template_date, self.date, code)
 
     def unreported(self) -> list[str]:
         return [c for c, v in self.classes.items() if not v.reported]

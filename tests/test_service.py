@@ -81,3 +81,33 @@ def test_zero_padded_sheet_name_and_data_file_locked(ws, tmp_path):
     assert ws.save() == "01"
     assert "chưa ghi được file dữ liệu" in ws.warning and ws.data_dirty
     assert sobook.load_book(book)["01"]["G6"].value == "Tuấn Anh"
+
+
+def test_schedule_cut_tomorrow_end_to_end(ws, roster):
+    from app.core import schedule as sch
+
+    ws.load_day(dt.date(2026, 10, 29))
+    kid = next(s for s in ws.roster.students if s.ho_ten == "Tô Minh Khôi")
+    note = ws.schedule(sch.CUT, "1D15", [kid.id], dt.date(2026, 10, 30))
+    assert note == "Từ 30/10 cắt bán trú Tô Minh Khôi"
+    assert ws.state.cd("1D15").note == note and ws.dirty
+    assert ws.save() == "29"  # sĩ số hôm nay chưa đổi
+    assert sobook.load_book(ws.book_path)["29"]["D6"].value == 6
+
+    st = ws.load_day(dt.date(2026, 10, 30))
+    assert st.si_so("1D15") == 5 and ws.si_so_conflicts() == []  # đổi theo lịch, không hỏi
+    assert [i.student.ho_ten for i in st.scheduled_changes()] == ["Tô Minh Khôi"]
+    assert st.cd("1D15").note == note  # ghi chú mang sang ngày sau
+    ws.save()
+    assert sobook.load_book(ws.book_path)["30"]["D6"].value == 5
+
+
+def test_schedule_new_student_from_next_month(ws):
+    from app.core import schedule as sch
+
+    ws.load_day(dt.date(2026, 10, 29))
+    ws.schedule(sch.ADD, "2D17", [], dt.date(2026, 11, 1), new_name="Em Chuyển Đến", new_dob="05/05/2019")
+    s = next(s for s in ws.roster.students if s.ho_ten == "Em Chuyển Đến")
+    assert s.lop == "2D17" and not s.is_boarding(dt.date(2026, 10, 30)) and s.is_boarding(dt.date(2026, 11, 2))
+    back = AppData.load(ws.data.path)  # đã lưu vào file dữ liệu
+    assert any(x.ho_ten == "Em Chuyển Đến" and x.bt_tu == dt.date(2026, 11, 1) for x in back.roster.students)

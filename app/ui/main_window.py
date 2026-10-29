@@ -15,6 +15,7 @@ from .tab_cai_dat import TabCaiDat
 from .tab_diem_danh import WEEKDAYS, TabDiemDanh
 from .tab_ghep_lop import TabGhepLop
 from .tab_hoc_sinh import TabHocSinh, ask_import, ask_notes
+from .tab_lich import TabLich
 from .widgets import ChoiceDialog
 
 
@@ -46,10 +47,12 @@ class MainWindow:
         self.nb = ttk.Notebook(root)
         self.nb.pack(fill="both", expand=True, padx=8)
         self.tab_dd = TabDiemDanh(self.nb, self)
+        self.tab_lich = TabLich(self.nb, self)
         self.tab_ghep = TabGhepLop(self.nb, self)
         self.tab_hs = TabHocSinh(self.nb, self)
         self.tab_cd = TabCaiDat(self.nb, self)
         self.nb.add(self.tab_dd, text="  Điểm danh  ")
+        self.nb.add(self.tab_lich, text="  Lịch thêm/cắt  ")
         self.nb.add(self.tab_ghep, text="  Ghép lớp  ")
         self.nb.add(self.tab_hs, text="  Học sinh  ")
         self.nb.add(self.tab_cd, text="  Cài đặt  ")
@@ -176,6 +179,7 @@ class MainWindow:
         self.tab_dd.clear_results()
         self.refresh_all()
         self.tab_dd.show_sheet_checks()
+        self.tab_dd.show_scheduled_changes()
 
     def recheck_day(self) -> None:
         self.open_day(self.ws.day)
@@ -185,6 +189,7 @@ class MainWindow:
         if self.ws.state is None:
             return
         self.tab_dd.refresh()
+        self.tab_lich.refresh()
         self.tab_ghep.refresh()
         self.tab_hs.refresh()
         self.tab_cd.refresh()

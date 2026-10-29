@@ -104,13 +104,16 @@ class TabDiemDanh(ttk.Frame):
         srow.pack(fill="x", pady=(4, 2))
         ttk.Button(srow, text="Lớp này đủ", command=self.mark_full).pack(side="right")
         ttk.Button(srow, text="Bỏ dấu đã báo", command=self.unmark_reported).pack(side="right", padx=6)
+        ttk.Button(srow, text="Thêm/cắt BT…", command=lambda: self._schedule_menu_for(None)).pack(side="right")
         ttk.Label(srow, text="Tìm tên:").pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
         ttk.Entry(srow, textvariable=self.search_var, width=18).pack(side="left", padx=4)
-        ttk.Label(srow, text="Tích = vắng", style="Muted.TLabel").pack(side="left", padx=4)
+        ttk.Label(srow, text="Tích = vắng · chuột phải: cắt/thứ 6", style="Muted.TLabel").pack(side="left", padx=4)
         self.checks = ScrollFrame(self.detail, height=120)
         self.checks.pack(fill="both", expand=True)
+        self.lbl_sched = ttk.Label(self.detail, text="", style="Ok.TLabel", wraplength=640, justify="left")
+        self.lbl_sched.pack(anchor="w")
         self.lbl_extra = ttk.Label(self.detail, text="", style="Warn.TLabel", wraplength=640, justify="left")
         self.lbl_extra.pack(anchor="w")
         nrow = ttk.Frame(self.detail)
@@ -143,8 +146,8 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_meal_warn = ttk.Label(right, text="", style="Err.TLabel", wraplength=360, justify="left")
         self.lbl_meal_warn.pack(anchor="w", fill="x")
         right.bind("<Configure>", lambda e: self.lbl_meal_warn.configure(wraplength=max(200, e.width - 16)))
-        self.detail.bind("<Configure>", lambda e: (self.lbl_warn.configure(wraplength=max(300, e.width - 20)),
-                                                   self.lbl_extra.configure(wraplength=max(300, e.width - 20))))
+        self.detail.bind("<Configure>", lambda e: [w.configure(wraplength=max(300, e.width - 20))
+                                                   for w in (self.lbl_warn, self.lbl_extra, self.lbl_sched)])
         self.after(300, self._init_sashes)
 
     def _init_sashes(self) -> None:
@@ -237,11 +240,16 @@ class TabDiemDanh(ttk.Frame):
             label = self.ws.roster.display_name(s)
             if s.id in auto:
                 label += f"  ({auto[s.id]})"
+            elif s.cat_thu6:
+                label += "  (nghỉ T6)"
+            if s.cat_tu and s.cat_tu > st.date:
+                label += f"  (cắt từ {s.cat_tu:%d/%m})"
             if s.an_ghep:
                 label += f"  [ăn {s.an_ghep}]"
             cb = ttk.Checkbutton(self.checks.inner, text=label, variable=var,
                                  command=lambda sid=s.id, v=var: self._toggle(sid, v.get()))
             cb.grid(row=i // cols, column=i % cols, sticky="w", padx=(4, 18), pady=1)
+            cb.bind("<Button-3>", lambda e, st_=s: self._schedule_menu_for(st_, e))
             cb._search = fold(s.ho_ten + " " + label)  # type: ignore[attr-defined]
             self.check_vars[s.id] = var
             self.check_widgets[s.id] = cb
@@ -287,6 +295,21 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_class.configure(
             text=f"{code} · Sĩ số {st.si_so(code)} · Vắng {st.absent_count(code)} · Hiện diện {st.present(code)}")
         c = st.cd(code)
+        sched = []
+        for it in st.scheduled_changes(code):
+            what = "cắt" if it.kind == "cat" else "thêm"
+            sched.append(f"{what} {it.student.ho_ten} (từ {it.start:%d/%m})")
+        upcoming = [s for s in self.ws.roster.in_class(code)
+                    if (s.cat_tu and s.cat_tu > st.date) or (s.ban_tru and s.bt_tu and s.bt_tu > st.date)]
+        txt = ""
+        if sched:
+            txt = f"📅 Sĩ số đổi theo lịch ({c.sheet_si_so} → {st.si_so(code)}): " + "; ".join(sched)
+        if upcoming:
+            nxt = "; ".join(
+                f"{'cắt' if s.cat_tu and s.cat_tu > st.date else 'thêm'} {s.ho_ten} từ "
+                f"{(s.cat_tu if s.cat_tu and s.cat_tu > st.date else s.bt_tu):%d/%m}" for s in upcoming)
+            txt += ("\n" if txt else "") + "Sắp tới: " + nxt
+        self.lbl_sched.configure(text=txt)
         if c.extra:
             self.lbl_extra.configure(text="Tên ghi nguyên văn (chưa khớp danh sách): " + ", ".join(c.extra))
             self.btn_clear_extra.pack(side="right")
@@ -414,6 +437,62 @@ class TabDiemDanh(ttk.Frame):
             self.ws.push_undo()
             c.note = val
             self._refresh_totals()
+
+    def _schedule_menu_for(self, student, event=None) -> None:
+        """Menu đặt lịch nhanh cho 1 em (chuột phải) hoặc cho cả lớp (nút Thêm/cắt BT…)."""
+        from ..core import schedule as sch
+
+        code = self.current_class
+        if not code:
+            return
+        tab = self.app.tab_lich
+        ids = (student.id,) if student else ()
+        menu = tk.Menu(self, tearoff=0)
+        title = student.ho_ten if student else f"Lớp {code}"
+        menu.add_command(label=title, state="disabled")
+        menu.add_separator()
+        menu.add_command(label="✂ Cắt bán trú từ ngày…", command=lambda: tab.open_dialog(sch.CUT, code, ids))
+        if student is None:
+            menu.add_command(label="＋ Thêm em vào bán trú…", command=lambda: tab.open_dialog(sch.ADD, code))
+        if student is not None and student.cat_thu6:
+            menu.add_command(label="Bỏ cắt thứ 6", command=lambda: self._undo_friday(student))
+        else:
+            menu.add_command(label="Cắt thứ 6 hàng tuần…", command=lambda: tab.open_dialog(sch.FRIDAY, code, ids))
+        menu.add_command(label="Vắng dài hạn…", command=lambda: tab.open_dialog(sch.LONG, code, ids))
+        if event is not None:
+            x, y = event.x_root, event.y_root
+        else:
+            x, y = self.winfo_pointerx(), self.winfo_pointery()
+        try:
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
+
+    def _undo_friday(self, student) -> None:
+        from ..core import schedule as sch
+
+        try:
+            self.ws.cancel_schedule(sch.ScheduleItem(sch.FRIDAY, student))
+        except Exception as e:  # noqa: BLE001
+            self.app.show_save_error(e, self.ws.data.path)
+        self.app.flash(f"Đã bỏ cắt thứ 6 cho {student.ho_ten}.")
+        self.app.refresh_days_only()
+        self.app.tab_lich.refresh()
+
+    def show_scheduled_changes(self) -> None:
+        """Báo các em thêm/cắt có hiệu lực từ hôm nay (so với sổ hôm trước)."""
+        st = self.ws.state
+        if st is None:
+            return
+        changes = st.scheduled_changes()
+        if not changes:
+            return
+        r = self.tree_res
+        pid = r.insert("", 0, text="📅 Lịch", values=(f"{len(changes)} thay đổi bán trú có hiệu lực từ hôm nay — sĩ số đã tự cập nhật",),
+                       tags=("ok", "bold"), open=True)
+        for it in changes:
+            what = "cắt bán trú" if it.kind == "cat" else "thêm bán trú"
+            r.insert(pid, "end", text=it.student.lop_tinh, values=(f"{what}: {it.student.ho_ten} (từ {it.start:%d/%m})",))
 
     def copy_unreported(self) -> None:
         st = self.ws.state
