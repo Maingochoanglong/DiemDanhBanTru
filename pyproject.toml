@@ -1,0 +1,15 @@
+[project]
+name = "diemdanhbantru"
+version = "1.0.0"
+description = "App điểm danh bán trú: kiểm tra tên HS vắng, tính suất ăn, ghi sổ Excel"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E9", "B", "UP"]

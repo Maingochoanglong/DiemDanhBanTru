@@ -1,0 +1,54 @@
+name: Dựng app Windows
+
+on:
+  push:
+    branches: [main, master, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cài thư viện
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Chạy test
+        run: python -m pytest -q
+
+      - name: Dựng file .exe
+        run: pyinstaller --noconfirm --onefile --windowed --name DiemDanhBanTru run_app.py
+
+      - name: Kiểm tra file .exe chạy được
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\DiemDanhBanTru.exe -ArgumentList "--selftest" -PassThru
+          if (-not $p.WaitForExit(120000)) { Stop-Process -Id $p.Id -Force; Write-Error "App bị treo khi tự kiểm tra"; exit 1 }
+          if ($p.ExitCode -ne 0) { Write-Error "App tự kiểm tra lỗi (mã $($p.ExitCode))"; exit 1 }
+          Write-Host "App tự kiểm tra OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DiemDanhBanTru-windows
+          path: dist/DiemDanhBanTru.exe
+
+      - name: Đăng bản mới nhất lên trang Releases
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ban-moi-nhat --yes --cleanup-tag || true
+          gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Điểm danh bán trú — bản mới nhất" \
+            --notes "Tải file DiemDanhBanTru.exe bên dưới rồi mở để dùng. Dựng từ commit $GITHUB_SHA (nhánh $GITHUB_REF_NAME)."
