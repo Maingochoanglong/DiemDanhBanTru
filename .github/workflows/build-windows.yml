@@ -48,21 +48,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           notes="Tải file DiemDanhBanTru.exe bên dưới rồi mở để dùng. Dựng từ commit $GITHUB_SHA (nhánh $GITHUB_REF_NAME)."
+          sha="sha256:$(sha256sum dist/DiemDanhBanTru.exe | cut -d' ' -f1)"
+          # API Releases của GitHub đôi khi trả HTTP 500 dù việc đã xong: kiểm tra lại file đã lên chưa
+          uploaded() {
+            gh api "repos/$GITHUB_REPOSITORY/releases/tags/ban-moi-nhat" --jq '.assets[].digest' 2>/dev/null | grep -qx "$sha"
+          }
+          # Hàm gọi trong "if" nên bash không tự dừng khi lỗi: nối bằng && để lỗi bước nào cũng báo
           publish() {
             if gh release view ban-moi-nhat >/dev/null 2>&1; then
-              # cập nhật bản đã có (không xóa rồi tạo lại, tránh hỏng khi API GitHub lỗi giữa chừng)
-              # (gọi trong "if" nên bash không tự dừng khi lỗi: nối bằng && để lỗi bước nào cũng báo)
+              # cập nhật bản đã có (không xóa rồi tạo lại)
               git tag -f ban-moi-nhat "$GITHUB_SHA" && git push -f origin refs/tags/ban-moi-nhat \
-                && gh release upload ban-moi-nhat dist/DiemDanhBanTru.exe --clobber \
-                && gh release edit ban-moi-nhat --notes "$notes"
+                && { uploaded || gh release upload ban-moi-nhat dist/DiemDanhBanTru.exe --clobber || uploaded; }
             else
               gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
                 --target "$GITHUB_SHA" --prerelease \
-                --title "Điểm danh bán trú — bản mới nhất" --notes "$notes"
+                --title "Điểm danh bán trú — bản mới nhất" --notes "$notes" || uploaded
             fi
           }
-          for i in 1 2 3; do
-            if publish; then exit 0; fi
-            echo "Đăng chưa được (lần $i), thử lại sau $((i * 10)) giây"; sleep $((i * 10))
+          for i in 1 2 3 4; do
+            if publish; then
+              gh release edit ban-moi-nhat --notes "$notes" \
+                || echo "::warning::Đã đăng file .exe mới, nhưng GitHub lỗi nên chưa sửa được dòng ghi chú của bản phát hành."
+              exit 0
+            fi
+            echo "Đăng chưa được (lần $i), thử lại sau $((i * 20)) giây"; sleep $((i * 20))
           done
           exit 1
