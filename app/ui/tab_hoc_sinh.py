@@ -1,4 +1,4 @@
-"""Tab Học sinh: danh sách bán trú, thêm/cắt, cắt thứ 6, vắng dài hạn, nhập từ file CDHS."""
+"""Tab Học sinh: danh sách bán trú, thêm/cắt, cắt thứ 6, nhập/xuất danh sách."""
 
 from __future__ import annotations
 
@@ -35,6 +35,7 @@ class TabHocSinh(ttk.Frame):
         ttk.Button(top, text="Lưu thay đổi", style="Big.TButton", command=self.save).pack(side="right")
         ttk.Button(top, text="Nhập / cập nhật từ file CDHS…", command=self.import_cdhs).pack(side="right", padx=6)
         ttk.Button(top, text="Đọc ghi chú trong sổ…", command=lambda: self.app.ask_note_suggestions()).pack(side="right")
+        ttk.Button(top, text="Xuất danh sách…", command=self.export).pack(side="right", padx=6)
 
         paned = ttk.PanedWindow(self, orient="horizontal")
         paned.pack(fill="both", expand=True, pady=(8, 0))
@@ -92,8 +93,6 @@ class TabHocSinh(ttk.Frame):
                 special.append(f"tính BT lớp {s.lop_bt}")
             if s.cat_thu6:
                 special.append("cắt thứ 6")
-            if s.vang_tu:
-                special.append(f"vắng dài hạn từ {fmt_date(s.vang_tu)}" + (f" đến {fmt_date(s.vang_den)}" if s.vang_den else ""))
             if s.bt_tu:
                 special.append(f"ăn từ {fmt_date(s.bt_tu)}")
             if s.cat_tu:
@@ -154,6 +153,33 @@ class TabHocSinh(ttk.Frame):
             return
         self.app.flash("Đã lưu danh sách học sinh.")
 
+    def export(self) -> None:
+        """Xuất danh sách gọn (lớp, họ tên, ngày sinh, X ăn bán trú, ghép lớp) theo một ngày."""
+        from tkinter import simpledialog
+
+        from ..excel.files import FileLockedError
+        from ..excel.roster_export import export_roster
+
+        raw = simpledialog.askstring("Xuất danh sách", "Đánh X cho các em ăn bán trú vào ngày (dd/mm/yyyy):",
+                                     initialvalue=fmt_date(self.ws.day), parent=self)
+        if raw is None:
+            return
+        day = parse_date(raw)
+        if not day:
+            messagebox.showwarning("Ngày không đúng", "Hãy nhập ngày dạng dd/mm/yyyy.", parent=self)
+            return
+        path = filedialog.asksaveasfilename(
+            parent=self, title="Lưu danh sách học sinh ăn bán trú", defaultextension=".xlsx",
+            initialfile="DANH_SACH_HOC_SINH_AN_BAN_TRU.xlsx", filetypes=[("Excel", "*.xlsx")])
+        if not path:
+            return
+        try:
+            n = export_roster(self.ws.roster, path, day)
+        except FileLockedError:
+            messagebox.showwarning("File đang mở", "File đang mở trong Excel. Hãy đóng rồi xuất lại.", parent=self)
+            return
+        self.app.flash(f"Đã xuất danh sách ({n} em ăn bán trú ngày {fmt_date(day)}) ra {path}")
+
     def import_cdhs(self) -> None:
         path = filedialog.askopenfilename(
             parent=self, title="Chọn file danh sách học sinh (CDHS, chữ đỏ = ăn bán trú)",
@@ -172,8 +198,6 @@ class StudentDialog(tk.Toplevel):
         ("lop_bt", "Lớp tính bán trú (nếu khác lớp học)", "entry"),
         ("an_ghep", "Ăn ghép tại nhóm (vd. 1.2)", "entry"),
         ("cat_thu6", "Cắt thứ 6 hàng tuần (thứ 6 tự tính vắng)", "check"),
-        ("vang_tu", "Vắng dài hạn từ ngày", "date"),
-        ("vang_den", "… đến ngày (trống = tới khi có thông báo)", "date"),
         ("bt_tu", "Bắt đầu ăn bán trú từ ngày", "date"),
         ("cat_tu", "Cắt bán trú từ ngày", "date"),
         ("ghi_chu", "Ghi chú", "entry"),
@@ -217,7 +241,7 @@ class StudentDialog(tk.Toplevel):
             self.lbl_err.configure(text="Cần nhập lớp (vd. 1D15) và họ tên.")
             return
         dates = {}
-        for f in ("vang_tu", "vang_den", "bt_tu", "cat_tu"):
+        for f in ("bt_tu", "cat_tu"):
             raw = clean_spaces(vals[f])
             d = parse_date(raw)
             if raw and not d:
@@ -339,7 +363,7 @@ def ask_notes(parent, ws, quiet: bool = False) -> int | None:
     dlg = CheckListDialog(
         parent, "Gợi ý từ ghi chú trong sổ",
         "App đọc các ghi chú cột H (và các chữ 'cắt …', 'thêm …' trong ô tên vắng) của sổ tháng, "
-        "rồi gợi ý cập nhật danh sách để sĩ số tự khớp và thứ 6 / vắng dài hạn tự tính vắng. "
+        "rồi gợi ý cập nhật danh sách để sĩ số tự khớp và thứ 6 tự tính vắng. "
         "Hãy xem từng dòng; bỏ tích dòng nào không đúng.", sugs)
     if not dlg.ok:
         return None

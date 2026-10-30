@@ -24,14 +24,12 @@ HS_COLS = [
     ("lop_bt", "Lớp tính BT", 11),
     ("an_ghep", "Ăn ghép tại", 11),
     ("cat_thu6", "Cắt thứ 6 (x)", 12),
-    ("vang_tu", "Vắng dài hạn từ", 15),
-    ("vang_den", "Vắng dài hạn đến", 16),
     ("bt_tu", "Ăn BT từ ngày", 14),
     ("cat_tu", "Cắt BT từ ngày", 14),
     ("ghi_chu", "Ghi chú", 30),
 ]
 BOOL_FIELDS = {"ban_tru", "cat_thu6"}
-DATE_FIELDS = {"vang_tu", "vang_den", "bt_tu", "cat_tu"}
+DATE_FIELDS = {"bt_tu", "cat_tu"}
 LOP_COLS = [("code", "Lớp", 8), ("khoi", "Khối", 7), ("ma_ngan", "Mã ngắn", 10), ("gvcn", "GVCN", 28)]
 LOG_COLS = [("Ngày", 12), ("Lớp", 7), ("Đã báo", 8), ("Sĩ số", 7), ("Vắng", 7), ("Tên vắng", 60)]
 
@@ -65,17 +63,20 @@ class AppData:
         wb = openpyxl.load_workbook(str(path), data_only=True)
         if "HocSinh" in wb.sheetnames:
             ws = wb["HocSinh"]
+            # đọc theo tên cột (file cũ có thể thừa/thiếu cột, vd. cột "Vắng dài hạn" đã bỏ)
+            by_title = {fold(t): f for f, t, _ in HS_COLS}
+            header = [by_title.get(fold(str(c.value or ""))) for c in ws[1]]
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if not row or not any(row):
                     continue
-                vals = dict(zip([c[0] for c in HS_COLS], list(row) + [None] * len(HS_COLS), strict=False))
+                vals = {f: v for f, v in zip(header, row, strict=False) if f}
                 if not vals.get("ho_ten"):
                     continue
                 s = Student(
-                    id=clean_spaces(str(vals["id"] or "")) or data.roster.next_id(),
-                    lop=norm_class(str(vals["lop"] or "")),
+                    id=clean_spaces(str(vals.get("id") or "")) or data.roster.next_id(),
+                    lop=norm_class(str(vals.get("lop") or "")),
                     ho_ten=clean_spaces(str(vals["ho_ten"])),
-                    ngay_sinh=fmt_date(parse_date(vals["ngay_sinh"])) or clean_spaces(str(vals["ngay_sinh"] or "")),
+                    ngay_sinh=fmt_date(parse_date(vals.get("ngay_sinh"))) or clean_spaces(str(vals.get("ngay_sinh") or "")),
                 )
                 for f in BOOL_FIELDS:
                     setattr(s, f, _truthy(vals.get(f)))

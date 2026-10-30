@@ -52,6 +52,9 @@ class PasteOutcome:
     message: ParsedMessage
     results: list[matcher.MatchResult] = field(default_factory=list)
     guessed_from: list[str] = field(default_factory=list)  # các lớp đoán được khi tin không ghi lớp
+    class_by: str = ""  # "sender": lớp theo tên người gửi; "names": theo tên học sinh
+    suggestions: list = field(default_factory=list)  # đề nghị thêm/cắt bán trú (tin báo lịch)
+    schedule_known: bool = False  # tin báo lịch nhưng lịch đó đã có sẵn
 
 
 class NeedMonthBook(Exception):
@@ -78,6 +81,7 @@ class Workspace:
         self.warning: str = ""  # cảnh báo sau lần lưu gần nhất
         self.dirty = False  # ngày đang mở có thay đổi chưa ghi vào sổ
         self.data_dirty = False  # danh sách HS / ghép lớp có thay đổi chưa lưu
+        self.paste_skipped: dict[dt.date, int] = {}  # tin Zalo của ngày khác (lần dán gần nhất)
 
     # ---------------------------------------------------------------- dữ liệu
     @property
@@ -247,22 +251,37 @@ class Workspace:
         return True
 
     def paste(self, text: str) -> list[PasteOutcome]:
+        """Đọc tin nhắn dán vào và ghi vào ngày đang mở.
+
+        Tin Zalo có ngày giờ: chỉ lấy tin đúng ngày đang mở (tin ngày khác đếm vào `paste_skipped`),
+        theo thứ tự giờ gửi nên tin sau của cùng lớp ghi đè tin trước."""
         assert self.state is not None
         known = set(self.state.classes)
         out = []
-        msgs = parse_messages(text, known)
-        if msgs:
+        self.paste_skipped = {}
+        msgs = []
+        for m in parse_messages(text, known):
+            if m.when is not None and m.when.date() != self.day:
+                d = m.when.date()
+                self.paste_skipped[d] = self.paste_skipped.get(d, 0) + 1
+            else:
+                msgs.append(m)
+        if any(m.is_report for m in msgs):
             self.push_undo()
         for msg in msgs:
             po = PasteOutcome(msg)
             if msg.cls is None:
-                guesses = matcher.guess_class(self.roster, msg.names, self.day)
-                po.guessed_from = guesses
-                if len(guesses) == 1:
-                    msg.cls, msg.guessed = guesses[0], True
-                else:
+                self._resolve_class(msg, po)
+                if msg.cls is None:
                     out.append(po)
                     continue
+            elif msg.sender:
+                self._learn_sender(msg.sender, msg.cls)
+            if msg.schedule:
+                self._schedule_suggestions(msg, po)
+            if not msg.is_report:
+                out.append(po)
+                continue
             if msg.full:
                 self.state.mark_full(msg.cls)
                 c = self.state.cd(msg.cls)
@@ -271,6 +290,73 @@ class Workspace:
                 po.results = self.state.apply_message(msg)
             out.append(po)
         return out
+
+    def _resolve_class(self, msg: ParsedMessage, po: PasteOutcome) -> None:
+        """Tìm lớp cho tin không ghi mã lớp: theo tên Zalo người gửi, rồi theo tên học sinh."""
+        from .core.senders import match_teacher, sender_key
+
+        assert self.state is not None
+        known = set(self.state.classes)
+        by_sender = None
+        if msg.sender_class in known:
+            by_sender = msg.sender_class
+        elif msg.sender:
+            gvcn = {c: info.gvcn for c, info in self.roster.classes.items() if c in known and info.gvcn}
+            by_sender = match_teacher(msg.sender, gvcn)
+            if by_sender is None:
+                learned = self.settings.get(sender_key(msg.sender))
+                by_sender = learned if learned in known else None
+        guesses = matcher.guess_class(self.roster, msg.names, self.day) if msg.names else []
+        po.guessed_from = guesses
+        if by_sender and (not msg.names or by_sender in guesses or len(guesses) != 1):
+            msg.cls, msg.guessed, po.class_by = by_sender, True, "sender"
+        elif len(guesses) == 1:
+            msg.cls, msg.guessed, po.class_by = guesses[0], True, "names"
+        if msg.cls and msg.sender:
+            self._learn_sender(msg.sender, msg.cls)
+
+    def _learn_sender(self, sender: str, code: str) -> None:
+        from .core.senders import sender_key
+
+        key = sender_key(sender)
+        if key != "zalo|" and self.settings.get(key) != code:
+            self.settings[key] = code
+            self.data_dirty = True
+
+    def _schedule_suggestions(self, msg: ParsedMessage, po: PasteOutcome) -> None:
+        from .core.notes import suggest_from_note
+
+        if not msg.cls:
+            return
+        seen = msg.when.date() if msg.when else self.day
+        po.suggestions = suggest_from_note(self.roster, msg.cls, _relative_dates(msg.schedule, seen), seen)
+        po.schedule_known = not po.suggestions
+
+    def apply_paste_suggestion(self, sug) -> str:
+        """Áp dụng 1 đề nghị từ tin báo lịch; thêm ghi chú cột H như giáo vụ vẫn viết. Trả về ghi chú."""
+        from .core import schedule as sch
+        from .core.notes import apply_suggestions
+
+        if not apply_suggestions(self.roster, [sug]):
+            return ""
+        self.data_dirty = True
+        s = sug.student or next((x for x in reversed(self.roster.students) if x.ho_ten == sug.new_name), None)
+        ch = sug.changes
+        if ch.get("cat_tu"):
+            note = sch.note_text(sch.CUT, [s], ch["cat_tu"])
+        elif ch.get("cat_thu6"):
+            note = sch.note_text(sch.FRIDAY, [s], None)
+        elif ch.get("ban_tru"):
+            note = sch.note_text(sch.ADD, [s], ch.get("bt_tu") or self.day)
+        else:
+            note = ""
+        if note and self.state is not None and sug.code in self.state.classes:
+            self.push_undo()
+            c = self.state.cd(sug.code)
+            if note not in c.note:
+                c.note = f"{c.note}, {note}" if c.note else note
+        self.save_data()
+        return note
 
     # ---------------------------------------------------------------- lưu & in
     def si_so_conflicts(self) -> list[tuple[str, int, int]]:
@@ -376,7 +462,7 @@ class Workspace:
 
     # ---------------------------------------------------------------- ghi chú trong sổ
     def note_suggestions(self):
-        """Đọc ghi chú cột H ở mọi sheet của sổ, gợi ý cập nhật danh sách (cắt thứ 6, vắng dài hạn…)."""
+        """Đọc ghi chú cột H ở mọi sheet của sổ, gợi ý cập nhật danh sách (cắt thứ 6, cắt/thêm theo ngày…)."""
         from .core.notes import suggest_from_book
 
         if not self.book_path:
@@ -440,6 +526,18 @@ class Workspace:
                 else:
                     problems.append(f"{group}: '{q}' {'trùng nhiều em' if r.status == matcher.AMBIGUOUS else 'không tìm thấy'}")
         return n, problems
+
+
+def _relative_dates(text: str, seen: dt.date) -> str:
+    """Đổi "từ mai", "tháng sau" trong tin báo lịch thành ngày cụ thể (tính từ ngày gửi tin)."""
+    import re
+
+    from .core.schedule import next_month_start
+
+    nxt = next_school_day(seen)
+    text = re.sub(r"(?i)từ\s*(?:ngày\s*)?mai", f"từ {nxt.day}/{nxt.month}", text)
+    text = re.sub(r"(?i)(?:đầu\s*)?tháng\s*sau", f"tháng {next_month_start(seen).month}", text)
+    return text
 
 
 def _col(i: int) -> str:

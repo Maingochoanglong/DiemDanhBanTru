@@ -136,7 +136,7 @@ def test_safe_save_refuses_when_open_in_excel(book):
 
 def test_app_data_roundtrip(tmp_path, roster):
     roster.students[0].cat_thu6 = True
-    roster.students[0].vang_tu = dt.date(2026, 10, 1)
+    roster.students[0].cat_tu = dt.date(2026, 11, 1)
     roster.students[1].an_ghep = "1.2"
     data = AppData(tmp_path / "DuLieu_BanTru.xlsx", roster)
     data.settings["so_folder"] = str(tmp_path)
@@ -144,7 +144,7 @@ def test_app_data_roundtrip(tmp_path, roster):
     data.save()
     back = AppData.load(tmp_path / "DuLieu_BanTru.xlsx")
     s0, s1 = back.roster.students[0], back.roster.students[1]
-    assert (s0.ho_ten, s0.cat_thu6, s0.vang_tu, s0.ban_tru) == ("Kha Bảo Ngọc", True, dt.date(2026, 10, 1), True)
+    assert (s0.ho_ten, s0.cat_thu6, s0.cat_tu, s0.ban_tru) == ("Kha Bảo Ngọc", True, dt.date(2026, 11, 1), True)
     assert s1.an_ghep == "1.2"
     assert len(back.roster.students) == len(roster.students)
     assert back.settings["so_folder"] == str(tmp_path)
@@ -201,3 +201,50 @@ def test_read_cdhs_xlsx_and_diff(tmp_path, roster):
     apply_changes(roster, changes)  # mặc định không xóa HS vắng mặt trong file mới
     assert len(roster.students) == n_before + 1
     assert roster.students[0].ban_tru is False and roster.students[5].lop == "1D16"
+
+
+def test_old_data_file_with_removed_columns_still_loads(tmp_path):
+    """File dữ liệu bản cũ còn 2 cột vắng dài hạn: đọc theo tên cột nên không lệch."""
+    p = tmp_path / "cu.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "HocSinh"
+    ws.append(["Mã", "Lớp", "Họ tên", "Ngày sinh", "Bán trú (x)", "Tên ghi sổ (sửa tay)", "Lớp tính BT", "Ăn ghép tại",
+               "Cắt thứ 6 (x)", "Vắng dài hạn từ", "Vắng dài hạn đến", "Ăn BT từ ngày", "Cắt BT từ ngày", "Ghi chú"])
+    ws.append(["HS0001", "1D15", "Kha Bảo Ngọc", "02/03/2020", "x", "", "", "1.2", "x", "10/10/2026", "", "", "01/11/2026", "gc"])
+    wb.save(p)
+    s = AppData.load(p).roster.students[0]
+    assert (s.ban_tru, s.an_ghep, s.cat_thu6, s.cat_tu, s.ghi_chu) == (True, "1.2", True, dt.date(2026, 11, 1), "gc")
+
+
+def test_export_then_import_x_and_ghep(tmp_path, roster):
+    from app.excel.roster_export import export_roster
+
+    roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc 1D19
+    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # tháng 11 cắt -> danh sách tháng 11 để trống
+    p = tmp_path / "ds.xlsx"
+    n = export_roster(roster, p, dt.date(2026, 11, 2), highlight={roster.students[0].id},
+                      changes=[["1D15", "Kha Bảo Ngọc", "Cắt bán trú từ 01/11/2026", "Tháng 11 cắt …"]])
+    assert n == sum(1 for s in roster.students if s.is_boarding(dt.date(2026, 11, 2)))
+    wb = openpyxl.load_workbook(p)
+    assert wb.sheetnames == ["DanhSach", "Thay đổi", "Ghi chú"]
+    ws = wb["DanhSach"]
+    assert [c.value for c in ws[1]] == ["Tên lớp học", "Họ tên", "Ngày sinh", "Ăn bán trú", "Ghép lớp"]
+    assert [c.value for c in ws[2]] == ["Lớp 1D15", "Kha Bảo Ngọc", "02/03/2020", None, None]
+    assert ws["A2"].fill.fgColor.rgb == "FFFFF2CC"  # dòng có thay đổi tô vàng
+
+    rows = read_cdhs(p)
+    by = {r.ho_ten: r for r in rows}
+    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep == "1.1"
+    assert not by["Kha Bảo Ngọc"].red and not by["Mạc Trần Quỳnh Anh"].red
+    # nhập lại vào danh sách đang có: em đã có lịch cắt thì không bị đổi; ghép không đổi
+    changes = diff_roster(roster, rows)
+    assert not [c for c in changes if c.kind in ("boarding", "ghep", "new")]
+
+
+def test_xls_file_with_wrong_extension_is_read(tmp_path):
+    p = tmp_path / "cdhs.xls"
+    _write_fake_cdhs_xls(p)
+    wrong = tmp_path / "ds_26_27.xlsx"
+    wrong.write_bytes(p.read_bytes())
+    assert [r.red for r in read_cdhs(wrong)] == [True, False, True]

@@ -7,10 +7,17 @@ Hiểu các dạng thường gặp:
     Lớp 5D20: đủ          2D21: 10/10          4D22: vắng Toàn
     Vắng Duy Mạnh, tuấn Kiệt , Hải Long      (không ghi lớp)
 Có thể dán nhiều tin một lúc; dòng tên người gửi ("cô Lan 1D15") và giờ gửi tự bỏ qua.
+
+Tin chép từ Zalo trên máy tính có dòng đầu dạng
+    [27/10/2026 07:29:30] Cô Mai: Lớp 1D15 :28/31
+    Vắng Hồ Khánh Ngọc ,Tuấn Anh            (dòng không có [...] là phần tiếp của tin trên)
+App giữ ngày giờ và người gửi của từng tin để lọc theo ngày và đoán lớp khi tin không ghi mã lớp.
+Tin báo lịch ("tháng 11 cắt bán trú Gia Huy") được tách riêng, không tính là vắng.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -48,6 +55,15 @@ class ParsedMessage:
     names: list[str] = field(default_factory=list)
     full: bool = False  # lớp báo đủ
     guessed: bool = False  # lớp do app đoán (tin không ghi lớp)
+    when: dt.datetime | None = None  # giờ gửi (tin chép từ Zalo máy tính)
+    sender: str = ""  # tên Zalo người gửi
+    schedule: str = ""  # phần báo lịch thêm/cắt bán trú trong tin, vd. "tháng 11 cắt bán trú Gia Huy"
+    sender_class: str | None = None  # mã lớp ghi trong tên Zalo người gửi ("1D15 Cô Lan")
+
+    @property
+    def is_report(self) -> bool:
+        """Tin có báo sĩ số / vắng (không chỉ báo lịch)."""
+        return bool(self.names) or self.full or self.present is not None
 
     @property
     def reported_absent(self) -> int | None:
@@ -137,8 +153,122 @@ def _parse_segment(raw: str, body: str, cls: str | None) -> ParsedMessage:
     return msg
 
 
+_ZALO_HEAD = re.compile(
+    r"^\s*\[\s*(\d{1,2})/(\d{1,2})/(\d{2,4})[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*\]\s?(.*)$"
+)
+_REPORT_WORD = re.compile(r"(?<!\w)(vang|nghi|du|ss|si so|hien dien)(?!\w)")
+# Báo lịch: "cắt …" (đúng dấu: "Cát Tiên" là tên), "tháng 11 thêm …", "thêm bán trú …".
+_SCHED = re.compile(
+    r"(?<!\w)(?:(?:từ\s*(?:ngày\s*)?)?\d{1,2}\s*/\s*\d{1,2}\s*|(?:tháng|t)\s*\d{1,2}\s*"
+    r"|từ\s*(?:ngày\s*)?mai\s*|(?:đầu\s*)?tháng\s*sau\s*)?"
+    r"(?:cắt|(?<!vắng )(?<!nghỉ )thêm(?=\s*bán\s*trú))(?!\w)"
+    r"|(?<!\w)(?:(?:từ\s*(?:ngày\s*)?)?\d{1,2}\s*/\s*\d{1,2}|(?:tháng|t)\s*\d{1,2}|(?:đầu\s*)?tháng\s*sau)\s*thêm(?!\w)"
+)
+_SCHED_END = re.compile(r"(?i)(?<!\w)(vắng|nghỉ)(?!\w)")
+
+
+@dataclass
+class ZaloLine:
+    when: dt.datetime | None
+    sender: str
+    body: str
+
+
+def split_zalo(text: str) -> list[ZaloLine] | None:
+    """Tách tin chép từ Zalo máy tính theo dòng '[ngày giờ] Người gửi: nội dung'.
+
+    Trả về None nếu đoạn dán không có dòng nào dạng đó (dán kiểu cũ)."""
+    out: list[ZaloLine] = []
+    lead: list[str] = []
+    for line in nfc(text).splitlines():
+        m = _ZALO_HEAD.match(line)
+        if not m:
+            if out:
+                out[-1].body += "\n" + line
+            else:
+                lead.append(line)
+            continue
+        d, mo, y, hh, mm, ss, rest = m.groups()
+        year = int(y) + (2000 if len(y) == 2 else 0)
+        try:
+            when = dt.datetime(year, int(mo), int(d), int(hh), int(mm), int(ss or 0))
+        except ValueError:
+            when = None
+        sender, body = "", rest
+        if ":" in rest:
+            head, tail = rest.split(":", 1)
+            if head.strip() and len(head) <= 40 and not CLASS_RE.search(head):
+                sender, body = head.strip(), tail
+            elif head.strip() and len(head) <= 40 and not _COUNT.search(head) and fold(head).startswith(_HEADER_START):
+                sender, body = head.strip(), tail  # tên Zalo có mã lớp, vd. "Cô Lan 1D15"
+        out.append(ZaloLine(when, sender, body.strip()))
+    if not out:
+        return None
+    if any(x.strip() for x in lead):
+        out.insert(0, ZaloLine(None, "", "\n".join(lead)))
+    return out
+
+
+def split_schedule(body: str) -> tuple[str, str]:
+    """Tách phần báo lịch thêm/cắt bán trú ra khỏi tin. Trả về (phần còn lại, phần báo lịch).
+
+    Phần báo lịch kéo tới hết dòng, hoặc tới chữ "vắng/nghỉ" phía sau nếu có."""
+    text = nfc(body)
+    m = _SCHED.search(text.lower())
+    if not m:
+        return text, ""
+    line_end = text.find("\n", m.start())
+    line_end = len(text) if line_end < 0 else line_end
+    stop = _SCHED_END.search(text, m.end(), line_end)
+    end = stop.start() if stop else line_end
+    sched = text[m.start():end].strip(" ,.;:()-\n")
+    rest = (text[: m.start()] + " " + text[end:]).strip()
+    return rest, sched
+
+
 def parse_messages(text: str, known_classes: set[str] | None = None) -> list[ParsedMessage]:
     """Tách và đọc các tin nhắn trong đoạn văn bản dán vào."""
+    zl = split_zalo(text)
+    if zl is not None:
+        return _parse_zalo(zl, known_classes)
+    return _parse_plain(text, known_classes)
+
+
+def _parse_zalo(lines: list[ZaloLine], known_classes: set[str] | None) -> list[ParsedMessage]:
+    known = set(known_classes) if known_classes else None
+    out: list[ParsedMessage] = []
+    for z in sorted(lines, key=lambda x: x.when or dt.datetime.min):
+        rest, sched = split_schedule(z.body)
+        sender_codes = _class_codes(z.sender, known) if z.sender else []
+        sender_class = f"{sender_codes[0].group(1)}D{sender_codes[0].group(2)}" if sender_codes else None
+        msgs = _parse_plain(rest, known_classes) if rest.strip() else []
+        if not msgs:
+            body = _preclean(rest, known)
+            m = _parse_segment(rest, body, None)
+            has_word = _REPORT_WORD.search(fold(body)) is not None
+            if m.full or m.present is not None or (m.names and has_word) or sched:
+                if not has_word and m.present is None and not m.full:
+                    m.names = []  # chỉ báo lịch, phần còn lại là lời chào…
+                msgs = [m]
+        else:
+            # tin không ghi lớp mà cũng không có chữ "vắng/nghỉ…": lời chào, cảm ơn… -> bỏ
+            msgs = [m for m in msgs if m.cls or m.present is not None or m.full
+                    or _REPORT_WORD.search(fold(m.raw))]
+            if sched and not msgs:
+                msgs = [ParsedMessage(raw=rest.strip())]
+        for i, m in enumerate(msgs):
+            m.when, m.sender, m.sender_class = z.when, z.sender, sender_class
+            if i == 0 and sched:
+                m.schedule = sched
+                if m.cls is None:
+                    codes = _class_codes(z.body, known)
+                    if codes:
+                        m.cls = f"{codes[0].group(1)}D{codes[0].group(2)}"
+            out.append(m)
+    return out
+
+
+def _parse_plain(text: str, known_classes: set[str] | None = None) -> list[ParsedMessage]:
     known = set(known_classes) if known_classes else None
     text = _preclean(text, known)
     matches = _class_codes(text, known)

@@ -20,8 +20,6 @@ class Student:
     lop_bt: str = ""  # lớp tính bán trú khi khác lớp học
     an_ghep: str = ""  # mã nhóm ăn ghép, vd. 1.2
     cat_thu6: bool = False
-    vang_tu: dt.date | None = None  # vắng dài hạn
-    vang_den: dt.date | None = None  # None = tới khi có thông báo mới
     bt_tu: dt.date | None = None  # bắt đầu ăn bán trú từ ngày
     cat_tu: dt.date | None = None  # cắt bán trú từ ngày (ngày này không ăn)
     ghi_chu: str = ""
@@ -44,8 +42,6 @@ class Student:
 
     def auto_absent_reason(self, day: dt.date) -> str:
         """Lý do vắng tự động trong ngày, '' nếu không có."""
-        if self.vang_tu and day >= self.vang_tu and (self.vang_den is None or day <= self.vang_den):
-            return "vắng dài hạn"
         if self.cat_thu6 and day.weekday() == 4:
             return "cắt thứ 6"
         return ""

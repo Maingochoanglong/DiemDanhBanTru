@@ -1,4 +1,4 @@
-"""Tab Lịch thêm/cắt: lên lịch cắt hoặc thêm bán trú từ một ngày, cắt thứ 6 hàng tuần, vắng dài hạn."""
+"""Tab Lịch thêm/cắt: lên lịch cắt hoặc thêm bán trú từ một ngày, cắt thứ 6 hàng tuần."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, parse_date
 from ..service import next_school_day
 from .widgets import center, tag_colors, with_scrollbar
 
-KIND_ORDER = [sch.CUT, sch.ADD, sch.FRIDAY, sch.LONG]
+KIND_ORDER = [sch.CUT, sch.ADD, sch.FRIDAY]
 
 
 class TabLich(ttk.Frame):
@@ -24,14 +24,12 @@ class TabLich(ttk.Frame):
         top = ttk.Frame(self)
         top.pack(fill="x")
         ttk.Label(top, text="Lịch thêm / cắt bán trú", style="Title.TLabel").pack(side="left")
-        ttk.Button(top, text="Vắng dài hạn…", command=lambda: self.open_dialog(sch.LONG)).pack(side="right")
         ttk.Button(top, text="Cắt thứ 6 hàng tuần…", command=lambda: self.open_dialog(sch.FRIDAY)).pack(side="right", padx=6)
         ttk.Button(top, text="＋ Thêm bán trú…", style="Big.TButton", command=lambda: self.open_dialog(sch.ADD)).pack(side="right")
         ttk.Button(top, text="✂ Cắt bán trú…", style="Big.TButton", command=lambda: self.open_dialog(sch.CUT)).pack(side="right", padx=6)
         ttk.Label(self, style="Muted.TLabel", wraplength=1000, justify="left", text=(
             "Đặt trước ngày cắt hoặc thêm (ví dụ từ ngày mai, hay từ đầu tháng sau). Tới ngày đó app tự đổi sĩ số "
-            "và danh sách tích vắng, không cần nhớ. Em \"cắt thứ 6\" (thứ 6 học nửa buổi) được tự tính vắng mỗi thứ 6. "
-            "Em vắng dài hạn được tự tính vắng mỗi ngày tới khi hết hạn hoặc hủy.")).pack(anchor="w", pady=(4, 8))
+            "và danh sách tích vắng, không cần nhớ. Em \"cắt thứ 6\" (thứ 6 học nửa buổi) được tự tính vắng mỗi thứ 6.")).pack(anchor="w", pady=(4, 8))
 
         frame, self.tree = with_scrollbar(self, ttk.Treeview, columns=("ngay", "lop", "hs", "viec"),
                                           show="tree headings", selectmode="extended")
@@ -61,15 +59,12 @@ class TabLich(ttk.Frame):
         groups = {
             "soon": ("Sắp áp dụng", "warn"),
             "weekly": ("Hàng tuần – cắt thứ 6", ""),
-            "long": ("Vắng dài hạn", ""),
             "done": ("Đã áp dụng (30 ngày qua)", "muted"),
         }
         buckets: dict[str, list[sch.ScheduleItem]] = {k: [] for k in groups}
         for it in self.ws.schedule_items():
             if it.kind == sch.FRIDAY:
                 buckets["weekly"].append(it)
-            elif it.kind == sch.LONG:
-                buckets["long"].append(it)
             elif it.start and it.start > today:
                 buckets["soon"].append(it)
             else:
@@ -190,9 +185,6 @@ class ScheduleDialog(tk.Toplevel):
                    command=lambda: self.start.set(fmt_date(self.day_month))).grid(row=0, column=3, padx=2)
         ttk.Button(self.date_box, text=f"Hôm nay ({base:%d/%m})",
                    command=lambda: self.start.set(fmt_date(base))).grid(row=0, column=4, padx=2)
-        self.lbl_end = ttk.Label(self.date_box, text="Đến ngày (trống = tới khi có thông báo):")
-        self.end = tk.StringVar()
-        self.ent_end = ttk.Entry(self.date_box, textvariable=self.end, width=12)
 
         self.note = tk.BooleanVar(value=True)
         self.chk_note = ttk.Checkbutton(body, variable=self.note, text="Ghi chú vào cột H của lớp (như \"T11 CẮT …\")")
@@ -246,19 +238,12 @@ class ScheduleDialog(tk.Toplevel):
             sch.CUT: "Chọn em thôi ăn bán trú (chọn được nhiều em, giữ Ctrl).",
             sch.ADD: "Chọn em trong lớp chưa ăn bán trú, hoặc dòng cuối để thêm em mới.",
             sch.FRIDAY: "Chọn em nghỉ ăn thứ 6 hàng tuần (thứ 6 học nửa buổi).",
-            sch.LONG: "Chọn em nghỉ dài ngày; app tự tính vắng mỗi ngày.",
         }
         self.lbl_hint.configure(text=hints[k])
         if k == sch.FRIDAY:
             self.date_box.pack_forget()
         else:
             self.date_box.pack(fill="x", pady=(10, 0), before=self.chk_note)
-        if k == sch.LONG:
-            self.lbl_end.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
-            self.ent_end.grid(row=1, column=2, sticky="w", pady=(6, 0))
-        else:
-            self.lbl_end.grid_remove()
-            self.ent_end.grid_remove()
         self._fill()
 
     def _sel_changed(self) -> None:
@@ -286,11 +271,6 @@ class ScheduleDialog(tk.Toplevel):
             start = parse_date(self.start.get())
             if not start:
                 self.lbl_err.configure(text="Ngày áp dụng phải có dạng dd/mm/yyyy.")
-                return
-        if k == sch.LONG and clean_spaces(self.end.get()):
-            end = parse_date(self.end.get())
-            if not end or end < start:
-                self.lbl_err.configure(text="Ngày kết thúc không hợp lệ.")
                 return
         dob = parse_date(self.new_dob.get())
         self.result = {"kind": k, "code": self.code.get(), "ids": ids, "start": start, "end": end,

@@ -69,7 +69,7 @@ class DayState:
         return self.roster.si_so(code, self.date)
 
     def auto_absent(self, code: str) -> dict[str, str]:
-        """id -> lý do vắng tự động (cắt thứ 6, vắng dài hạn)."""
+        """id -> lý do vắng tự động (cắt thứ 6)."""
         out = {}
         for s in self.roster.boarding(code, self.date):
             reason = s.auto_absent_reason(self.date)

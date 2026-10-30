@@ -3,7 +3,7 @@
 Hiểu các ghi chú giáo vụ đang viết, ví dụ:
     Thứ 6 hàng tuần cắt 2 em Bảo Ngân, Minh Phúc     -> cắt thứ 6
     Lục Thảo Mi cắt thứ 6 hàng tuần             -> cắt thứ 6
-    Vũ Khoa vắng tới khi có thông báo mới              -> vắng dài hạn
+    Vũ Khoa vắng tới khi có thông báo mới              -> bỏ qua (không còn chế độ vắng dài hạn)
     T11 CẮT Hồ Khánh Ngọc                            -> cắt bán trú từ 01/11
     Từ 12/10 cắt bán trú Tô Minh Khôi          -> cắt bán trú từ 12/10
     Cắt bán trú 12/10 Tô Minh Khôi, 19/10 Bảo Ngân
@@ -27,7 +27,7 @@ _KEY = re.compile(
     rf"(?P<thu6>{_B}th[ứu]\s*(?:6|sáu)\s*(?:hàng|hang)\s*tu[ầa]n\s*c[ắa]t(?:\s*bán\s*trú)?(?:\s*\d+\s*em)?)"
     rf"|(?P<thu6_after>{_B}c[ắa]t\s*(?:bán\s*trú\s*)?th[ứu]\s*(?:6|sáu)(?:\s*hàng\s*tuần)?)"
     rf"|(?P<long>{_B}v[ắa]ng\s*(?:cho\s*)?(?:tới|đến|toi|den)\s*khi(?:\s*có\s*thông\s*báo\s*mới)?)"
-    rf"|(?P<month_cut>{_B}t\s*(?P<m>\d{{1,2}})\s*c[ắa]t(?:\s*bán\s*trú)?(?!\w))"
+    rf"|(?P<month_cut>{_B}(?:tháng|t)\s*(?P<m>\d{{1,2}})\s*c[ắa]t(?:\s*bán\s*trú)?(?!\w))"
     rf"|(?P<date_cut>{_B}(?:từ\s*)?(?P<d1>\d{{1,2}})\s*/\s*(?P<m1>\d{{1,2}})\s*c[ắa]t(?:\s*bán\s*trú)?(?!\w))"
     rf"|(?P<from_cut>{_B}từ\s*(?:ngày\s*)?(?P<d2>\d{{1,2}})\s*/\s*(?P<m2>\d{{1,2}}))"
     rf"|(?P<cut>{_B}c[ắa]t(?:\s*bán\s*trú)?(?!\w))"
@@ -37,7 +37,8 @@ _KEY = re.compile(
     re.IGNORECASE,
 )
 KINDS = ("thu6", "thu6_after", "long", "month_cut", "date_cut", "from_cut", "cut", "month_add", "date_add", "add")
-AFTER = ("thu6_after", "long")  # tên đứng TRƯỚC từ khóa
+AFTER = ("thu6_after", "long")  # tên đứng TRƯỚC từ khóa ("long" chỉ để tách ý, không tạo gợi ý)
+DATE_KEYS = ("bt_tu", "cat_tu")
 _ITEM_DATE = re.compile(r"^\s*(\d{1,2})\s*/\s*(\d{1,2})\s+")
 _GHEP = re.compile(r"ghép\s*(\d)\s*[./]\s*(\d)", re.IGNORECASE)
 _TAIL_NOISE = re.compile(r"(ghép\s*\d\s*[./]\s*\d|chú\s*ý.*|lưu\s*ý.*|\(.*?\))", re.IGNORECASE)
@@ -58,27 +59,38 @@ class Suggestion:
         return (self.code, sid)
 
     def merge(self, other: Suggestion) -> None:
-        """Gộp gợi ý cùng một em (vd. 'thêm Khôi Vĩ' rồi 'thêm Khôi Vĩ ghép 1.3')."""
-        added = {k: v for k, v in other.changes.items() if k not in self.changes}
-        if not added:
-            return
-        self.changes.update(added)
-        extra = []
-        for k, v in added.items():
-            if k == "an_ghep":
-                extra.append(f"ăn ghép {v}")
-            elif k == "bt_tu":
-                extra.append(f"ăn từ {fmt_date(v)}")
-            elif k == "lop_bt":
-                extra.append(f"tính bán trú lớp {v}")
-            elif k == "cat_thu6":
-                extra.append("cắt thứ 6 hàng tuần")
-            elif k == "vang_tu":
-                extra.append(f"vắng dài hạn từ {fmt_date(v)}")
-            elif k == "cat_tu":
-                extra.append(f"cắt bán trú từ {fmt_date(v)}")
-        if extra:
-            self.text = f"{self.text}, {', '.join(extra)}"
+        """Gộp gợi ý cùng một em (vd. 'thêm Khôi Vĩ' rồi 'thêm Khôi Vĩ ghép 1.3').
+
+        Cùng một mốc ngày ở nhiều ghi chú thì lấy ngày sớm nhất (vd. ghi chú cũ 'tháng 11 thêm X'
+        nhưng sổ đã ghi 'thêm X' từ 26/10)."""
+        changed = False
+        for k, v in other.changes.items():
+            if k not in self.changes:
+                self.changes[k] = v
+                changed = True
+            elif k in DATE_KEYS and v and self.changes[k] and v < self.changes[k]:
+                self.changes[k] = v
+                changed = True
+        if changed:
+            self.text = f"{self.text.split(' — ')[0]} — {describe(self.changes, self.new_name)}"
+
+
+def describe(changes: dict, new_name: str = "") -> str:
+    parts = []
+    if new_name:
+        parts.append("HS chưa có trong danh sách, thêm mới")
+    if changes.get("ban_tru"):
+        start = changes.get("bt_tu")
+        parts.append("thêm vào bán trú" + (f" từ {fmt_date(start)}" if start else ""))
+    if changes.get("lop_bt"):
+        parts.append(f"tính bán trú lớp {changes['lop_bt']}")
+    if changes.get("an_ghep"):
+        parts.append(f"ăn ghép {changes['an_ghep']}")
+    if changes.get("cat_thu6"):
+        parts.append("cắt thứ 6 hàng tuần")
+    if changes.get("cat_tu"):
+        parts.append(f"cắt bán trú từ {fmt_date(changes['cat_tu'])}")
+    return ", ".join(parts)
 
 
 def _date(day: int, month: int, ref: dt.date) -> dt.date | None:
@@ -158,46 +170,36 @@ def suggest_from_note(roster: Roster, code: str, note: str, seen: dt.date) -> li
         return []
     out: list[Suggestion] = []
     for kind, m, arg in _clauses(note):
-        if kind in (None, "from_cut"):
+        if kind in (None, "from_cut", "long"):  # "vắng tới khi…": không còn chế độ vắng dài hạn
             continue
         ghep = _GHEP.search(arg)
         for name, item_date in _names(arg):
             adding = kind in ("add", "month_add", "date_add")
             s, cands = _find_student(roster, code, name, adding)
             changes: dict = {}
-            desc = ""
             if kind in ("thu6", "thu6_after"):
-                changes, desc = {"cat_thu6": True}, "cắt thứ 6 hàng tuần"
-            elif kind == "long":
-                changes, desc = {"vang_tu": seen, "vang_den": None}, f"vắng dài hạn từ {fmt_date(seen)}"
+                changes = {"cat_thu6": True}
             elif kind == "month_cut":
-                d = _date(1, int(m.group("m")), seen)
-                changes, desc = {"cat_tu": d}, f"cắt bán trú từ {fmt_date(d)}"
+                changes = {"cat_tu": _date(1, int(m.group("m")), seen)}
             elif kind in ("date_cut", "date_from"):
-                d = _date(int(m.group("d1") or m.group("d2")), int(m.group("m1") or m.group("m2")), seen)
-                changes, desc = {"cat_tu": d}, f"cắt bán trú từ {fmt_date(d)}"
+                changes = {"cat_tu": _date(int(m.group("d1") or m.group("d2")), int(m.group("m1") or m.group("m2")), seen)}
             elif kind == "cut":
-                d = _date(*item_date, seen) if item_date else seen
-                changes, desc = {"cat_tu": d}, f"cắt bán trú từ {fmt_date(d)}"
-            elif kind in ("add", "month_add", "date_add"):
+                changes = {"cat_tu": _date(*item_date, seen) if item_date else seen}
+            elif adding:
                 changes = {"ban_tru": True}
-                desc = "thêm vào bán trú"
-                start = None
+                start = seen  # "thêm X" không ghi ngày: tính từ ngày của sheet có ghi chú
                 if kind == "month_add":
                     start = _date(1, int(m.group("ma")), seen)
                 elif kind == "date_add":
                     start = _date(int(m.group("da")), int(m.group("mda")), seen)
                 if start:
                     changes["bt_tu"] = start
-                    desc += f" từ {fmt_date(start)}"
                 if s is not None and s.lop != code and s.lop_tinh != code:
                     changes["lop_bt"] = code
-                    desc += f" (học lớp {s.lop}, tính bán trú lớp {code})"
                 if ghep:
                     changes["an_ghep"] = f"{ghep.group(1)}.{ghep.group(2)}"
-                    desc += f", ăn ghép {changes['an_ghep']}"
             if s is None and adding and not cands:
-                out.append(Suggestion(code, f"{code}: {name} — HS chưa có trong danh sách, thêm mới và {desc}",
+                out.append(Suggestion(code, f"{code}: {name} — {describe(changes, name)}",
                                       None, changes, new_name=name, source=note))
                 continue
             if s is None:
@@ -207,13 +209,15 @@ def suggest_from_note(roster: Roster, code: str, note: str, seen: dt.date) -> li
                                           None, {}, apply=False, source=note))
                 continue
             todo = {k: v for k, v in changes.items() if getattr(s, k) != v}
-            if kind == "long" and s.vang_tu:
-                todo = {}
+            if adding and s.ban_tru and not s.bt_tu:
+                todo.pop("bt_tu", None)  # em đã ăn bán trú sẵn
+                todo.pop("ban_tru", None)
             if kind in ("cut", "month_cut", "date_cut", "date_from") and (not s.ban_tru or s.cat_tu):
                 todo = {}
             if not todo:
                 continue
-            out.append(Suggestion(code, f"{code}: {s.ho_ten} — {desc}", s, todo, source=note))
+            where = code if s.lop_tinh == code else f"{code} → em học {s.lop}"
+            out.append(Suggestion(code, f"{where}: {s.ho_ten} — {describe(todo)}", s, todo, source=note))
     return out
 
 

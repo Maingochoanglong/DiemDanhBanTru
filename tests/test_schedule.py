@@ -24,10 +24,10 @@ def test_cut_tomorrow_and_add_next_month(roster):
 
 def test_note_text_matches_teacher_style_and_is_readable_back(roster):
     a = roster.students[4]  # Hồ Khánh Ngọc 1D15
-    assert sch.note_text(sch.CUT, [a], dt.date(2026, 11, 1)) == "T11 CẮT Hồ Khánh Ngọc"
+    assert sch.note_text(sch.CUT, [a], dt.date(2026, 11, 1)) == "Tháng 11 cắt bán trú Hồ Khánh Ngọc"
+    assert sch.note_text(sch.ADD, [a], dt.date(2026, 11, 1)) == "Tháng 11 thêm Hồ Khánh Ngọc"
     assert sch.note_text(sch.CUT, [a], FRI) == "Từ 30/10 cắt bán trú Hồ Khánh Ngọc"
     assert sch.note_text(sch.FRIDAY, [a], None) == "Thứ 6 hàng tuần cắt Hồ Khánh Ngọc"
-    assert sch.note_text(sch.LONG, [a], THU) == "Hồ Khánh Ngọc vắng tới khi có thông báo mới"
     # ghi chú app viết, đọc lại gợi ý đúng việc đó
     sug = suggest_from_note(roster, "1D15", sch.note_text(sch.CUT, [a], FRI), THU)
     assert [(g.student.ho_ten, g.changes) for g in sug] == [("Hồ Khánh Ngọc", {"cat_tu": FRI})]

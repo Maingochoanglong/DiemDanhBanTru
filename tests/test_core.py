@@ -149,9 +149,6 @@ def test_boarding_dates_and_auto_absent(roster):
     s = roster.students[0]
     s.cat_tu = dt.date(2026, 11, 1)
     assert s.is_boarding(dt.date(2026, 10, 31)) and not s.is_boarding(dt.date(2026, 11, 2))
-    k = roster.students[21]  # Ninh Vũ Khoa 4D21
-    k.vang_tu = dt.date(2026, 10, 10)
-    assert k.auto_absent_reason(DAY) == "vắng dài hạn"
     n = roster.students[24]  # Lục Thảo Mi 4D19
     n.cat_thu6 = True
     assert n.auto_absent_reason(DAY) == ""
