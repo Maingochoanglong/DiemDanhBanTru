@@ -47,8 +47,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete ban-moi-nhat --yes --cleanup-tag || true
-          gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
-            --target "$GITHUB_SHA" --prerelease \
-            --title "Điểm danh bán trú — bản mới nhất" \
-            --notes "Tải file DiemDanhBanTru.exe bên dưới rồi mở để dùng. Dựng từ commit $GITHUB_SHA (nhánh $GITHUB_REF_NAME)."
+          notes="Tải file DiemDanhBanTru.exe bên dưới rồi mở để dùng. Dựng từ commit $GITHUB_SHA (nhánh $GITHUB_REF_NAME)."
+          publish() {
+            if gh release view ban-moi-nhat >/dev/null 2>&1; then
+              # cập nhật bản đã có (không xóa rồi tạo lại, tránh hỏng khi API GitHub lỗi giữa chừng)
+              # (gọi trong "if" nên bash không tự dừng khi lỗi: nối bằng && để lỗi bước nào cũng báo)
+              git tag -f ban-moi-nhat "$GITHUB_SHA" && git push -f origin refs/tags/ban-moi-nhat \
+                && gh release upload ban-moi-nhat dist/DiemDanhBanTru.exe --clobber \
+                && gh release edit ban-moi-nhat --notes "$notes"
+            else
+              gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
+                --target "$GITHUB_SHA" --prerelease \
+                --title "Điểm danh bán trú — bản mới nhất" --notes "$notes"
+            fi
+          }
+          for i in 1 2 3; do
+            if publish; then exit 0; fi
+            echo "Đăng chưa được (lần $i), thử lại sau $((i * 10)) giây"; sleep $((i * 10))
+          done
+          exit 1
