@@ -149,3 +149,31 @@ def test_unresolved_names_and_unplaced_messages(ws):  # noqa: F811
     assert ws.pending_names()["2D17"] == ["Xyz Qwe"]
     ws.load_day(dt.date(2026, 10, 29))
     assert ws.unplaced == []
+
+
+def test_names_that_look_like_stop_words():
+    from app.core.parser import extract_names
+
+    assert extract_names("31/41 (Hoàng Nghi, Gia Lâm)") == ["Hoàng Nghi", "Gia Lâm"]
+    assert extract_names("vang Minh Anh, nghi phep Bao Ngoc") == ["Minh Anh", "Bao Ngoc"]
+    assert extract_names("Vang Minh Anh") == ["Minh Anh"]
+    assert extract_names("vắng: Duy kien, quỳnh anh") == ["Duy kien", "quỳnh anh"]
+
+
+def test_zalo_multi_line_and_multi_class_messages():
+    log = """[30/10/2026 07:34:45] Cô A: 1D16 vắng 2:
+- Gia Hưng
+- Thanh Vy
+4/6
+[30/10/2026 07:42:18] Cô B: Lớp 1D19: 2/4( Bảo Ngọc, Gia Hân
+[30/10/2026 08:03:21] Cô C: 2D17. 3/4. Vắng Hải Long
+1D15 bán trú vắng 1 Tuấn Anh. 5/6
+4D19 vắng Hoài Nam nha"""
+    got = {m.cls: (m.present, m.total, m.names) for m in parse_messages(log, {"1D15", "1D16", "1D19", "2D17", "4D19"})}
+    assert got == {
+        "1D16": (4, 6, ["Gia Hưng", "Thanh Vy"]),
+        "1D19": (2, 4, ["Bảo Ngọc", "Gia Hân"]),
+        "2D17": (3, 4, ["Hải Long"]),
+        "1D15": (5, 6, ["Tuấn Anh"]),
+        "4D19": (None, None, ["Hoài Nam"]),
+    }

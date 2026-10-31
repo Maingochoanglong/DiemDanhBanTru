@@ -70,11 +70,7 @@ class TabDiemDanh(ttk.Frame):
         self.sugg_items: dict[str, object] = {}  # iid -> đề nghị lịch (notes.Suggestion)
         self.check_vars: dict[str, tk.BooleanVar] = {}
         self.check_widgets: dict[str, ttk.Checkbutton] = {}
-        self.meal_rows: dict[str, object] = {}  # iid -> MealLine
         self.unplaced_items: dict[str, object] = {}  # iid -> tin không rõ lớp (ParsedMessage)
-        self.meal_open = not getattr(self.winfo_toplevel(), "compact", False)  # màn nhỏ: thu gọn bảng suất ăn
-        self._last_balanced = True
-        self._meal_auto = False  # bảng suất ăn đang mở do app tự mở (vì lệch)
         self._summary: list[tuple[str, str]] = []  # (chữ, mức: ok/warn/err)
         self._build()
         self.results = ResultWindow(self)
@@ -86,8 +82,8 @@ class TabDiemDanh(ttk.Frame):
         base = tkfont.nametofont("TkDefaultFont")
         family, size = base.actual("family"), base.actual("size")
         style = ttk.Style()
-        style.configure("So.Treeview", rowheight=23 if compact else 30, font=(family, size + 1))
-        style.configure("So.Treeview.Heading", font=(family, size, "bold"))
+        style.configure("So.Treeview", rowheight=28 if compact else 32, font=(family, size + 2))
+        style.configure("So.Treeview.Heading", font=(family, size + 1, "bold"))
         style.configure("Link.TLabel", font=(family, size, "bold"))
 
         # Thanh dưới (đóng gói trước để luôn hiện đủ khi cửa sổ thấp)
@@ -102,8 +98,7 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_saved.pack(side="left")
 
         # ① Ô dán tin nhắn
-        box = ttk.LabelFrame(self, text="① Dán tin nhắn Zalo vào đây (Ctrl+V) — dán cả đoạn chép từ Zalo máy tính, "
-                                        "app tự lấy đúng tin của ngày đang mở", padding=(8, 6))
+        box = ttk.LabelFrame(self, text="Dán tin nhắn Zalo vào đây (Ctrl+V)", padding=(8, 6))
         box.pack(fill="x")
         row = ttk.Frame(box)
         row.pack(fill="x")
@@ -125,72 +120,84 @@ class TabDiemDanh(ttk.Frame):
         srow.bind("<Configure>", lambda e: self.lbl_summary.configure(wraplength=max(300, e.width - 300)))
         self.lbl_summary.bind("<Button-1>", lambda e: self.show_results())
 
-        self.paned = paned = ttk.PanedWindow(self, orient="horizontal")
-        paned.pack(fill="both", expand=True, pady=(8, 0))
-
-        # ② Bảng điểm danh giống sổ
-        left = ttk.LabelFrame(paned, text="② Bảng điểm danh — bấm vào một lớp để xem, tích vắng", padding=6)
-        paned.add(left, weight=3)
-        self.lbl_totals = ttk.Label(left, text="", style="Title.TLabel")
-        self.lbl_totals.pack(anchor="w", pady=(0, 4))
+        # Bảng điểm danh giống sổ, rộng hết màn hình
+        left = ttk.LabelFrame(self, text="Bảng điểm danh — bấm đúp vào một lớp để tích vắng, xử lý tên", padding=6)
+        left.pack(fill="both", expand=True, pady=(8, 0))
+        trow = ttk.Frame(left)
+        trow.pack(fill="x", pady=(0, 4))
+        self.lbl_totals = ttk.Label(trow, text="", style="Title.TLabel")
+        self.lbl_totals.pack(side="left")
+        self.lbl_meal_total = ttk.Label(trow, text="", style="Title.TLabel", cursor="hand2")
+        self.lbl_meal_total.pack(side="left", padx=(16, 0))
+        self.lbl_meal_total.bind("<Button-1>", lambda e: self.app.show_tab(self.app.tab_sa))
         legend = ttk.Frame(left)
         legend.pack(side="bottom", fill="x", pady=(4, 0))
         for text, key in (("○ chưa báo", "muted"), ("✔ đủ", "ok"), ("● có vắng", "warn"), ("⚠ cần xem", "err")):
             tk.Label(legend, text=f" {text} ", background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
-        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch thêm/cắt · [App đoán lớp] tin không ghi lớp",
+        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch · [App đoán lớp] tin không ghi lớp",
                   style="Muted.TLabel").pack(side="left", padx=6)
         cols = ("lop", "gv", "siso", "vang", "hd", "ten", "note")
         frame, self.tree = with_scrollbar(left, ttk.Treeview, columns=cols, show="headings",
                                           selectmode="browse", style="So.Treeview")
         frame.pack(fill="both", expand=True)
         t = self.tree
-        heads = {"lop": ("Lớp", 74, "w"), "gv": ("GVCN", 150 if compact else 190, "w"), "siso": ("Sĩ số", 50, "center"),
-                 "vang": ("Vắng", 48, "center"), "hd": ("Hiện diện", 84 if compact else 100, "center"),
-                 "ten": ("Tên học sinh vắng", 250, "w"), "note": ("Ghi chú", 150, "w")}
+        heads = {"lop": ("Lớp", 90, "w"), "gv": ("GVCN", 220, "w"), "siso": ("Sĩ số", 64, "center"),
+                 "vang": ("Vắng", 64, "center"), "hd": ("Hiện diện", 100, "center"),
+                 "ten": ("Tên học sinh vắng", 420, "w"), "note": ("Ghi chú", 280, "w")}
         for c, (title, w, anchor) in heads.items():
             t.heading(c, text=title, anchor=anchor)
-            t.column(c, width=w, anchor=anchor, stretch=c in ("ten", "note"), minwidth=40)
+            t.column(c, width=w, anchor=anchor, stretch=c in ("ten", "note"), minwidth=50)
         for key in ROW_BG:
             t.tag_configure(key, background=ROW_BG[key], foreground=ROW_FG[key])
-        t.tag_configure("sum", background="#e4ecf7", font=(family, size, "bold"))
-        t.tag_configure("total", background="#c9d9ef", font=(family, size + 1, "bold"))
+        t.tag_configure("sum", background="#e4ecf7", font=(family, size + 1, "bold"))
+        t.tag_configure("total", background="#c9d9ef", font=(family, size + 2, "bold"))
         t.bind("<<TreeviewSelect>>", self._on_class_select)
+        t.bind("<Double-Button-1>", lambda e: self._open_from_table(e))
+        t.bind("<Return>", lambda e: self.open_class(self.current_class))
         t.bind("<Button-3>", self._on_table_right)
+        self._build_class_window(family, size)
 
-        right = ttk.PanedWindow(paned, orient="vertical")
-        paned.add(right, weight=2)
-        self.right = right
-
-        # ③ Lớp đang chọn
-        self.detail = ttk.LabelFrame(right, text="③ Lớp", padding=8)
-        right.add(self.detail, weight=3)
-        self.lbl_class = ttk.Label(self.detail, text="Chọn một lớp trong bảng", style="Title.TLabel")
-        self.lbl_class.pack(anchor="w")
+    def _build_class_window(self, family: str, size: int) -> None:
+        """Cửa sổ riêng của 1 lớp: tích vắng, xử lý tên chưa rõ, ghi chú. Mở bằng bấm đúp vào lớp."""
+        win = self.cls_win = tk.Toplevel(self)
+        win.withdraw()
+        win.title("Lớp")
+        win.transient(self.winfo_toplevel())
+        win.protocol("WM_DELETE_WINDOW", self.close_class)
+        win.bind("<Escape>", lambda e: self.close_class())
+        ttk.Style().configure("Big.TCheckbutton", font=(family, size + 1))
+        self.detail = ttk.Frame(win, padding=14)
+        self.detail.pack(fill="both", expand=True)
+        bar = ttk.Frame(self.detail)
+        bar.pack(side="bottom", fill="x", pady=(10, 0))
+        ttk.Button(bar, text="Xong", style="Big.TButton", command=self.close_class).pack(side="right")
+        self.lbl_cls_title = ttk.Label(self.detail, text="", style="Title.TLabel")
+        self.lbl_cls_title.pack(anchor="w")
+        self.lbl_class = ttk.Label(self.detail, text="", style="Title.TLabel")
+        self.lbl_class.pack(anchor="w", pady=(4, 0))
         brow = ttk.Frame(self.detail)
-        brow.pack(fill="x", pady=(4, 2))
+        brow.pack(fill="x", pady=(8, 4))
         ttk.Button(brow, text="Lớp này đủ", command=self.mark_full).pack(side="left")
-        ttk.Button(brow, text="Bỏ đã báo", command=self.unmark_reported).pack(side="left", padx=4)
-        ttk.Button(brow, text="Thêm/cắt…", command=lambda: self._schedule_menu_for(None)).pack(side="left")
-        frow = ttk.Frame(self.detail)
-        frow.pack(fill="x", pady=(2, 2))
-        ttk.Label(frow, text="Tìm tên:").pack(side="left")
+        ttk.Button(brow, text="Bỏ đã báo", command=self.unmark_reported).pack(side="left", padx=6)
+        ttk.Button(brow, text="Thêm/cắt bán trú…", command=lambda: self._schedule_menu_for(None)).pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
-        ttk.Entry(frow, textvariable=self.search_var, width=12).pack(side="left", padx=4)
-        self.lbl_hint = ttk.Label(frow, text="tích ô = vắng · chuột phải vào tên: cắt / thứ 6", style="Muted.TLabel")
-        self.lbl_hint.pack(side="left", padx=4)
+        ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
+        ttk.Label(brow, text="Tìm tên:").pack(side="right", padx=(0, 4))
         self.guess_row = ttk.Frame(self.detail)
         self.guess_row.pack(fill="x")
         self.pending_row = ttk.Frame(self.detail)
         self.pending_row.pack(fill="x")
-        self.checks = ScrollFrame(self.detail, height=120)
+        ttk.Label(self.detail, text="Tích ô = em vắng · chuột phải vào tên: cắt bán trú / cắt thứ 6",
+                  style="Muted.TLabel").pack(anchor="w", pady=(4, 2))
+        self.checks = ScrollFrame(self.detail, height=260)
         self.checks.pack(fill="both", expand=True)
-        self.lbl_sched = ttk.Label(self.detail, text="", style="Ok.TLabel", wraplength=300, justify="left")
+        self.lbl_sched = ttk.Label(self.detail, text="", style="Ok.TLabel", wraplength=800, justify="left")
         self.lbl_sched.pack(anchor="w")
-        self.lbl_extra = ttk.Label(self.detail, text="", style="Warn.TLabel", wraplength=300, justify="left")
+        self.lbl_extra = ttk.Label(self.detail, text="", style="Warn.TLabel", wraplength=800, justify="left")
         self.lbl_extra.pack(anchor="w")
         nrow = ttk.Frame(self.detail)
-        nrow.pack(fill="x", pady=(4, 0))
+        nrow.pack(fill="x", pady=(6, 0))
         ttk.Label(nrow, text="Ghi chú (cột H):").pack(side="left")
         self.note_var = tk.StringVar()
         e = ttk.Entry(nrow, textvariable=self.note_var)
@@ -198,88 +205,42 @@ class TabDiemDanh(ttk.Frame):
         e.bind("<FocusOut>", lambda ev: self._save_note())
         e.bind("<Return>", lambda ev: self._save_note())
         self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ nguyên chữ", command=self.clear_extra)
-        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=300, justify="left")
+        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left")
         self.lbl_warn.pack(anchor="w")
 
-        # ④ Bảng suất ăn: dòng tổng luôn hiện; bảng chi tiết thu gọn được (màn nhỏ mặc định thu gọn)
-        meal = ttk.LabelFrame(right, text="④ Bảng suất ăn (tự tính)", padding=6)
-        right.add(meal, weight=2 if self.meal_open else 0)
-        self.meal = meal
-        head = ttk.Frame(meal)
-        head.pack(fill="x")
-        self.btn_meal = ttk.Button(head, text="", command=self.toggle_meal)
-        self.btn_meal.pack(side="right")
-        self.lbl_meal_total = ttk.Label(head, text="", style="Title.TLabel")
-        self.lbl_meal_total.pack(side="left", anchor="w")
-        self.meal_body = ttk.Frame(meal)
-        self.lbl_meal_info = ttk.Label(self.meal_body, text="", style="Muted.TLabel", wraplength=300, justify="left")
-        self.lbl_meal_info.pack(side="bottom", anchor="w", fill="x", pady=(4, 0))
-        frame, self.tree_meal = with_scrollbar(self.meal_body, ttk.Treeview, columns=("nhom", "lop", "suat"),
-                                               show="headings", selectmode="browse", height=6)
-        frame.pack(fill="both", expand=True, pady=(6, 0))
-        m = self.tree_meal
-        m.heading("nhom", text="Nhóm", anchor="w")
-        m.heading("lop", text="Gồm", anchor="w")
-        m.heading("suat", text="Suất")
-        m.column("nhom", width=110, stretch=False)
-        m.column("lop", width=200)
-        m.column("suat", width=56, anchor="center", stretch=False)
-        tag_colors(m)
-        m.bind("<<TreeviewSelect>>", self._on_meal_select)
-        m.bind("<Double-Button-1>", self._on_meal_double)
+    def _open_from_table(self, e) -> str | None:
+        iid = self.tree.identify_row(e.y)
+        if iid and iid in self.ws.state.classes:
+            self.open_class(iid)
+            return "break"
+        return None
 
-        def wrap(e, widgets):
-            for w in widgets:
-                w.configure(wraplength=max(220, e.width - 20))
-
-        self.detail.bind("<Configure>", lambda e: wrap(e, (self.lbl_warn, self.lbl_extra, self.lbl_sched)))
-        meal.bind("<Configure>", lambda e: wrap(e, (self.lbl_meal_info,)))
-        self._apply_meal_state()
-        self.after(300, self._init_sashes)
-
-    def _init_sashes(self) -> None:
-        w = self.paned.winfo_width()
-        if w < 200:
-            self.after(300, self._init_sashes)
+    def open_class(self, code: str | None) -> None:
+        """Mở cửa sổ của lớp (dùng chung 1 cửa sổ, đổi nội dung khi chọn lớp khác)."""
+        if not code or self.ws.state is None or code not in self.ws.state.classes:
             return
-        try:
-            self.paned.sashpos(0, w - (470 if w < 1500 else 540))
-            self._place_meal_sash()
-        except Exception:  # noqa: BLE001
-            pass
+        self.select_class(code)
+        win = self.cls_win
+        if not win.winfo_viewable():
+            top = self.winfo_toplevel()
+            w = min(940, top.winfo_width() - 40)
+            h = min(660, top.winfo_height() - 40)
+            win.geometry(f"{w}x{h}")
+            center(win, top)
+            win.deiconify()
+        self._build_checks()
+        self._refresh_detail_labels()
+        win.lift()
+        win.focus_set()
 
-    # ------------------------------------------------------------------ thu gọn / mở
+    def close_class(self) -> None:
+        self._save_note()
+        self.cls_win.withdraw()
+        self.tree.focus_set()
+
     def _shrink_paste(self) -> None:
         if not self.paste.get("1.0", "end").strip():
             self.paste.configure(height=1)
-
-    def toggle_meal(self) -> None:
-        self.meal_open, self._meal_auto = not self.meal_open, False
-        self._apply_meal_state()
-        self.after(50, self._place_meal_sash)
-
-    def _apply_meal_state(self) -> None:
-        if self.meal_open:
-            self.meal_body.pack(fill="both", expand=True)
-            self.btn_meal.configure(text="Thu gọn ▾")
-        else:
-            self.meal_body.pack_forget()
-            self.btn_meal.configure(text="Xem bảng ▸")
-        try:
-            self.right.pane(self.meal, weight=2 if self.meal_open else 0)
-        except Exception:  # noqa: BLE001
-            pass
-
-    def _place_meal_sash(self) -> None:
-        """Đặt đường chia khung ③/④: thu gọn thì ④ chỉ cao đủ dòng tổng."""
-        self.update_idletasks()
-        h = self.right.winfo_height()
-        if h < 200:
-            return
-        if self.meal_open:
-            self.right.sashpos(0, int(h * (0.5 if h < 500 else 0.56)))
-        else:
-            self.right.sashpos(0, h - self.meal.winfo_reqheight() - 4)
 
     # ------------------------------------------------------------------ làm mới
     def refresh(self) -> None:
@@ -388,7 +349,7 @@ class TabDiemDanh(ttk.Frame):
                 label += f"  (cắt từ {s.cat_tu:%d/%m})"
             if s.an_ghep:
                 label += f"  [ăn {s.an_ghep}]"
-            cb = ttk.Checkbutton(self.checks.inner, text=label, variable=var,
+            cb = ttk.Checkbutton(self.checks.inner, text=label, variable=var, style="Big.TCheckbutton",
                                  command=lambda sid=s.id, v=var: self._toggle(sid, v.get()))
             cb.grid(row=i // cols, column=i % cols, sticky="w", padx=(4, 14), pady=1)
             cb.bind("<Button-3>", lambda e, st_=s: self._schedule_menu_for(st_, e))
@@ -403,7 +364,7 @@ class TabDiemDanh(ttk.Frame):
         self._filter_checks()
 
     def _check_cols(self) -> int:
-        w = self.detail.winfo_width()
+        w = self.cls_win.winfo_width() if self.cls_win.winfo_viewable() else 940
         return 3 if w > 620 else 2
 
     def _sync_checks(self) -> None:
@@ -437,7 +398,8 @@ class TabDiemDanh(ttk.Frame):
         info = self.ws.roster.classes.get(code)
         gv = f" · GVCN {info.gvcn}" if info and info.gvcn else ""
         ma = f" ({info.ma_ngan})" if info and info.ma_ngan else ""
-        self.detail.configure(text=f"③ Lớp {code}{ma}{gv}")
+        self.lbl_cls_title.configure(text=f"Lớp {code}{ma}{gv}")
+        self.cls_win.title(f"Lớp {code}")
         c = st.cd(code)
         state = "chưa báo" if not c.reported else ("đủ" if not st.absent_count(code) else "đã báo")
         self.lbl_class.configure(
@@ -483,84 +445,19 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_warn.configure(text="\n".join("⚠ " + w for w in warns))
 
     def _refresh_meals(self) -> None:
-        m = self.tree_meal
-        m.delete(*m.get_children())
-        self.meal_rows.clear()
-        layout = self.ws.layout
-        if layout.is_empty:
+        """Dòng "Tổng suất = hiện diện" trên màn Điểm danh; bảng đầy đủ ở tab Suất ăn."""
+        tab = getattr(self.app, "tab_sa", None)
+        if tab is not None:
+            tab.refresh()
+        if self.ws.layout.is_empty:
             self.lbl_meal_total.configure(text="")
-            self.lbl_meal_info.configure(text="Sổ chưa có bảng suất ăn bên dưới (như sheet ngày 21–28/10).",
-                                         style="Err.TLabel")
             return
         summary = self.ws.meals()
-        manual = self.ws.state.manual_codes(layout)
-        for line in summary.lines:
-            r = line.row
-            gom = " + ".join(r.classes)
-            if r.code:
-                gom += f" + ghép {line.o}"
-                if line.m:
-                    gom += f" − vắng {line.m}"
-                if r.code in manual:
-                    gom += " ✎"
-            iid = m.insert("", "end", values=(r.label, gom, line.meals), tags=("warn",) if line.m else ())
-            self.meal_rows[iid] = line
-        if layout.self_classes:
-            m.insert("", "end", values=("Tự ăn tại lớp", ", ".join(layout.self_classes), summary.self_meals),
-                     tags=("muted",))
         ok = summary.balanced
-        if not ok and self._last_balanced and not self.meal_open:  # vừa bị lệch: tự mở bảng để xem
-            self.meal_open, self._meal_auto = True, True
-            self._apply_meal_state()
-            self.after(50, self._place_meal_sash)
-        elif ok and self._meal_auto and self.meal_open:  # hết lệch: thu lại như cũ
-            self.meal_open, self._meal_auto = False, False
-            self._apply_meal_state()
-            self.after(50, self._place_meal_sash)
-        self._last_balanced = ok
         self.lbl_meal_total.configure(
-            text=f"Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present} {'✔' if ok else '✖'}",
-            style="Ok.TLabel" if ok else "Err.TLabel")
-        info = "Bấm vào 1 nhóm để xem chi tiết · nhóm có ✎: bấm đúp để nhập số em ghép vắng."
-        if summary.warnings:
-            self.lbl_meal_info.configure(text="\n".join("⚠ " + w for w in summary.warnings), style="Err.TLabel")
-        else:
-            self.lbl_meal_info.configure(text=info, style="Muted.TLabel")
-
-    def _on_meal_select(self, _e=None) -> None:
-        sel = self.tree_meal.selection()
-        line = self.meal_rows.get(sel[0]) if sel else None
-        if line is None:
-            return
-        r = line.row
-        text = f"{r.label}: {' + '.join(r.classes) or '—'}"
-        if r.code:
-            text += f" + {line.o} em ghép"
-            if line.m:
-                names = f": {', '.join(line.absent_names)}" if line.absent_names else ""
-                text += f", ghép vắng {line.m}{names}"
-        text += f" → {line.meals} suất"
-        self.lbl_meal_info.configure(text=text, style="TLabel")
-
-    def _on_meal_double(self, _e=None) -> None:
-        from tkinter import simpledialog
-
-        sel = self.tree_meal.selection()
-        line = self.meal_rows.get(sel[0]) if sel else None
-        if line is None or not line.row.code:
-            return
-        code = line.row.code
-        st = self.ws.state
-        if code not in st.manual_codes(self.ws.layout):
-            self.app.flash(f"Nhóm {code} tự tính theo danh sách ghép (tab Học sinh → Ghép lớp).")
-            return
-        val = simpledialog.askinteger("Vắng ghép", f"Số em ghép vắng ở nhóm {code}:", parent=self,
-                                      initialvalue=st.manual_m.get(code, 0), minvalue=0, maxvalue=99)
-        if val is None:
-            return
-        self.ws.push_undo()
-        st.manual_m[code] = val
-        self.refresh_light()
+            text=f"·  Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present} "
+                 f"{'✔' if ok else '✖ (xem tab Suất ăn)'}",
+            foreground=OK_COLOR if ok else ERR_COLOR)
 
     def _refresh_totals(self) -> None:
         st = self.ws.state
@@ -982,8 +879,8 @@ class TabDiemDanh(ttk.Frame):
         st = self.ws.state
         codes = [c for c in st.classes if c in self.ws.pending_names()]
         if codes:
-            self.select_class(codes[0])
-            self.app.flash(f"Lớp {codes[0]}: bấm vào tên chưa rõ ở khung ③ để chọn em đúng.", error=True)
+            self.open_class(codes[0])
+            self.app.flash(f"Lớp {codes[0]}: bấm vào tên chưa rõ để chọn em đúng.", error=True)
         if self.ws.unplaced:
             self.show_results()
 

@@ -11,7 +11,9 @@ App Windows nhỏ gọn giúp giáo vụ làm sổ điểm danh bán trú hằng
 
 ## Tải về
 
-Trang **Releases** → bản *Điểm danh bán trú — bản mới nhất* → tải `DiemDanhBanTru.exe`. File được dựng tự động bởi GitHub Actions (`.github/workflows/build-windows.yml`) sau mỗi lần cập nhật mã.
+👉 **[Tải DiemDanhBanTru.exe](https://github.com/Maingochoanglong/DiemDanhBanTru/raw/main/tai-ve/DiemDanhBanTru.exe)** (thư mục [`tai-ve`](tai-ve) của repo).
+
+File được GitHub Actions (`.github/workflows/build-windows.yml`) dựng trên Windows và tự commit vào `tai-ve/` mỗi khi nhánh `main` có mã mới. Cũng có ở trang **Releases** → bản *Điểm danh bán trú — bản mới nhất*. Mỗi lần cập nhật, repo nặng thêm khoảng 17 MB (dung lượng file `.exe`).
 
 ## Chạy từ mã nguồn (cho người phát triển)
 
