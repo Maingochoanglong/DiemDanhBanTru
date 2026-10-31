@@ -18,7 +18,7 @@ from .tab_hoc_sinh import TabHocSinh, ask_import, ask_notes
 from .tab_lich import TabLich
 from .icons import icon, set_app_icon
 from .tab_suat_an import TabSuatAn
-from .widgets import ChoiceDialog
+from .widgets import ChoiceDialog, ask
 
 
 class _TabGroup(ttk.Frame):
@@ -138,18 +138,15 @@ class MainWindow:
     def step_day(self, step: int) -> None:
         self.open_day(next_school_day(self.ws.day, step))
 
-    def confirm_discard(self) -> bool:
-        """Hỏi lưu khi ngày đang mở có thay đổi. Trả về False nếu người dùng hủy."""
+    def confirm_discard(self, then: str = "chuyển ngày") -> bool:
+        """Hỏi lưu khi ngày đang mở có thay đổi. Trả về False nếu người dùng muốn ở lại."""
         if not self.ws.dirty:
             return True
-        ans = messagebox.askyesnocancel(
-            "Chưa lưu", f"Ngày {self.ws.day:%d/%m/%Y} có thay đổi chưa lưu vào sổ.\nLưu trước khi tiếp tục?",
-            parent=self.root)
-        if ans is None:
-            return False
-        if ans:
+        ans = ask(self.root, "Chưa lưu", f"Ngày {self.ws.day:%d/%m/%Y} có thay đổi chưa lưu vào sổ.",
+                  [("save", f"Lưu rồi {then}"), ("discard", "Không lưu"), ("stay", "Ở lại")])
+        if ans == "save":
             return self.save()
-        return True
+        return ans == "discard"
 
     def open_day(self, day: dt.date, ask: bool = True) -> None:
         if ask and not self.confirm_discard():
@@ -293,9 +290,9 @@ class MainWindow:
                 sheet = self.ws.save()
                 break
             except FileLockedError as e:
-                if not messagebox.askretrycancel(
-                        "File đang mở", f"File đang mở trong Excel nên chưa ghi được:\n{e}\n\n"
-                        "Hãy đóng file đó trong Excel rồi bấm Thử lại.", parent=self.root):
+                if ask(self.root, "File đang mở", f"File đang mở trong Excel nên chưa ghi được:\n{e}\n\n"
+                       "Hãy đóng file đó trong Excel rồi bấm Thử lại.",
+                       [("retry", "Thử lại"), ("cancel", "Hủy")], image="st_err") != "retry":
                     return False
             except Exception as e:  # noqa: BLE001
                 messagebox.showerror("Lỗi khi lưu", f"Không lưu được:\n{e}", parent=self.root)
@@ -308,29 +305,30 @@ class MainWindow:
         return True
 
     def _check_unresolved(self) -> bool:
-        """Chốt chặn: còn tên chưa rõ / tin không rõ lớp (chưa tính vắng) thì hỏi trước khi lưu."""
-        pend = self.ws.pending_names()
-        unplaced = self.ws.unplaced
-        guessed = self.ws.guessed_classes()
-        if not pend and not unplaced:
+        """Chốt chặn: còn tên chưa rõ / tin không rõ lớp (chưa tính vắng) thì CHƯA cho lưu, in.
+
+        Không bị kẹt: mỗi tên chưa rõ đều chọn được "Chọn em này", "Giữ nguyên chữ GV ghi" hoặc "Bỏ qua tên này";
+        tin không rõ lớp chọn được "Ghi vào lớp này" hoặc "Bỏ tin này".
+        """
+        n = self.ws.unresolved_count()
+        if not n:
             return True
-        lines = [f"Lớp {code}: {', '.join(names)}" for code, names in pend.items()]
-        for m in unplaced:
+        lines = [f"Lớp {code}: {', '.join(names)}" for code, names in self.ws.pending_names().items()]
+        for m in self.ws.unplaced:
             who = f" (người gửi {m.sender})" if m.sender else ""
             lines.append(f"Tin không rõ lớp{who}: {', '.join(m.names)}")
-        for code, how in guessed.items():
-            lines.append(f"Lớp {code}: app tự đoán lớp {how} — nên xem lại")
-        n = sum(len(v) for v in pend.values()) + sum(len(m.names) for m in unplaced)
-        dlg = ChoiceDialog(
-            self.root, "Còn tên chưa rõ",
-            f"Còn {n} tên GV báo vắng mà app CHƯA xác định được em nào. Các tên này CHƯA được tính vắng, "
-            "nên hiện diện và suất ăn có thể bị dư.",
-            lines, [("fix", "Xử lý trước"), ("save", "Vẫn lưu")])
-        if dlg.result[0] == "save":
-            return True
+        ChoiceDialog(
+            self.root, "Chưa lưu được",
+            f"Còn {n} tên GV báo vắng chưa rõ là em nào, nên chưa tính vắng.\n"
+            "Với mỗi tên: chọn em đúng, giữ nguyên chữ GV ghi, hoặc bỏ qua tên đó. Xử lý xong mới lưu được.",
+            lines, [("fix", "Xử lý ngay")], image="st_err", style="Err.TLabel")
+        self.fix_unresolved()
+        return False
+
+    def fix_unresolved(self) -> None:
+        """Đưa giáo vụ tới chỗ cần xử lý (cửa sổ lớp có tên chưa rõ, hoặc Kết quả chi tiết)."""
         self.show_tab(self.tab_dd)
         self.tab_dd.focus_problem()
-        return False
 
     def _after_load_light(self) -> None:
         bp = self.ws.book_path
@@ -343,8 +341,11 @@ class MainWindow:
         if st is None or not self.ws.book_path:
             return
         if self.ws.dirty or not st.exists_in_book:
-            if not messagebox.askyesno("Lưu trước khi in", "Cần lưu ngày này vào sổ trước khi in. Lưu ngay?",
-                                       parent=self.root):
+            if self.ws.unresolved_count():
+                self._check_unresolved()
+                return
+            if ask(self.root, "Lưu trước khi in", "Cần lưu ngày này vào sổ trước khi in.",
+                   [("save", "Lưu rồi in"), ("cancel", "Hủy")]) != "save":
                 return
             if not self.save():
                 return
@@ -354,9 +355,9 @@ class MainWindow:
         try:
             printing.print_areas(self.ws.book_path, self.ws.sheet_name, areas, preview=preview)
         except printing.PrintError as e:
-            if messagebox.askyesno("Không in trực tiếp được",
-                                   f"{e}\n\nMở sổ bằng Excel để in tay (vùng in: {' và '.join(areas)})?",
-                                   parent=self.root):
+            if ask(self.root, "Không in trực tiếp được",
+                   f"{e}\n\nCó thể mở sổ bằng Excel để in tay (vùng in: {' và '.join(areas)}).",
+                   [("open", "Mở sổ bằng Excel"), ("close", "Đóng")], image="st_err") == "open":
                 printing.open_file(self.ws.book_path)
             return
         self.flash("Đã gửi lệnh in 2 tờ." if not preview else "Đã mở xem trước trong Excel.")
@@ -419,14 +420,14 @@ class MainWindow:
 
     # ------------------------------------------------------------------ đóng app
     def on_close(self) -> None:
-        if not self.confirm_discard():
+        if not self.confirm_discard("thoát"):
             return
         if self.ws.data_dirty:
-            ans = messagebox.askyesnocancel("Chưa lưu", "Danh sách học sinh / ghép lớp có thay đổi chưa lưu. Lưu không?",
-                                            parent=self.root)
-            if ans is None:
+            ans = ask(self.root, "Chưa lưu", "Danh sách học sinh / ghép lớp có thay đổi chưa lưu.",
+                      [("save", "Lưu rồi thoát"), ("discard", "Không lưu"), ("stay", "Ở lại")])
+            if ans in (None, "stay"):
                 return
-            if ans:
+            if ans == "save":
                 try:
                     self.ws.save_data()
                 except Exception as e:  # noqa: BLE001

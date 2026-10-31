@@ -141,14 +141,21 @@ def test_unresolved_names_and_unplaced_messages(ws):  # noqa: F811
     ws.load_day(dt.date(2026, 10, 29))
     ws.paste("Lớp 1D15: 5/6 vắng Bảo Ngọc")  # 3 em Bảo Ngọc -> chưa rõ
     assert ws.pending_names() == {"1D15": ["Bảo Ngọc"]}
+    assert ws.unresolved_count() == 1
     ws.paste("[29/10/2026 07:00:00] Ai Đó: Vắng Xyz Qwe")
     ws.paste("[29/10/2026 07:00:00] Ai Đó: Vắng Xyz Qwe")  # dán lại không nhân đôi
     assert [m.names for m in ws.unplaced] == [["Xyz Qwe"]]
+    assert ws.unresolved_count() == 2
     res = ws.assign_unplaced(ws.unplaced[0], "2D17")
     assert ws.unplaced == [] and res[0].status != "ok"
     assert ws.pending_names()["2D17"] == ["Xyz Qwe"]
+    assert ws.unresolved_count() == 2
+    # mỗi tên chưa rõ đều có lối ra: chọn em / giữ nguyên chữ / bỏ qua -> hết chặn lưu
+    for code, r in list(ws.state.pending):
+        ws.state.resolve_pending(code, r, None, keep_raw=(code == "1D15"))
+    assert ws.unresolved_count() == 0
     ws.load_day(dt.date(2026, 10, 29))
-    assert ws.unplaced == []
+    assert ws.unplaced == [] and ws.unresolved_count() == 0
 
 
 def test_names_that_look_like_stop_words():

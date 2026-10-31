@@ -9,7 +9,7 @@ from ..core.models import Student
 from ..core.text import class_sort_key, clean_spaces, fmt_date, norm_class, parse_date
 from ..excel.roster_import import RosterFormatError, flag_mismatches
 from ..service import search_students
-from .widgets import _chk, CheckListDialog, center, tag_colors, with_scrollbar
+from .widgets import _chk, CheckListDialog, ask, center, tag_colors, with_scrollbar
 
 ALL = "Tất cả"
 
@@ -134,8 +134,9 @@ class TabHocSinh(ttk.Frame):
         s = self._selected()
         if not s:
             return
-        if messagebox.askyesno("Xóa học sinh", f"Xóa {s.ho_ten} ({s.lop}) khỏi danh sách?\n"
-                               "Nếu em chỉ thôi ăn bán trú, nên sửa 'Cắt BT từ ngày' thay vì xóa.", parent=self):
+        if ask(self, "Xóa học sinh", f"Xóa {s.ho_ten} ({s.lop}) khỏi danh sách?\n"
+               "Nếu em chỉ thôi ăn bán trú, nên sửa 'Cắt BT từ ngày' thay vì xóa.",
+               [("keep", "Không xóa"), ("delete", "Xóa")], image="st_err") == "delete":
             self.ws.roster.students.remove(s)
             self._changed()
 

@@ -23,7 +23,10 @@ def test_every_icon_used_in_ui_exists():
     ui = Path(__file__).resolve().parents[1] / "app" / "ui"
     used = set()
     for f in ui.glob("*.py"):
-        used |= set(re.findall(r"""icon\(\s*["']([a-z_]+)["']""", f.read_text(encoding="utf-8")))
+        text = f.read_text(encoding="utf-8")
+        used |= set(re.findall(r"""icon\(\s*["']([a-z_]+)["']""", text))
+        # tên icon truyền cho hộp hỏi: ask(..., image="st_err"), ChoiceDialog(..., image="...")
+        used |= set(re.findall(r"""\bimage(?::\s*str(?:\s*\|\s*None)?)?\s*=\s*["']([a-z_]+)["']""", text))
     # bảng tên icon trong app/ui/icons.py (đọc bằng ast để không cần tkinter khi chạy test)
     import ast
 

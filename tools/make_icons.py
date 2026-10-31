@@ -60,6 +60,9 @@ ICONS = {
     "excel": ("outline", "file-spreadsheet", GREEN),
     "today": ("outline", "calendar-check", DARK),
     "list": ("outline", "list-details", DARK),
+    "friday": ("outline", "calendar-minus", DARK),  # cắt thứ 6 hàng tuần
+    "open": ("outline", "app-window", BLUE),  # mở cửa sổ lớp
+    "ask": ("outline", "help-circle", BLUE),  # hộp hỏi
 }
 APP_ICON = ("outline", "calendar-check", BLUE)  # biểu tượng cửa sổ app
 

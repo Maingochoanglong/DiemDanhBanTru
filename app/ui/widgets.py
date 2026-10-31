@@ -104,7 +104,7 @@ class ChoiceDialog(tk.Toplevel):
     """Hộp thoại chọn 1 mục trong danh sách. result = (nút đã bấm, chỉ số mục chọn)."""
 
     def __init__(self, parent, title: str, message: str, options: list[str], buttons: list[tuple[str, str]],
-                 need_choice: set[str] | None = None):
+                 need_choice: set[str] | None = None, image: str | None = None, style: str = "TLabel"):
         super().__init__(parent)
         self.title(title)
         self.transient(parent.winfo_toplevel())
@@ -113,7 +113,12 @@ class ChoiceDialog(tk.Toplevel):
         self.need_choice = need_choice or set()
         body = ttk.Frame(self, padding=14)
         body.pack(fill="both", expand=True)
-        ttk.Label(body, text=message, wraplength=560, justify="left").pack(anchor="w", pady=(0, 8))
+        msg = ttk.Label(body, text=message, wraplength=560, justify="left", style=style)
+        if image:
+            from .icons import bigger, icon
+
+            msg.configure(image=icon(image, bigger()), compound="left")
+        msg.pack(anchor="w", pady=(0, 8))
         self.lb = None
         if options:
             frame = ttk.Frame(body)
@@ -148,6 +153,72 @@ class ChoiceDialog(tk.Toplevel):
             return
         self.result = (key, idx)
         self.destroy()
+
+
+def ask(parent, title: str, message: str, buttons: list[tuple[str, str]], image: str = "ask") -> str | None:
+    """Hộp hỏi có nút ghi rõ việc sẽ làm bằng tiếng Việt (thay cho Yes/No).
+
+    Nút đầu tiên là nút mặc định (Enter). Trả về khóa của nút đã bấm, None nếu đóng hộp (Esc / dấu X).
+    """
+    return ChoiceDialog(parent, title, message, [], buttons, image=image).result[0]
+
+
+class TreeTooltip:
+    """Rê chuột vào ô bị cắt chữ trong bảng: hiện ô nổi nền vàng nhạt chứa đủ nội dung."""
+
+    def __init__(self, tree: ttk.Treeview, columns: tuple[str, ...], delay: int = 350):
+        self.tree, self.columns, self.delay = tree, set(columns), delay
+        self.tip: tk.Toplevel | None = None
+        self.key: tuple[str, str] | None = None
+        self.job: str | None = None
+        tree.bind("<Motion>", self._motion, add="+")
+        for ev in ("<Leave>", "<ButtonPress>", "<MouseWheel>", "<Button-4>", "<Button-5>", "<KeyPress>"):
+            tree.bind(ev, lambda e: self.hide(), add="+")
+
+    def _font(self) -> tkfont.Font:
+        name = ttk.Style().lookup(str(self.tree.cget("style") or "Treeview"), "font") or "TkDefaultFont"
+        try:
+            return tkfont.nametofont(name)
+        except tk.TclError:
+            return tkfont.Font(font=name)
+
+    def _motion(self, e) -> None:
+        t = self.tree
+        row, col = t.identify_row(e.y), t.identify_column(e.x)
+        if (row, col) == self.key:
+            return
+        self.hide()
+        self.key = (row, col)
+        if not row or not col or col == "#0":
+            return
+        cid = t.column(col, "id")
+        if cid not in self.columns:
+            return
+        text = str(t.set(row, cid)).strip()
+        # chừa chỗ cho chữ đậm và lề ô
+        if not text or self._font().measure(text) * 1.08 + 14 <= int(t.column(cid, "width")):
+            return
+        self.job = t.after(self.delay, lambda: self._show(text, e.x_root, e.y_root))
+
+    def _show(self, text: str, x: int, y: int) -> None:
+        self.job = None
+        tip = self.tip = tk.Toplevel(self.tree)
+        tip.overrideredirect(True)
+        tk.Label(tip, text=text, background="#ffffe0", foreground="#202020", relief="solid", borderwidth=1,
+                 wraplength=520, justify="left", padx=8, pady=5, font=self._font()).pack()
+        tip.update_idletasks()
+        sw = tip.winfo_screenwidth()
+        x = min(x + 14, sw - tip.winfo_reqwidth() - 8)
+        tip.geometry(f"+{max(0, x)}+{y + 20}")
+
+    def hide(self) -> None:
+        if self.job:
+            self.tree.after_cancel(self.job)
+            self.job = None
+        if self.tip is not None:
+            self.tip.destroy()
+            self.tip = None
+        self.key = None
 
 
 class TextDialog(tk.Toplevel):
