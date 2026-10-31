@@ -5,6 +5,7 @@ from __future__ import annotations
 from tkinter import simpledialog, ttk
 from tkinter import font as tkfont
 
+from .icons import icon
 from .widgets import tag_colors, with_scrollbar
 
 
@@ -22,19 +23,19 @@ class TabSuatAn(ttk.Frame):
         style.configure("Meal.Treeview.Heading", font=(family, size + 1, "bold"))
         style.configure("MealTotal.TLabel", font=(family, size + 4, "bold"))
 
-        self.lbl_total = ttk.Label(self, text="", style="MealTotal.TLabel")
+        self.lbl_total = ttk.Label(self, text="", style="MealTotal.TLabel", compound="left")
         self.lbl_total.pack(anchor="w")
-        self.lbl_info = ttk.Label(self, text="", style="Muted.TLabel", justify="left")
+        self.lbl_info = ttk.Label(self, text="", style="Muted.TLabel", justify="left", compound="left")
         self.lbl_info.pack(side="bottom", anchor="w", fill="x", pady=(8, 0))
         self.bind("<Configure>", lambda e: self.lbl_info.configure(wraplength=max(400, e.width - 30)))
-        frame, self.tree = with_scrollbar(self, ttk.Treeview, columns=("nhom", "lop", "suat"), show="headings",
+        frame, self.tree = with_scrollbar(self, ttk.Treeview, columns=("lop", "suat"), show="tree headings",
                                           selectmode="browse", style="Meal.Treeview")
         frame.pack(fill="both", expand=True, pady=(8, 0))
         t = self.tree
-        t.heading("nhom", text="Nhóm", anchor="w")
+        t.heading("#0", text="Nhóm", anchor="w")
         t.heading("lop", text="Gồm", anchor="w")
         t.heading("suat", text="Suất")
-        t.column("nhom", width=220, stretch=False)
+        t.column("#0", width=230, stretch=False)
         t.column("lop", width=600)
         t.column("suat", width=100, anchor="center", stretch=False)
         tag_colors(t)
@@ -49,7 +50,7 @@ class TabSuatAn(ttk.Frame):
             return
         layout = self.ws.layout
         if layout.is_empty:
-            self.lbl_total.configure(text="Sổ chưa có bảng suất ăn", style="MealTotal.TLabel")
+            self.lbl_total.configure(text="Sổ chưa có bảng suất ăn", style="MealTotal.TLabel", image="")
             self.lbl_info.configure(text="Sheet mẫu của sổ không có bảng suất ăn bên dưới bảng điểm danh.")
             return
         summary = self.ws.meals()
@@ -61,23 +62,22 @@ class TabSuatAn(ttk.Frame):
                 gom += f" + ghép {line.o} em"
                 if line.m:
                     gom += f" − vắng {line.m}"
-                if r.code in manual:
-                    gom += "  ✎"
-            iid = t.insert("", "end", values=(r.label, gom, line.meals), tags=("warn",) if line.m else ())
+            hand = bool(r.code and r.code in manual)
+            iid = t.insert("", "end", text=f" {r.label}", image=icon("pencil") if hand else "",
+                           values=(gom, line.meals), tags=("warn",) if line.m else ())
             self.rows[iid] = line
         if layout.self_classes:
-            t.insert("", "end", values=("Tự ăn tại lớp", ", ".join(layout.self_classes), summary.self_meals),
+            t.insert("", "end", text=" Tự ăn tại lớp", values=(", ".join(layout.self_classes), summary.self_meals),
                      tags=("muted",))
         ok = summary.balanced
         self.lbl_total.configure(
-            text=f"Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present} "
-                 f"{'✔' if ok else '✖'}",
-            foreground="#1b7f3b" if ok else "#b00020")
+            text=f" Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present}",
+            image=icon("st_ok" if ok else "st_err", 32), foreground="#1b7f3b" if ok else "#b00020")
         if summary.warnings:
-            self.lbl_info.configure(text="\n".join("⚠ " + w for w in summary.warnings), style="Err.TLabel")
+            self.lbl_info.configure(text="\n".join(summary.warnings), style="Err.TLabel", image=icon("st_err"))
         else:
-            self.lbl_info.configure(text="Bấm vào 1 nhóm để xem em ghép vắng. Nhóm có ✎: bấm đúp để nhập số em ghép vắng.",
-                                    style="Muted.TLabel")
+            self.lbl_info.configure(text="Bấm vào 1 nhóm để xem em ghép vắng. Nhóm có hình bút chì: bấm đúp để nhập "
+                                         "số em ghép vắng.", style="Muted.TLabel", image="")
 
     def _on_select(self, _e=None) -> None:
         sel = self.tree.selection()
@@ -91,7 +91,7 @@ class TabSuatAn(ttk.Frame):
             if line.m:
                 names = f": {', '.join(line.absent_names)}" if line.absent_names else ""
                 text += f", ghép vắng {line.m}{names}"
-        self.lbl_info.configure(text=f"{text} → {line.meals} suất", style="TLabel")
+        self.lbl_info.configure(text=f"{text} → {line.meals} suất", style="TLabel", image="")
 
     def _on_double(self, _e=None) -> None:
         sel = self.tree.selection()

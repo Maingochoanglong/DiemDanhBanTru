@@ -16,6 +16,7 @@ from .tab_diem_danh import WEEKDAYS, TabDiemDanh
 from .tab_ghep_lop import TabGhepLop
 from .tab_hoc_sinh import TabHocSinh, ask_import, ask_notes
 from .tab_lich import TabLich
+from .icons import icon, set_app_icon
 from .tab_suat_an import TabSuatAn
 from .widgets import ChoiceDialog
 
@@ -34,22 +35,26 @@ class MainWindow:
         self.root = root
         self.ws = ws
         root.title("Điểm danh bán trú")
+        set_app_icon(root)
         root.minsize(1100, 680)
 
         top = ttk.Frame(root, padding=(10, 8, 10, 4))
         top.pack(fill="x")
         ttk.Label(top, text="Ngày:", style="Title.TLabel").pack(side="left")
-        ttk.Button(top, text="◀", width=3, command=lambda: self.step_day(-1)).pack(side="left", padx=(6, 2))
+        ttk.Button(top, image=icon("prev"), command=lambda: self.step_day(-1)).pack(side="left", padx=(6, 2))
         self.date_var = tk.StringVar()
         e = ttk.Entry(top, textvariable=self.date_var, width=11, font=("TkDefaultFont", 12, "bold"), justify="center")
         e.pack(side="left")
         e.bind("<Return>", lambda ev: self.open_typed_day())
-        ttk.Button(top, text="▶", width=3, command=lambda: self.step_day(1)).pack(side="left", padx=(2, 4))
-        ttk.Button(top, text="Hôm nay", command=lambda: self.open_day(dt.date.today())).pack(side="left", padx=4)
+        ttk.Button(top, image=icon("next"), command=lambda: self.step_day(1)).pack(side="left", padx=(2, 4))
+        ttk.Button(top, text="Hôm nay", image=icon("today"), compound="left",
+                   command=lambda: self.open_day(dt.date.today())).pack(side="left", padx=4)
         self.lbl_wd = ttk.Label(top, text="", style="Title.TLabel")
         self.lbl_wd.pack(side="left", padx=8)
-        ttk.Button(top, text="⚙ Cài đặt", command=self.show_settings).pack(side="right", padx=(6, 0))
-        ttk.Button(top, text="Mở sổ trong Excel", command=self.open_book_in_excel).pack(side="right")
+        ttk.Button(top, text="Cài đặt", image=icon("settings"), compound="left",
+                   command=self.show_settings).pack(side="right", padx=(6, 0))
+        ttk.Button(top, text="Mở sổ trong Excel", image=icon("excel"), compound="left",
+                   command=self.open_book_in_excel).pack(side="right")
         self.lbl_book = ttk.Label(top, text="", style="Muted.TLabel")
         self.lbl_book.pack(side="right", padx=8)
 
@@ -72,7 +77,7 @@ class MainWindow:
         self.nb.add(self.tab_hs_group, text="  Học sinh  ")
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab)
         self.tab_hs_group.nb.bind("<<NotebookTabChanged>>", self._on_tab)
-        # Cài đặt: cửa sổ riêng, mở bằng nút ⚙
+        # Cài đặt: cửa sổ riêng, mở bằng nút Cài đặt
         self.cd_win = tk.Toplevel(root)
         self.cd_win.withdraw()
         self.cd_win.title("Cài đặt")
@@ -166,7 +171,7 @@ class MainWindow:
 
     def _handle_new_month(self, day: dt.date, e: NeedMonthBook) -> bool:
         if e.prev is None:
-            self.flash("Chưa chọn sổ điểm danh. Bấm ⚙ Cài đặt → Chọn sổ khác…", error=True)
+            self.flash("Chưa chọn sổ điểm danh. Bấm nút Cài đặt → Chọn sổ khác…", error=True)
             return False
         dlg = ChoiceDialog(
             self.root, "Sổ tháng mới",
@@ -264,7 +269,7 @@ class MainWindow:
         if self.ws.state is None:
             return False
         if not self.ws.book_path:
-            messagebox.showwarning("Chưa có sổ", "Chưa có sổ điểm danh cho tháng này. Bấm nút ⚙ Cài đặt để chọn sổ.",
+            messagebox.showwarning("Chưa có sổ", "Chưa có sổ điểm danh cho tháng này. Bấm nút Cài đặt để chọn sổ.",
                                    parent=self.root)
             return False
         self.tab_dd._save_note()

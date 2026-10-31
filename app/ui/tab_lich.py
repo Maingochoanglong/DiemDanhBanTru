@@ -10,6 +10,7 @@ from tkinter import font as tkfont
 from ..core import schedule as sch
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, parse_date
 from ..service import next_school_day
+from .icons import icon
 from .widgets import center, tag_colors, with_scrollbar
 
 KIND_ORDER = [sch.CUT, sch.ADD, sch.FRIDAY]
@@ -25,8 +26,10 @@ class TabLich(ttk.Frame):
         top.pack(fill="x")
         ttk.Label(top, text="Lịch thêm / cắt bán trú", style="Title.TLabel").pack(side="left")
         ttk.Button(top, text="Cắt thứ 6 hàng tuần…", command=lambda: self.open_dialog(sch.FRIDAY)).pack(side="right", padx=6)
-        ttk.Button(top, text="＋ Thêm bán trú…", style="Big.TButton", command=lambda: self.open_dialog(sch.ADD)).pack(side="right")
-        ttk.Button(top, text="✂ Cắt bán trú…", style="Big.TButton", command=lambda: self.open_dialog(sch.CUT)).pack(side="right", padx=6)
+        ttk.Button(top, text="Thêm bán trú…", style="Big.TButton", image=icon("add"), compound="left",
+                   command=lambda: self.open_dialog(sch.ADD)).pack(side="right")
+        ttk.Button(top, text="Cắt bán trú…", style="Big.TButton", image=icon("cut"), compound="left",
+                   command=lambda: self.open_dialog(sch.CUT)).pack(side="right", padx=6)
         ttk.Label(self, style="Muted.TLabel", wraplength=1000, justify="left", text=(
             "Đặt trước ngày cắt hoặc thêm (ví dụ từ ngày mai, hay từ đầu tháng sau). Tới ngày đó app tự đổi sĩ số "
             "và danh sách tích vắng, không cần nhớ. Em \"cắt thứ 6\" (thứ 6 học nửa buổi) được tự tính vắng mỗi thứ 6.")).pack(anchor="w", pady=(4, 8))
@@ -119,7 +122,7 @@ class TabLich(ttk.Frame):
 class ScheduleDialog(tk.Toplevel):
     """Hộp thoại đặt lịch: chọn việc, lớp, học sinh, ngày áp dụng."""
 
-    NEW = "➕ Học sinh mới (chưa có trong danh sách)…"
+    NEW = "+ Học sinh mới (chưa có trong danh sách)…"
 
     def __init__(self, parent, ws, kind: str, code: str, ids: tuple[str, ...] = ()):
         super().__init__(parent)

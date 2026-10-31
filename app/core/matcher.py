@@ -23,7 +23,6 @@ NOT_BT = "not_bt"
 OTHER_CLASS = "other_class"
 NOT_FOUND = "not_found"
 
-STATUS_ICON = {OK: "✔", AMBIGUOUS: "⚠", NOT_BT: "⛔", OTHER_CLASS: "✖", NOT_FOUND: "✖"}
 
 
 @dataclass
@@ -32,10 +31,6 @@ class MatchResult:
     status: str
     student: Student | None = None
     candidates: list[Student] = field(default_factory=list)
-
-    @property
-    def icon(self) -> str:
-        return STATUS_ICON[self.status]
 
 
 def _split_query(q: str) -> tuple[list[str], list[str], str | None]:

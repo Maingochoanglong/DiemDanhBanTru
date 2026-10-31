@@ -1,10 +1,7 @@
-"""Tab Điểm danh: bảng giống tờ sổ, dán tin Zalo, tích vắng theo lớp, bảng suất ăn.
+"""Tab Điểm danh: ô dán tin Zalo + bảng điểm danh giống tờ sổ (rộng hết màn hình).
 
-Bố cục:
-    ① ô dán tin Zalo + dòng tóm tắt kết quả (bấm để xem chi tiết)
-    ② bảng điểm danh giống sổ (trái)      ③ lớp đang chọn: tích vắng (phải, trên)
-                                           ④ bảng suất ăn (phải, dưới)
-    thanh nút: Copy lớp chưa báo · Hoàn tác · Lưu vào sổ · Xem trước · In 2 tờ
+Bấm đúp vào một lớp để mở cửa sổ của lớp đó (tích vắng, tên chưa rõ, ghi chú cột H).
+Bảng suất ăn nằm ở tab Suất ăn. Icon là ảnh (app/ui/icons.py), không dùng ký tự.
 """
 
 from __future__ import annotations
@@ -15,6 +12,7 @@ from tkinter import font as tkfont
 
 from ..core import matcher
 from ..core.text import fold
+from .icons import RESULT_ICON, STATUS_ICON, icon
 from .widgets import ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog, ScrollFrame, center, tag_colors, with_scrollbar
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
@@ -35,7 +33,8 @@ class ResultWindow(tk.Toplevel):
         self.title("Kết quả kiểm tra tin nhắn")
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
         self.transient(tab.winfo_toplevel())
-        ttk.Label(self, text="Bấm đúp: dòng ⚠ / ✖ để chọn em đúng · dòng \"Lịch GV báo\" để áp dụng lịch · dòng \"? không rõ lớp\" để chọn lớp.",
+        ttk.Label(self, text="Bấm đúp: dòng có dấu cảnh báo / dấu X đỏ để chọn em đúng · dòng \"Lịch GV báo\" để áp dụng lịch · "
+                       "dòng \"không rõ lớp\" để chọn lớp.",
                   style="Muted.TLabel").pack(anchor="w", padx=10, pady=(8, 2))
         bar = ttk.Frame(self, padding=(10, 4, 10, 10))
         bar.pack(side="bottom", fill="x")
@@ -89,21 +88,28 @@ class TabDiemDanh(ttk.Frame):
         # Thanh dưới (đóng gói trước để luôn hiện đủ khi cửa sổ thấp)
         bottom = ttk.Frame(self)
         bottom.pack(side="bottom", fill="x", pady=(8, 0))
-        ttk.Button(bottom, text="In 2 tờ (Ctrl+P)", style="Big.TButton", command=lambda: self.app.print_day(False)).pack(side="right")
-        ttk.Button(bottom, text="Xem trước", command=lambda: self.app.print_day(True)).pack(side="right", padx=6)
-        ttk.Button(bottom, text="Lưu vào sổ (Ctrl+S)", style="Big.TButton", command=self.app.save).pack(side="right", padx=6)
-        ttk.Button(bottom, text="Hoàn tác (Ctrl+Z)", command=self.app.undo).pack(side="right", padx=6)
-        ttk.Button(bottom, text="Copy lớp chưa báo", command=self.copy_unreported).pack(side="right", padx=6)
+        ttk.Button(bottom, text="In 2 tờ (Ctrl+P)", style="Big.TButton", image=icon("print"), compound="left",
+                   command=lambda: self.app.print_day(False)).pack(side="right")
+        ttk.Button(bottom, text="Xem trước", image=icon("preview"), compound="left",
+                   command=lambda: self.app.print_day(True)).pack(side="right", padx=6)
+        ttk.Button(bottom, text="Lưu vào sổ (Ctrl+S)", style="Big.TButton", image=icon("save"), compound="left",
+                   command=self.app.save).pack(side="right", padx=6)
+        ttk.Button(bottom, text="Hoàn tác (Ctrl+Z)", image=icon("undo"), compound="left",
+                   command=self.app.undo).pack(side="right", padx=6)
+        ttk.Button(bottom, text="Copy lớp chưa báo", image=icon("copy"), compound="left",
+                   command=self.copy_unreported).pack(side="right", padx=6)
         self.lbl_saved = ttk.Label(bottom, text="")
         self.lbl_saved.pack(side="left")
 
-        # ① Ô dán tin nhắn
+        # Ô dán tin nhắn
         box = ttk.LabelFrame(self, text="Dán tin nhắn Zalo vào đây (Ctrl+V)", padding=(8, 6))
         box.pack(fill="x")
         row = ttk.Frame(box)
         row.pack(fill="x")
-        ttk.Button(row, text="Xóa ô", command=lambda: self.paste.delete("1.0", "end")).pack(side="right", padx=(6, 0))
-        ttk.Button(row, text="Kiểm tra (Ctrl+Enter)", style="Big.TButton", command=self.analyze).pack(side="right", padx=(6, 0))
+        ttk.Button(row, text="Xóa ô", image=icon("erase"), compound="left",
+                   command=lambda: self.paste.delete("1.0", "end")).pack(side="right", padx=(6, 0))
+        ttk.Button(row, text="Kiểm tra (Ctrl+Enter)", style="Big.TButton", image=icon("check"), compound="left",
+                   command=self.analyze).pack(side="right", padx=(6, 0))
         # ô dán chỉ cao 1 dòng khi không dùng; bấm vào thì mở ra 3 dòng
         self.paste = tk.Text(row, height=1, wrap="word", font=base, undo=True)
         self.paste.pack(side="left", fill="both", expand=True)
@@ -114,8 +120,9 @@ class TabDiemDanh(ttk.Frame):
         srow = ttk.Frame(box)
         srow.pack(fill="x", pady=(6, 0))
         ttk.Button(srow, text="Kiểm tra lại sổ", command=self.app.recheck_day).pack(side="right")
-        ttk.Button(srow, text="Kết quả chi tiết…", command=self.show_results).pack(side="right", padx=6)
-        self.lbl_summary = ttk.Label(srow, text="", style="Link.TLabel", cursor="hand2", justify="left")
+        ttk.Button(srow, text="Kết quả chi tiết…", image=icon("list"), compound="left",
+                   command=self.show_results).pack(side="right", padx=6)
+        self.lbl_summary = ttk.Label(srow, text="", style="Link.TLabel", cursor="hand2", justify="left", compound="left")
         self.lbl_summary.pack(side="left", fill="x", expand=True)
         srow.bind("<Configure>", lambda e: self.lbl_summary.configure(wraplength=max(300, e.width - 300)))
         self.lbl_summary.bind("<Button-1>", lambda e: self.show_results())
@@ -127,21 +134,24 @@ class TabDiemDanh(ttk.Frame):
         trow.pack(fill="x", pady=(0, 4))
         self.lbl_totals = ttk.Label(trow, text="", style="Title.TLabel")
         self.lbl_totals.pack(side="left")
-        self.lbl_meal_total = ttk.Label(trow, text="", style="Title.TLabel", cursor="hand2")
+        self.lbl_meal_total = ttk.Label(trow, text="", style="Title.TLabel", cursor="hand2", compound="left")
         self.lbl_meal_total.pack(side="left", padx=(16, 0))
         self.lbl_meal_total.bind("<Button-1>", lambda e: self.app.show_tab(self.app.tab_sa))
         legend = ttk.Frame(left)
         legend.pack(side="bottom", fill="x", pady=(4, 0))
-        for text, key in (("○ chưa báo", "muted"), ("✔ đủ", "ok"), ("● có vắng", "warn"), ("⚠ cần xem", "err")):
-            tk.Label(legend, text=f" {text} ", background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
+        for text, key in (("chưa báo", "muted"), ("đủ", "ok"), ("có vắng", "warn"), ("cần xem", "err")):
+            tk.Label(legend, text=f" {text} ", image=icon(STATUS_ICON[key]), compound="left", padx=4,
+                     background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
         ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch · [App đoán lớp] tin không ghi lớp",
                   style="Muted.TLabel").pack(side="left", padx=6)
-        cols = ("lop", "gv", "siso", "vang", "hd", "ten", "note")
-        frame, self.tree = with_scrollbar(left, ttk.Treeview, columns=cols, show="headings",
+        cols = ("gv", "siso", "vang", "hd", "ten", "note")
+        frame, self.tree = with_scrollbar(left, ttk.Treeview, columns=cols, show="tree headings",
                                           selectmode="browse", style="So.Treeview")
         frame.pack(fill="both", expand=True)
         t = self.tree
-        heads = {"lop": ("Lớp", 90, "w"), "gv": ("GVCN", 220, "w"), "siso": ("Sĩ số", 64, "center"),
+        t.heading("#0", text="Lớp", anchor="w")
+        t.column("#0", width=110, stretch=False, minwidth=90)
+        heads = {"gv": ("GVCN", 220, "w"), "siso": ("Sĩ số", 64, "center"),
                  "vang": ("Vắng", 64, "center"), "hd": ("Hiện diện", 100, "center"),
                  "ten": ("Tên học sinh vắng", 420, "w"), "note": ("Ghi chú", 280, "w")}
         for c, (title, w, anchor) in heads.items():
@@ -177,9 +187,10 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_class.pack(anchor="w", pady=(4, 0))
         brow = ttk.Frame(self.detail)
         brow.pack(fill="x", pady=(8, 4))
-        ttk.Button(brow, text="Lớp này đủ", command=self.mark_full).pack(side="left")
+        ttk.Button(brow, text="Lớp này đủ", image=icon("st_ok"), compound="left", command=self.mark_full).pack(side="left")
         ttk.Button(brow, text="Bỏ đã báo", command=self.unmark_reported).pack(side="left", padx=6)
-        ttk.Button(brow, text="Thêm/cắt bán trú…", command=lambda: self._schedule_menu_for(None)).pack(side="left")
+        ttk.Button(brow, text="Thêm/cắt bán trú…", image=icon("calendar"), compound="left",
+                   command=lambda: self._schedule_menu_for(None)).pack(side="left")
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
         ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
@@ -205,7 +216,7 @@ class TabDiemDanh(ttk.Frame):
         e.bind("<FocusOut>", lambda ev: self._save_note())
         e.bind("<Return>", lambda ev: self._save_note())
         self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ nguyên chữ", command=self.clear_extra)
-        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left")
+        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left", compound="left")
         self.lbl_warn.pack(anchor="w")
 
     def _open_from_table(self, e) -> str | None:
@@ -263,25 +274,25 @@ class TabDiemDanh(ttk.Frame):
         self._refresh_meals()
         self._refresh_totals()
 
-    def _class_status(self, code: str) -> tuple[str, str]:
-        """(ký hiệu, mức màu) của 1 lớp."""
+    def _class_status(self, code: str) -> str:
+        """Mức màu của 1 lớp: muted (chưa báo) / ok (đủ) / warn (có vắng) / err (cần xem)."""
         st = self.ws.state
         c = st.cd(code)
         n = st.absent_count(code)
         problem = (bool(c.extra) or any(p[0] == code for p in st.pending) or bool(st.class_warnings(code))
                    or c.guess_weak)
         if problem:
-            return "⚠", "err"
+            return "err"
         if not c.reported and not n:
-            return "○", "muted"
+            return "muted"
         if n:
-            return "●", "warn"
-        return "✔", "ok"
+            return "warn"
+        return "ok"
 
     def _class_values(self, code: str) -> tuple[tuple, str]:
         st = self.ws.state
         c = st.cd(code)
-        icon, tag = self._class_status(code)
+        tag = self._class_status(code)
         info = self.ws.roster.classes.get(code)
         n = st.absent_count(code)
         names = ", ".join(st.absent_names(code))
@@ -290,12 +301,12 @@ class TabDiemDanh(ttk.Frame):
         note = c.note
         warns = st.class_warnings(code)
         if warns:
-            note = "⚠ " + warns[0] + (f" · {note}" if note else "")
+            note = warns[0] + (f" · {note}" if note else "")
         if st.scheduled_changes(code):
             note = "[Lịch] " + note
         if c.guess:
             note = f"[App đoán lớp] {c.guess}" + (f" · {note}" if note else "")
-        vals = (f"{icon} {code}", info.gvcn if info else "", st.si_so(code), n, st.present(code), names, note)
+        vals = (info.gvcn if info else "", st.si_so(code), n, st.present(code), names, note)
         return vals, tag
 
     def _refresh_table(self) -> None:
@@ -315,13 +326,14 @@ class TabDiemDanh(ttk.Frame):
         for k, codes in sorted(by_khoi.items()):
             for code in codes:
                 vals, tag = self._class_values(code)
-                t.item(code, values=vals, tags=(tag,))
+                t.item(code, text=f" {code}", image=icon(STATUS_ICON[tag]), values=vals, tags=(tag,))
             si = sum(st.si_so(c) for c in codes)
             ab = sum(st.absent_count(c) for c in codes)
-            t.item(f"khoi{k}", values=(f"KHỐI {k}", "", si, ab, si - ab, "", ""), tags=("sum",))
+            t.item(f"khoi{k}", text=f"KHỐI {k}", values=("", si, ab, si - ab, "", ""), tags=("sum",))
         si, ab, pr = st.totals()
         n_rep = sum(1 for c in st.classes.values() if c.reported)
-        t.item("tong", values=("TỔNG CỘNG", f"đã báo {n_rep}/{len(st.classes)} lớp", si, ab, pr, "", ""), tags=("total",))
+        t.item("tong", text="TỔNG CỘNG", values=(f"đã báo {n_rep}/{len(st.classes)} lớp", si, ab, pr, "", ""),
+               tags=("total",))
         sel = self.current_class
         if sel and t.exists(sel) and t.selection() != (sel,):
             t.selection_set(sel)
@@ -417,7 +429,7 @@ class TabDiemDanh(ttk.Frame):
         if pend:
             ttk.Label(self.pending_row, text="Tên chưa rõ:", style="Err.TLabel").pack(side="left")
             for res in pend[:6]:
-                ttk.Button(self.pending_row, text=f"{res.icon} {res.query}…",
+                ttk.Button(self.pending_row, text=f"{res.query}…", image=icon(RESULT_ICON[res.status]), compound="left",
                            command=lambda r=res: self._resolve_from_detail(code, r)).pack(side="left", padx=2, pady=2)
         sched = []
         for it in st.scheduled_changes(code):
@@ -442,7 +454,7 @@ class TabDiemDanh(ttk.Frame):
             self.btn_clear_extra.pack_forget()
         self.note_var.set(c.note)
         warns = st.class_warnings(code)
-        self.lbl_warn.configure(text="\n".join("⚠ " + w for w in warns))
+        self.lbl_warn.configure(text="\n".join(warns), image=icon("st_err") if warns else "")
 
     def _refresh_meals(self) -> None:
         """Dòng "Tổng suất = hiện diện" trên màn Điểm danh; bảng đầy đủ ở tab Suất ăn."""
@@ -455,9 +467,9 @@ class TabDiemDanh(ttk.Frame):
         summary = self.ws.meals()
         ok = summary.balanced
         self.lbl_meal_total.configure(
-            text=f"·  Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present} "
-                 f"{'✔' if ok else '✖ (xem tab Suất ăn)'}",
-            foreground=OK_COLOR if ok else ERR_COLOR)
+            text=f"Tổng suất {summary.total_meals} {'=' if ok else '≠'} hiện diện {summary.total_present}"
+                 f"{'' if ok else ' (xem tab Suất ăn)'}",
+            image=icon("st_ok" if ok else "st_err"), foreground=OK_COLOR if ok else ERR_COLOR)
 
     def _refresh_totals(self) -> None:
         st = self.ws.state
@@ -467,9 +479,10 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_totals.configure(
             text=f"{wd} {st.date:%d/%m/%Y}  ·  Đã báo {n_rep}/{len(st.classes)} lớp  ·  Sĩ số {si}  ·  "
                  f"Vắng {ab}  ·  Hiện diện {pr}")
-        saved = "● Có thay đổi chưa lưu vào sổ" if self.ws.dirty else (
+        saved = "Có thay đổi chưa lưu vào sổ" if self.ws.dirty else (
             "Đã có trong sổ" if st.exists_in_book else "Ngày này chưa có trong sổ")
-        self.lbl_saved.configure(text=saved, style="Warn.TLabel" if self.ws.dirty else "Muted.TLabel")
+        self.lbl_saved.configure(text=saved, style="Warn.TLabel" if self.ws.dirty else "Muted.TLabel",
+                                 image=icon("pencil") if self.ws.dirty else "", compound="left")
         self._show_summary()
 
     # ------------------------------------------------------------------ tóm tắt kết quả
@@ -482,9 +495,9 @@ class TabDiemDanh(ttk.Frame):
         parts = list(self._summary)
         n_pending = len(st.pending) if st else 0
         if n_pending:
-            parts.append((f"⚠ {n_pending} tên chưa rõ", "err"))
+            parts.append((f"{n_pending} tên chưa rõ", "err"))
         if st and self.ws.unplaced:
-            parts.append((f"⚠ {len(self.ws.unplaced)} tin không rõ lớp", "err"))
+            parts.append((f"{len(self.ws.unplaced)} tin không rõ lớp", "err"))
         n_guess = len(self.ws.guessed_classes()) if st else 0
         if n_guess:
             parts.append((f"{n_guess} lớp app tự đoán", "warn"))
@@ -492,12 +505,13 @@ class TabDiemDanh(ttk.Frame):
         if n_sug:
             parts.append((f"{n_sug} lịch GV báo", "warn"))
         if not parts:
-            self.lbl_summary.configure(text="Chưa dán tin nào.", foreground=MUTED_COLOR)
+            self.lbl_summary.configure(text="Chưa dán tin nào.", foreground=MUTED_COLOR, image="")
             return
         worst = "err" if any(k == "err" for _, k in parts) else ("warn" if any(k == "warn" for _, k in parts) else "ok")
         color = {"ok": OK_COLOR, "warn": WARN_COLOR, "err": ERR_COLOR}[worst]
         tail = "  — bấm để xem" if worst != "ok" else ""
-        self.lbl_summary.configure(text="  ·  ".join(t for t, _ in parts) + tail, foreground=color)
+        img = {"ok": "st_ok", "warn": "res_ambiguous", "err": "st_err"}[worst]
+        self.lbl_summary.configure(text=" " + "  ·  ".join(t for t, _ in parts) + tail, foreground=color, image=icon(img))
 
     def show_results(self) -> None:
         self.results.show()
@@ -565,7 +579,7 @@ class TabDiemDanh(ttk.Frame):
             self._refresh_totals()
             if self.tree.exists(code):
                 vals, tag = self._class_values(code)
-                self.tree.item(code, values=vals, tags=(tag,))
+                self.tree.item(code, image=icon(STATUS_ICON[tag]), values=vals, tags=(tag,))
 
     def _schedule_menu_for(self, student, event=None) -> None:
         """Menu đặt lịch nhanh cho 1 em (chuột phải) hoặc cho cả lớp (nút Thêm/cắt BT…)."""
@@ -580,9 +594,11 @@ class TabDiemDanh(ttk.Frame):
         title = student.ho_ten if student else f"Lớp {code}"
         menu.add_command(label=title, state="disabled")
         menu.add_separator()
-        menu.add_command(label="✂ Cắt bán trú từ ngày…", command=lambda: tab.open_dialog(sch.CUT, code, ids))
+        menu.add_command(label=" Cắt bán trú từ ngày…", image=icon("cut"), compound="left",
+                         command=lambda: tab.open_dialog(sch.CUT, code, ids))
         if student is None:
-            menu.add_command(label="＋ Thêm em vào bán trú…", command=lambda: tab.open_dialog(sch.ADD, code))
+            menu.add_command(label=" Thêm em vào bán trú…", image=icon("add"), compound="left",
+                             command=lambda: tab.open_dialog(sch.ADD, code))
         if student is not None and student.cat_thu6:
             menu.add_command(label="Bỏ cắt thứ 6", command=lambda: self._undo_friday(student))
         else:
@@ -616,7 +632,7 @@ class TabDiemDanh(ttk.Frame):
         if not changes:
             return
         r = self.tree_res
-        pid = r.insert("", 0, text="[Lịch]", values=(f"{len(changes)} thay đổi bán trú có hiệu lực từ hôm nay — sĩ số đã tự cập nhật",),
+        pid = r.insert("", 0, text=" Lịch thêm/cắt", image=icon("res_schedule"), values=(f"{len(changes)} thay đổi bán trú có hiệu lực từ hôm nay — sĩ số đã tự cập nhật",),
                        tags=("ok", "bold"), open=True)
         for it in changes:
             what = "cắt bán trú" if it.kind == "cat" else "thêm bán trú"
@@ -672,7 +688,7 @@ class TabDiemDanh(ttk.Frame):
         elif skipped:
             parts.append((f"Không có tin nào của ngày {st.date:%d/%m}", "warn"))
         if not_bt:
-            parts.append((f"⛔ {not_bt} tên không ăn BT (bỏ qua)", "ok"))
+            parts.append((f"{not_bt} tên không ăn BT (bỏ qua)", "ok"))
         if skipped:
             parts.append((f"bỏ qua {sum(skipped.values())} tin ngày khác", "ok"))
         self._summary = parts
@@ -692,7 +708,7 @@ class TabDiemDanh(ttk.Frame):
             else:
                 why = "không đoán được lớp — hãy dán kèm mã lớp (vd. 2D17) hoặc tích tay"
             who = f" ({msg.sender})" if msg.sender else ""
-            iid = r.insert("", 0, text=f"? không rõ lớp{who}",
+            iid = r.insert("", 0, text=f" không rõ lớp{who}", image=icon("res_unknown"),
                            values=(f"{', '.join(msg.names)} — {why} — bấm đúp để chọn lớp",), tags=("err",))
             self.unplaced_items[iid] = (msg, po.guessed_from)
             return None
@@ -712,7 +728,7 @@ class TabDiemDanh(ttk.Frame):
         tag = "err" if warns else ("ok" if msg.full else "warn")
         pid = r.insert("", 0, text=f"{code}{guess}", values=(head,), tags=(tag, "bold"), open=True)
         for w in warns:
-            r.insert(pid, "end", text="  ⚠", values=(w,), tags=("err",))
+            r.insert(pid, "end", text="", image=icon("res_ambiguous"), values=(w,), tags=("err",))
         for res in po.results:
             self._insert_result(pid, code, res)
         return code
@@ -722,16 +738,18 @@ class TabDiemDanh(ttk.Frame):
         msg = po.message
         src = f"{msg.cls}: \"{msg.schedule}\"" + (f" ({msg.sender} {msg.when:%d/%m %H:%M})" if msg.when else "")
         if po.schedule_known:
-            r.insert("", 0, text=f"Lịch GV báo {msg.cls}", values=(f"{src} — lịch này đã có, không cần làm gì",),
+            r.insert("", 0, text=f" Lịch GV báo {msg.cls}", image=icon("res_schedule"),
+                     values=(f"{src} — lịch này đã có, không cần làm gì",),
                      tags=("muted",))
             return
         for sug in po.suggestions:
             if not sug.apply or not sug.changes:
-                r.insert("", 0, text=f"Lịch GV báo {msg.cls}", values=(f"{src} — {sug.text}",), tags=("err",))
+                r.insert("", 0, text=f" Lịch GV báo {msg.cls}", image=icon("res_unknown"), values=(f"{src} — {sug.text}",),
+                         tags=("err",))
                 continue
             what = sug.text.split(" — ", 1)[-1]
             who = sug.student.ho_ten if sug.student else sug.new_name
-            iid = r.insert("", 0, text=f"Lịch GV báo {msg.cls}",
+            iid = r.insert("", 0, text=f" Lịch GV báo {msg.cls}", image=icon("res_schedule"),
                            values=(f"{who}: {what} — bấm đúp để áp dụng · tin {src}",), tags=("warn", "bold"))
             self.sugg_items[iid] = sug
 
@@ -755,7 +773,7 @@ class TabDiemDanh(ttk.Frame):
             sug = ", ".join(roster.display_name(c) for c in res.candidates[:3])
             text = "Không tìm thấy trong lớp" + (f". Gần giống: {sug}" if sug else "") + " — bấm đúp"
             tag = "err"
-        iid = r.insert(parent, "end", text=f"{res.icon} {res.query}", values=(text,), tags=(tag,))
+        iid = r.insert(parent, "end", text=f" {res.query}", image=icon(RESULT_ICON[res.status]), values=(text,), tags=(tag,))
         if res.status in PROBLEM:
             self.result_items[iid] = (code, res)
 
@@ -770,8 +788,8 @@ class TabDiemDanh(ttk.Frame):
         n = sum(len(v) for v in checks.values())
         head = f"Kiểm tra sổ ngày {st.date:%d/%m}: {n} tên"
         if not bad:
-            r.insert("", 0, text="Sổ", values=(head + " — tất cả đều đúng ✔",), tags=("ok", "bold"))
-            self._summary = [(f"Sổ ngày {st.date:%d/%m}: {n} tên vắng, tất cả đều đúng ✔", "ok")]
+            r.insert("", 0, text="Sổ", image=icon("res_ok"), values=(head + " — tất cả đều đúng",), tags=("ok", "bold"))
+            self._summary = [(f"Sổ ngày {st.date:%d/%m}: {n} tên vắng, tất cả đều đúng", "ok")]
         else:
             pid = r.insert("", 0, text="Sổ", values=(head + f" — {len(bad)} tên cần xem",), tags=("err", "bold"), open=True)
             for code, res in bad:
@@ -801,7 +819,7 @@ class TabDiemDanh(ttk.Frame):
             self._place_message(iid)
             return
         if iid not in self.result_items:
-            code = self.tree_res.item(iid, "text").split(" ")[0]
+            code = self.tree_res.item(iid, "text").strip().split(" ")[0]
             if code in self.ws.state.classes:
                 self.select_class(code)
             return
@@ -823,7 +841,7 @@ class TabDiemDanh(ttk.Frame):
             return
         del self.sugg_items[iid]
         done = f"Đã áp dụng: {who} — {what}" + (f" · ghi chú cột H: \"{note}\"" if note else "")
-        self.tree_res.item(iid, text=f"✔ {sug.code}", values=(done,), tags=("ok",))
+        self.tree_res.item(iid, text=f" {sug.code}", image=icon("res_ok"), values=(done,), tags=("ok",))
         self.app.flash(done)
         self.app.refresh_days_only()
         self.app.tab_lich.refresh()
@@ -851,16 +869,16 @@ class TabDiemDanh(ttk.Frame):
         self.ws.push_undo()
         if key == "pick" and idx is not None:
             st.resolve_pending(code, res, cands[idx])
-            row = (f"✔ {res.query}", f"→ {roster.display_name(cands[idx])}  (đã chọn)", "ok")
+            row = (res.query, f"→ {roster.display_name(cands[idx])}  (đã chọn)", "ok", "res_ok")
         elif key == "raw":
             st.resolve_pending(code, res, None, keep_raw=True)
-            row = (f"✎ {res.query}", "Giữ nguyên chữ GV ghi vào sổ", "warn")
+            row = (res.query, "Giữ nguyên chữ GV ghi vào sổ", "warn", "res_raw")
         else:
             st.resolve_pending(code, res, None)
-            row = (f"– {res.query}", "Đã bỏ qua", "muted")
+            row = (res.query, "Đã bỏ qua", "muted", "res_skip")
         for iid, (_, r) in list(self.result_items.items()):
             if r is res:
-                self.tree_res.item(iid, text=row[0], values=(row[1],), tags=(row[2],))
+                self.tree_res.item(iid, text=f" {row[0]}", image=icon(row[3]), values=(row[1],), tags=(row[2],))
                 del self.result_items[iid]
         if code in st.classes:
             st.cd(code).reported = True
