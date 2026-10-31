@@ -3,6 +3,7 @@ name: Dựng app Windows
 on:
   push:
     branches: [main, master, "claude/**"]
+    paths-ignore: ["tai-ve/**"]  # commit chỉ cập nhật file tải về thì không dựng lại
   pull_request:
   workflow_dispatch:
 
@@ -72,5 +73,25 @@ jobs:
               exit 0
             fi
             echo "Đăng chưa được (lần $i), thử lại sau $((i * 20)) giây"; sleep $((i * 20))
+          done
+          exit 1
+
+      - name: Cập nhật file tải về trong repo (tai-ve/DiemDanhBanTru.exe)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          git fetch -q origin main --depth=1
+          if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "main đã có commit mới hơn, lần dựng của commit đó sẽ cập nhật file tải về"; exit 0
+          fi
+          mkdir -p tai-ve
+          cp dist/DiemDanhBanTru.exe tai-ve/DiemDanhBanTru.exe
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tai-ve/DiemDanhBanTru.exe
+          git commit -q -m "Cập nhật file tải về DiemDanhBanTru.exe (từ ${GITHUB_SHA::7}) [skip ci]"
+          for i in 1 2 3 4; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "Đẩy chưa được (lần $i), thử lại sau $((i * 10)) giây"; sleep $((i * 10))
           done
           exit 1

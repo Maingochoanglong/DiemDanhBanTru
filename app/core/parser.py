@@ -127,9 +127,14 @@ def extract_names(body: str) -> list[str]:
         if not chunk:
             continue
         kept = []
-        for w in chunk.split():
+        tokens = chunk.split()
+        for i, w in enumerate(tokens):
             lw = lower(w)
-            if lw in STOP or fold(w) in STOP_FOLD or lw.isdigit():
+            if lw in STOP or lw.isdigit():
+                continue
+            # chữ không dấu "vang/nghi/phep…": chỉ bỏ khi viết thường hoặc đứng đầu cụm ("Nghi phep Minh");
+            # viết hoa giữa cụm là tên ("Hoàng Nghi")
+            if fold(w) in STOP_FOLD and (w == w.lower() or (i == 0 and len(tokens) > 1)):
                 continue
             if not any(ch.isalpha() for ch in w):
                 continue

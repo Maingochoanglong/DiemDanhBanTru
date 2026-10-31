@@ -16,6 +16,7 @@ from .tab_diem_danh import WEEKDAYS, TabDiemDanh
 from .tab_ghep_lop import TabGhepLop
 from .tab_hoc_sinh import TabHocSinh, ask_import, ask_notes
 from .tab_lich import TabLich
+from .tab_suat_an import TabSuatAn
 from .widgets import ChoiceDialog
 
 
@@ -57,6 +58,7 @@ class MainWindow:
         self.nb = ttk.Notebook(root)
         self.nb.pack(fill="both", expand=True, padx=8)
         self.tab_dd = TabDiemDanh(self.nb, self)
+        self.tab_sa = TabSuatAn(self.nb, self)
         self.tab_lich = TabLich(self.nb, self)
         # Tab "Học sinh" gồm 2 tab con: danh sách học sinh và ghép lớp (ít dùng hằng ngày)
         self.tab_hs_group = _TabGroup(self.nb)
@@ -65,6 +67,7 @@ class MainWindow:
         self.tab_hs_group.nb.add(self.tab_hs, text="  Danh sách học sinh  ")
         self.tab_hs_group.nb.add(self.tab_ghep, text="  Ghép lớp  ")
         self.nb.add(self.tab_dd, text="  Điểm danh  ")
+        self.nb.add(self.tab_sa, text="  Suất ăn  ")
         self.nb.add(self.tab_lich, text="  Lịch thêm/cắt  ")
         self.nb.add(self.tab_hs_group, text="  Học sinh  ")
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab)
@@ -210,6 +213,7 @@ class MainWindow:
         if self.ws.state is None:
             return
         self.tab_dd.refresh()
+        self.tab_sa.refresh()
         self.tab_lich.refresh()
         self.tab_ghep.refresh()
         self.tab_hs.refresh()
