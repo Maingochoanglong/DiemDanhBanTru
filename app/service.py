@@ -325,6 +325,12 @@ class Workspace:
             out.setdefault(code, []).append(res.query)
         return out
 
+    def unresolved_count(self) -> int:
+        """Số tên GV báo vắng chưa xác định được em nào (chưa tính vắng). Còn > 0 thì chưa cho lưu."""
+        if self.state is None:
+            return 0
+        return len(self.state.pending) + sum(len(m.names) for m in self.unplaced)
+
     def guessed_classes(self) -> dict[str, str]:
         """Lớp có tin do app tự đoán lớp, giáo vụ chưa xem lại: mã lớp -> cách đoán."""
         assert self.state is not None

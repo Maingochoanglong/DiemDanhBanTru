@@ -6,7 +6,7 @@ from tkinter import simpledialog, ttk
 from tkinter import font as tkfont
 
 from .icons import icon
-from .widgets import tag_colors, with_scrollbar
+from .widgets import TreeTooltip, tag_colors, with_scrollbar
 
 
 class TabSuatAn(ttk.Frame):
@@ -41,6 +41,7 @@ class TabSuatAn(ttk.Frame):
         tag_colors(t)
         t.bind("<<TreeviewSelect>>", self._on_select)
         t.bind("<Double-Button-1>", self._on_double)
+        TreeTooltip(t, ("lop",))
 
     def refresh(self) -> None:
         t = self.tree

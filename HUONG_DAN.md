@@ -43,17 +43,17 @@ Dữ liệu riêng của app (danh sách HS, ghép lớp, cài đặt) lưu ở 
 
 ## 3. Mỗi sáng
 
-App có 4 tab: **Điểm danh** (dùng hằng ngày), **Suất ăn**, **Lịch thêm/cắt**, **Học sinh** (trong đó có tab con **Ghép lớp**). Cài đặt mở bằng nút **⚙ Cài đặt** ở góc trên bên phải.
+App có 3 tab: **Điểm danh** (dùng hằng ngày), **Suất ăn**, **Học sinh** (trong đó có 3 tab con ít dùng: **Danh sách học sinh**, **Lịch thêm/cắt**, **Ghép lớp**). Cài đặt mở bằng nút **Cài đặt** (hình bánh răng) ở góc trên bên phải; nhập/xuất danh sách học sinh nằm trong Cài đặt.
 
 Màn hình **Điểm danh** gồm:
 
 | Phần | Dùng để |
 |---|---|
-| **Ô dán tin nhắn Zalo** (trên cùng) | Copy tin nhắn của GVCN trong Zalo, bấm vào ô rồi **Ctrl+V**. Dán 1 tin hay cả đoạn nhiều tin đều được. Dòng chữ bên dưới tóm tắt kết quả; bấm vào đó (hoặc nút **Kết quả chi tiết…**) để xem từng tên. |
-| **Bảng điểm danh** (rộng hết màn hình) | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng tô màu: **xám** = chưa báo, **xanh** = đủ, **cam** = có vắng, **đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt; **[App đoán lớp]** = tin của lớp này không ghi mã lớp, app tự tìm lớp. Dòng trên bảng có **Tổng suất = hiện diện ✔** (đỏ khi lệch, bấm vào để xem tab Suất ăn). |
-| **Cửa sổ lớp** (bấm đúp vào 1 lớp) | Danh sách em ăn bán trú của lớp, **tích = vắng**. Có nút *Lớp này đủ*, các tên chưa rõ để chọn em đúng, ô tìm tên, ô ghi chú cột H; lớp do app tự đoán có nút **Đúng lớp này**. Bấm **Xong** để đóng. |
+| **Ô dán tin nhắn Zalo** (trên cùng) | Copy tin nhắn của GVCN trong Zalo, bấm vào ô rồi **Ctrl+V**: app **tự kiểm tra ngay** và tự xóa ô. Dán 1 tin hay cả đoạn nhiều tin đều được; gõ tay thì gõ xong bấm **Ctrl+Enter**. Bên dưới có 2 dòng: dòng 1 **"Cần xử lý: …"** (đỏ/cam) là việc bạn phải làm, dòng 2 (xám) là thông tin. Bấm vào đó (hoặc nút **Kết quả chi tiết…**) để xem từng tên. |
+| **Bảng điểm danh** (rộng hết màn hình) | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng có icon và màu: **vòng tròn xám** = chưa báo, **tích xanh** = đủ, **chấm cam** = có vắng, **tam giác đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt; **[Máy tự xếp lớp]** = tin của lớp này không ghi mã lớp, app tự tìm lớp. Chữ dài bị cắt: rê chuột vào ô để xem đủ. Dòng trên bảng có **Tổng suất = hiện diện** kèm dấu tích xanh (đỏ khi lệch, bấm vào để xem tab Suất ăn). |
+| **Cửa sổ lớp** (bấm đúp vào 1 lớp, hoặc chọn lớp rồi bấm **Mở lớp đã chọn**, hoặc chuột phải → **Mở lớp này**) | Danh sách em ăn bán trú của lớp, **tích = vắng**. Có nút *Lớp này đủ*, các tên chưa rõ để chọn em đúng, ô tìm tên, ô ghi chú cột H; lớp do máy tự xếp có nút **Đúng lớp này**. Bấm **Xong** để đóng. |
 
-Tab **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ các em ghép vắng. Dòng trên cùng phải là **Tổng suất = hiện diện ✔**. Bấm vào 1 nhóm để xem tên em ghép vắng.
+Tab **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ các em ghép vắng. Dòng trên cùng phải là **Tổng suất = hiện diện** kèm dấu tích xanh. Bấm vào 1 nhóm để xem tên em ghép vắng.
 
 ### Dán tin chép từ Zalo trên máy tính
 
@@ -65,9 +65,9 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 
 - App **chỉ lấy tin của ngày đang mở**. Tin của ngày khác được bỏ qua và báo lại (vd. "bỏ qua 50 tin ngày khác"). Muốn nhập ngày khác thì mở ngày đó rồi dán lại cùng đoạn tin.
 - Tin được đọc **theo giờ gửi**: GV nhắn sửa thì tin sau thay cho tin trước của cùng lớp.
-- Tin **không ghi mã lớp** (vd. "Vắng Hải Long và Tuấn Anh"): app tìm lớp theo **tên Zalo người gửi** so với cột GVCN của sổ (vd. tên Zalo "Lan Nguyễn" là cô Nguyễn Thị Ngọc Lan, "Phamthanhtam" là thầy Phạm Thanh Tâm). Người gửi đã từng nhắn kèm mã lớp thì app nhớ lớp của người đó. Nếu vẫn không biết, app đoán theo tên học sinh.
-  - Lớp do app tự đoán được ghi **[App đoán lớp]** ở cột Ghi chú. Xem lại tin của GV; nếu đúng, bấm **Đúng lớp này** trong cửa sổ lớp. Đoán theo tên học sinh thì dòng lớp tô đỏ để chắc chắn bạn xem lại.
-  - Tin **không tìm được lớp**: trong **Kết quả chi tiết…**, bấm đúp dòng "? không rõ lớp" để chọn lớp cho tin đó (hoặc bỏ tin).
+- Tin **không ghi mã lớp** (vd. "Vắng Hải Long và Tuấn Anh"): app tìm lớp theo **tên Zalo người gửi** so với cột GVCN của sổ (vd. tên Zalo "Lan Nguyễn" là cô Nguyễn Thị Ngọc Lan, "Phamthanhtam" là thầy Phạm Thanh Tâm). Người gửi đã từng nhắn kèm mã lớp thì app nhớ lớp của người đó. Nếu vẫn không biết, app tìm theo tên học sinh.
+  - Lớp do máy tự xếp được ghi **[Máy tự xếp lớp]** ở cột Ghi chú. Xem lại tin của GV; nếu đúng, bấm **Đúng lớp này** trong cửa sổ lớp. Xếp theo tên học sinh (kém chắc chắn) thì dòng lớp tô đỏ để chắc chắn bạn xem lại.
+  - Tin **không tìm được lớp**: trong **Kết quả chi tiết…**, bấm đúp dòng "không rõ lớp" để chọn lớp cho tin đó (hoặc bỏ tin).
 - Lời chào, "dạ", "ok cô"… không có chữ "vắng/nghỉ/đủ" hay sĩ số thì app bỏ qua.
 - **Tin báo lịch** (vd. "Lớp 5D21: tháng 11 cắt bán trú Gia Huy") không tính là vắng. App hiện dòng **Lịch GV báo**: bấm đúp để áp dụng, app tự cắt/thêm em đó và ghi chú cột H ("Tháng 11 cắt bán trú …"). Nếu lịch đó đã có sẵn, app chỉ báo "đã có".
 
@@ -75,10 +75,10 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 
 Mỗi tên GV ghi được kiểm tra (xem trong **Kết quả chi tiết…**):
 
-- ✔ **xanh**: đúng em trong lớp, có ăn bán trú. Tên được ghi theo quy tắc (tên đệm + tên; trùng thì họ tên đầy đủ; trùng cả họ tên thì thêm A/B theo ngày sinh).
-- ⚠ **cam**: nhiều em trùng tên. **Bấm đúp** để chọn đúng em.
-- ⛔ **xám**: em có trong lớp nhưng **không ăn bán trú**, app bỏ qua, không ghi.
-- ✖ **đỏ**: không tìm thấy trong lớp (có gợi ý tên gần giống, hoặc báo em học lớp khác). Bấm đúp để chọn em đúng, **giữ nguyên chữ GV ghi**, hoặc bỏ qua.
+- **Vòng tròn tích xanh**: đúng em trong lớp, có ăn bán trú. Tên được ghi theo quy tắc (tên đệm + tên; trùng thì họ tên đầy đủ; trùng cả họ tên thì thêm A/B theo ngày sinh).
+- **Tam giác cam**: nhiều em trùng tên. **Bấm đúp** để chọn đúng em.
+- **Vòng tròn gạch chéo xám**: em có trong lớp nhưng **không ăn bán trú**, app bỏ qua, không ghi.
+- **Dấu X đỏ**: không tìm thấy trong lớp (có gợi ý tên gần giống, hoặc báo em học lớp khác). Bấm đúp để chọn em đúng, **giữ nguyên chữ GV ghi**, hoặc bỏ qua.
 
 Tên chưa rõ cũng hiện thành nút trong **cửa sổ lớp** (bấm đúp vào lớp), bấm vào để xử lý.
 
@@ -89,16 +89,16 @@ App còn đối chiếu số GV báo: nếu GV ghi "38/41" mà sĩ số là 40, 
 Khi các lớp đã báo xong:
 
 1. Bấm **Lưu vào sổ** (Ctrl+S). Nếu chưa có sheet ngày hôm nay, app sao chép sheet hôm trước rồi điền số liệu.
-   - Nếu còn **tên chưa rõ** hoặc **tin không rõ lớp**, app hiện hộp **"Còn tên chưa rõ"**: các tên đó chưa được tính vắng nên suất ăn có thể dư. Bấm **Xử lý trước** để app đưa bạn tới lớp cần xử lý, hoặc **Vẫn lưu** nếu chắc chắn.
-2. Bấm **In 2 tờ** (Ctrl+P): tờ 1 là bảng điểm danh, tờ 2 là bảng suất ăn. Bấm **Xem trước** nếu muốn xem trước khi in.
+   - Nếu còn **tên chưa rõ** hoặc **tin không rõ lớp**, app **chưa cho lưu và in** (các tên đó chưa được tính vắng nên suất ăn sẽ sai). Cạnh nút Lưu hiện chữ đỏ "Còn … tên chưa rõ"; bấm **Xử lý ngay** để app đưa bạn tới lớp cần xử lý. Với mỗi tên: **chọn em đúng**, **giữ nguyên chữ GV ghi**, hoặc **bỏ qua tên này** — xử lý hết là lưu được.
+2. Bấm **In 2 tờ** (Ctrl+P): tờ 1 là bảng điểm danh, tờ 2 là bảng suất ăn.
 
 Nút **Copy lớp chưa báo** chép danh sách lớp (kèm tên GVCN) chưa báo để dán vào Zalo nhắc.
 
 ## 4. Lịch thêm / cắt bán trú, nghỉ thứ 6
 
-Tab **Lịch thêm/cắt** dùng khi biết trước một em sẽ thôi ăn hoặc bắt đầu ăn, ví dụ từ ngày mai hay từ đầu tháng sau:
+Tab **Học sinh → Lịch thêm/cắt** dùng khi biết trước một em sẽ thôi ăn hoặc bắt đầu ăn, ví dụ từ ngày mai hay từ đầu tháng sau:
 
-1. Bấm **✂ Cắt bán trú…** hoặc **＋ Thêm bán trú…**.
+1. Bấm **Cắt bán trú…** (hình cây kéo) hoặc **Thêm bán trú…** (dấu cộng).
 2. Chọn lớp, rồi chọn em (giữ Ctrl để chọn nhiều em). Muốn thêm em chưa có trong danh sách: chọn dòng cuối *Học sinh mới…* rồi gõ họ tên.
 3. Chọn ngày áp dụng: bấm **Ngày học kế tiếp**, **Đầu tháng sau**, hoặc gõ ngày.
 4. Bấm **Lưu lịch**.
@@ -121,7 +121,7 @@ Tab **Học sinh → Ghép lớp** liệt kê các em ăn bán trú của lớp 
 - Hoặc bấm **Dán danh sách ghép…** và gõ mỗi dòng: `1.1: Bảo Ngọc, Gia Hân, Minh Khôi`.
 - Bấm **Lưu danh sách ghép**.
 
-Khi đã gán đủ cả lớp, mỗi lần em ghép vắng, app tự điền ô **vắng** đúng hàng trong bảng suất ăn. Khi chưa gán đủ, app giữ số em ghép như sổ cũ; bạn **bấm đúp vào hàng nhóm** (có dấu ✎) trong bảng suất ăn để nhập số em ghép vắng.
+Khi đã gán đủ cả lớp, mỗi lần em ghép vắng, app tự điền ô **vắng** đúng hàng trong bảng suất ăn. Khi chưa gán đủ, app giữ số em ghép như sổ cũ; bạn **bấm đúp vào hàng nhóm** (có hình bút chì) trong tab Suất ăn để nhập số em ghép vắng.
 
 Nếu nhập danh sách từ file có cột **Ghép lớp**, app tự gán nhóm ghép theo cột đó.
 
@@ -131,14 +131,19 @@ Tab **Học sinh** dùng để:
 
 - tìm em, lọc theo lớp;
 - **Thêm học sinh**, hoặc **Sửa** (bấm đúp) các thông tin: ăn bán trú, *cắt bán trú từ ngày*, *bắt đầu ăn từ ngày*, *cắt thứ 6*, *ăn ghép tại*, *tên ghi sổ* (nếu muốn ghi khác tên tự đặt);
+- bấm **Lưu thay đổi** sau khi sửa.
+
+Việc ít làm với danh sách nằm trong **Cài đặt → Danh sách học sinh**:
+
 - **Nhập / cập nhật từ file CDHS…** khi trường có danh sách mới (file CDHS tô đỏ, hoặc file 5 cột có X). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn, đổi nhóm ghép) để bạn duyệt. Thông tin cắt thứ 6… vẫn giữ nguyên.
+- **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
 - **Xuất danh sách…**: ghi ra file 5 cột *Tên lớp học · Họ tên · Ngày sinh · Ăn bán trú (X) · Ghép lớp*, tính theo ngày bạn chọn (vd. ngày đầu tháng sau). File này gửi cho người khác xem, hoặc nhập lại vào app.
 
-Bảng **Sĩ số bán trú từng lớp** bên phải tô đỏ lớp có sĩ số theo danh sách khác sĩ số trong sổ. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
+Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 
 ## 7. Ngày cũ, tháng mới
 
-- Đổi ngày bằng ô **Ngày**, nút ◀ ▶ hoặc **Hôm nay**.
+- Đổi ngày bằng ô **Ngày**, 2 nút mũi tên trái/phải hoặc **Hôm nay**.
 - Mở một ngày **đã có trong sổ**: app đọc lại và **kiểm tra mọi ô tên vắng** (kể cả gõ tay trong Excel), báo tên sai hoặc không ăn bán trú.
 - Sang tháng mới: app hỏi **Tạo sổ tháng mới**. Sổ mới (vd. `… T11.xlsx`) được làm từ sheet cuối của tháng trước, giữ nguyên mẫu, chữ ký, ghi chú.
 
@@ -146,10 +151,9 @@ Bảng **Sĩ số bán trú từng lớp** bên phải tô đỏ lớp có sĩ s
 
 - Trước mỗi lần ghi, app **sao lưu** file cũ vào thư mục `SaoLuu` cạnh file (giữ 30 bản gần nhất).
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
-- **Không in trực tiếp được**: app mở sổ bằng Excel để bạn in tay (vùng in xem ở nút *⚙ Cài đặt*).
-- Sửa vùng in ở **⚙ Cài đặt**, mặc định:
-  - tờ 1: A1 tới hết phần chữ ký (A1:G46);
-  - tờ 2: bảng suất ăn (G68:O80).
+- **Không in trực tiếp được**: app báo vùng in và mở sổ bằng Excel để bạn in tay. App tự tính vùng in theo mẫu sổ:
+  - tờ 1: A1 tới hết phần chữ ký (thường là A1:G46);
+  - tờ 2: bảng suất ăn (thường là G68:O80).
 - Khi app gặp lỗi, chi tiết được ghi vào `%APPDATA%\DiemDanhBanTru\loi.log`.
 - **Cập nhật app lên bản mới**: tải lại `DiemDanhBanTru.exe` trong thư mục `tai-ve` của repo, chép đè lên file cũ (đóng app trước). Danh sách học sinh, ghép lớp, lịch và cài đặt nằm trong file dữ liệu `DuLieu_BanTru.xlsx` nên vẫn giữ nguyên.
 
@@ -158,7 +162,7 @@ Bảng **Sĩ số bán trú từng lớp** bên phải tô đỏ lớp có sĩ s
 | Phím | Việc |
 |---|---|
 | Ctrl+V (trong ô dán) | Dán và kiểm tra tin nhắn |
-| Ctrl+Enter | Kiểm tra lại nội dung ô dán |
+| Ctrl+Enter | Kiểm tra nội dung gõ tay trong ô dán |
 | Ctrl+S | Lưu vào sổ |
 | Ctrl+P | In 2 tờ |
 | Ctrl+Z | Hoàn tác thao tác vừa làm |

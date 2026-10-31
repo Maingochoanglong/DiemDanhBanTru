@@ -11,7 +11,7 @@ from ..core import schedule as sch
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, parse_date
 from ..service import next_school_day
 from .icons import icon
-from .widgets import center, tag_colors, with_scrollbar
+from .widgets import ask, center, tag_colors, with_scrollbar
 
 KIND_ORDER = [sch.CUT, sch.ADD, sch.FRIDAY]
 
@@ -25,7 +25,8 @@ class TabLich(ttk.Frame):
         top = ttk.Frame(self)
         top.pack(fill="x")
         ttk.Label(top, text="Lịch thêm / cắt bán trú", style="Title.TLabel").pack(side="left")
-        ttk.Button(top, text="Cắt thứ 6 hàng tuần…", command=lambda: self.open_dialog(sch.FRIDAY)).pack(side="right", padx=6)
+        ttk.Button(top, text="Cắt thứ 6 hàng tuần…", image=icon("friday"), compound="left",
+                   command=lambda: self.open_dialog(sch.FRIDAY)).pack(side="right", padx=6)
         ttk.Button(top, text="Thêm bán trú…", style="Big.TButton", image=icon("add"), compound="left",
                    command=lambda: self.open_dialog(sch.ADD)).pack(side="right")
         ttk.Button(top, text="Cắt bán trú…", style="Big.TButton", image=icon("cut"), compound="left",
@@ -107,7 +108,8 @@ class TabLich(ttk.Frame):
             return
         its = [self.items[i] for i in sel]
         lines = "\n".join(f"• {it.student.ho_ten} ({it.student.lop_tinh}): {it.text}" for it in its[:12])
-        if not messagebox.askyesno("Hủy lịch", f"Hủy {len(its)} lịch sau?\n\n{lines}", parent=self):
+        if ask(self, "Hủy lịch", f"Hủy {len(its)} lịch sau?\n\n{lines}",
+               [("keep", "Giữ lại"), ("cancel", "Hủy các lịch này")], image="st_err") != "cancel":
             return
         try:
             for it in its:

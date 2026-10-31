@@ -50,16 +50,16 @@ ICONS = {
     "add": ("outline", "plus", DARK),
     "save": ("outline", "device-floppy", BLUE),
     "print": ("outline", "printer", DARK),
-    "preview": ("outline", "eye", DARK),
     "undo": ("outline", "arrow-back-up", DARK),
     "copy": ("outline", "copy", DARK),
-    "check": ("outline", "checks", BLUE),
-    "erase": ("outline", "eraser", DARK),
     "pencil": ("outline", "pencil", ORANGE),
     "calendar": ("outline", "calendar-event", DARK),
     "excel": ("outline", "file-spreadsheet", GREEN),
     "today": ("outline", "calendar-check", DARK),
     "list": ("outline", "list-details", DARK),
+    "friday": ("outline", "calendar-minus", DARK),  # cắt thứ 6 hàng tuần
+    "open": ("outline", "app-window", BLUE),  # mở cửa sổ lớp
+    "ask": ("outline", "help-circle", BLUE),  # hộp hỏi
 }
 APP_ICON = ("outline", "calendar-check", BLUE)  # biểu tượng cửa sổ app
 
