@@ -187,7 +187,7 @@ class ScheduleDialog(tk.Toplevel):
                    command=lambda: self.start.set(fmt_date(base))).grid(row=0, column=4, padx=2)
 
         self.note = tk.BooleanVar(value=True)
-        self.chk_note = ttk.Checkbutton(body, variable=self.note, text="Ghi chú vào cột H của lớp (như \"T11 CẮT …\")")
+        self.chk_note = ttk.Checkbutton(body, variable=self.note, text="Ghi chú vào cột H của lớp (như \"Tháng 11 cắt bán trú …\")")
         self.chk_note.pack(anchor="w", pady=(10, 0))
         self.lbl_err = ttk.Label(body, text="", style="Err.TLabel")
         self.lbl_err.pack(anchor="w")

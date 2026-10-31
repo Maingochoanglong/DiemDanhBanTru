@@ -403,8 +403,9 @@ class Workspace:
         self.sheet_name = ws.title
         self.state.exists_in_book = True
         for code in self.state.classes:
-            self.state.cd(code).keep_sheet_si_so = True
-            self.state.cd(code).sheet_si_so = self.state.si_so(code)
+            c = self.state.cd(code)
+            c.sheet_si_so = self.state.si_so(code)  # lấy sĩ số vừa ghi TRƯỚC khi chuyển sang "giữ sĩ số trong sổ"
+            c.keep_sheet_si_so = True
             self.data.set_log(self.day, code, self.state.cd(code).reported, self.state.si_so(code), self.state.absent_names(code))
         self.dirty = False
         self.warning = ""

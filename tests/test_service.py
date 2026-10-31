@@ -111,3 +111,16 @@ def test_schedule_new_student_from_next_month(ws):
     assert s.lop == "2D17" and not s.is_boarding(dt.date(2026, 10, 30)) and s.is_boarding(dt.date(2026, 11, 2))
     back = AppData.load(ws.data.path)  # đã lưu vào file dữ liệu
     assert any(x.ho_ten == "Em Chuyển Đến" and x.bt_tu == dt.date(2026, 11, 1) for x in back.roster.students)
+
+
+def test_si_so_unchanged_after_save_with_scheduled_cut(ws):
+    """Sĩ số đổi theo lịch cắt (3 -> 2) phải giữ nguyên sau khi lưu, không quay về sĩ số sheet mẫu."""
+    day = dt.date(2026, 10, 29)
+    s = next(x for x in ws.roster.students if x.ho_ten == "Tô Minh Khôi")
+    s.cat_tu = day
+    st = ws.load_day(day)
+    assert st.si_so("1D15") == 5 and not ws.si_so_conflicts()
+    ws.save()
+    assert ws.state.si_so("1D15") == 5
+    assert ws.meals().balanced
+    assert ws.load_day(day).si_so("1D15") == 5
