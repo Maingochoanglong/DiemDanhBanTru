@@ -151,6 +151,7 @@ Bảng **Sĩ số bán trú từng lớp** bên phải tô đỏ lớp có sĩ s
   - tờ 1: A1 tới hết phần chữ ký (A1:G46);
   - tờ 2: bảng suất ăn (G68:O80).
 - Khi app gặp lỗi, chi tiết được ghi vào `%APPDATA%\DiemDanhBanTru\loi.log`.
+- **Cập nhật app lên bản mới**: tải lại `DiemDanhBanTru.exe` trong thư mục `tai-ve` của repo, chép đè lên file cũ (đóng app trước). Danh sách học sinh, ghép lớp, lịch và cài đặt nằm trong file dữ liệu `DuLieu_BanTru.xlsx` nên vẫn giữ nguyên.
 
 ## 9. Phím tắt
 
