@@ -199,7 +199,7 @@ class CheckListDialog(tk.Toplevel):
         body = ttk.Frame(self, padding=12)
         body.pack(fill="both", expand=True)
         ttk.Label(body, text=intro, wraplength=780, justify="left").pack(anchor="w")
-        ttk.Label(body, text="Bấm vào dòng để bật/tắt. Chỉ các dòng có ☑ được áp dụng.",
+        ttk.Label(body, text="Bấm vào dòng để bật/tắt. Chỉ các dòng có dấu tích được áp dụng.",
                   style="Muted.TLabel").pack(anchor="w", pady=(6, 4))
         frame, self.tree = with_scrollbar(body, ttk.Treeview, columns=("nd",), show="tree headings", height=16)
         frame.pack(fill="both", expand=True)
@@ -209,7 +209,7 @@ class CheckListDialog(tk.Toplevel):
         self.tree.column("nd", width=720)
         tag_colors(self.tree)
         for i, it in enumerate(items):
-            self.tree.insert("", "end", iid=str(i), text="☑" if it.apply else "☐", values=(it.text,),
+            self.tree.insert("", "end", iid=str(i), image=_chk(it.apply), values=(it.text,),
                              tags=() if it.apply else ("muted",))
         self.tree.bind("<ButtonRelease-1>", self._toggle)
         bar = ttk.Frame(body)
@@ -228,13 +228,20 @@ class CheckListDialog(tk.Toplevel):
             return
         it = self.items[int(iid)]
         it.apply = not it.apply
-        self.tree.item(iid, text="☑" if it.apply else "☐", tags=() if it.apply else ("muted",))
+        self.tree.item(iid, image=_chk(it.apply), tags=() if it.apply else ("muted",))
 
     def _all(self, on: bool) -> None:
         for i, it in enumerate(self.items):
             it.apply = on
-            self.tree.item(str(i), text="☑" if on else "☐", tags=() if on else ("muted",))
+            self.tree.item(str(i), image=_chk(on), tags=() if on else ("muted",))
 
     def _ok(self) -> None:
         self.ok = True
         self.destroy()
+
+
+def _chk(on: bool):
+    """Ô tích dạng ảnh cho các bảng duyệt."""
+    from .icons import icon
+
+    return icon("chk_on" if on else "chk_off")

@@ -9,7 +9,7 @@ from ..core.models import Student
 from ..core.text import class_sort_key, clean_spaces, fmt_date, norm_class, parse_date
 from ..excel.roster_import import RosterFormatError, flag_mismatches
 from ..service import search_students
-from .widgets import CheckListDialog, center, tag_colors, with_scrollbar
+from .widgets import _chk, CheckListDialog, center, tag_colors, with_scrollbar
 
 ALL = "Tất cả"
 
@@ -283,7 +283,7 @@ class ImportDialog(tk.Toplevel):
                 f"{r.ho_ten} ({r.lop}, {'đỏ' if r.red else 'không đỏ'}, ghi '{r.phan_loai}')" for r in mism[:8])
             ttk.Label(body, text=txt + ". App lấy theo màu chữ.", style="Warn.TLabel", wraplength=760,
                       justify="left").pack(anchor="w", pady=(4, 0))
-        ttk.Label(body, text="Bấm vào dòng để bật/tắt. Chỉ các dòng có ☑ được áp dụng.",
+        ttk.Label(body, text="Bấm vào dòng để bật/tắt. Chỉ các dòng có dấu tích được áp dụng.",
                   style="Muted.TLabel").pack(anchor="w", pady=(6, 4))
         frame, self.tree = with_scrollbar(body, ttk.Treeview, columns=("nd",), show="tree headings", height=16)
         frame.pack(fill="both", expand=True)
@@ -293,7 +293,7 @@ class ImportDialog(tk.Toplevel):
         self.tree.column("nd", width=680)
         tag_colors(self.tree)
         for i, c in enumerate(changes):
-            self.tree.insert("", "end", iid=str(i), text="☑" if c.apply else "☐", values=(c.text,),
+            self.tree.insert("", "end", iid=str(i), image=_chk(c.apply), values=(c.text,),
                              tags=("err",) if c.kind == "removed" else ())
         self.tree.bind("<ButtonRelease-1>", self._toggle)
         if not changes:
@@ -314,12 +314,12 @@ class ImportDialog(tk.Toplevel):
             return
         c = self.changes[int(iid)]
         c.apply = not c.apply
-        self.tree.item(iid, text="☑" if c.apply else "☐")
+        self.tree.item(iid, image=_chk(c.apply))
 
     def _all(self, on: bool) -> None:
         for i, c in enumerate(self.changes):
             c.apply = on
-            self.tree.item(str(i), text="☑" if on else "☐")
+            self.tree.item(str(i), image=_chk(on))
 
     def _ok(self) -> None:
         self.ok = True
