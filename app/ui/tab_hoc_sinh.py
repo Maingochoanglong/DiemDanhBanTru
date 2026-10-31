@@ -1,4 +1,4 @@
-"""Tab Học sinh: danh sách bán trú, thêm/cắt, cắt thứ 6, nhập/xuất danh sách."""
+"""Tab Học sinh: danh sách bán trú, thêm/sửa/xóa học sinh. Nhập/xuất danh sách nằm ở Cài đặt."""
 
 from __future__ import annotations
 
@@ -33,14 +33,9 @@ class TabHocSinh(ttk.Frame):
         self.bt_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(top, text="Chỉ em ăn bán trú", variable=self.bt_var, command=self.refresh_list).pack(side="left", padx=12)
         ttk.Button(top, text="Lưu thay đổi", style="Big.TButton", command=self.save).pack(side="right")
-        ttk.Button(top, text="Nhập / cập nhật từ file CDHS…", command=self.import_cdhs).pack(side="right", padx=6)
-        ttk.Button(top, text="Đọc ghi chú trong sổ…", command=lambda: self.app.ask_note_suggestions()).pack(side="right")
-        ttk.Button(top, text="Xuất danh sách…", command=self.export).pack(side="right", padx=6)
 
-        paned = ttk.PanedWindow(self, orient="horizontal")
-        paned.pack(fill="both", expand=True, pady=(8, 0))
-        left = ttk.Frame(paned)
-        paned.add(left, weight=4)
+        left = ttk.Frame(self)
+        left.pack(fill="both", expand=True, pady=(8, 0))
         cols = ("lop", "ten", "ns", "bt", "ghiso", "ghep", "db", "gc")
         frame, self.tree = with_scrollbar(left, ttk.Treeview, columns=cols, show="headings", selectmode="browse")
         frame.pack(fill="both", expand=True)
@@ -59,26 +54,11 @@ class TabHocSinh(ttk.Frame):
         self.lbl_count = ttk.Label(bar, text="", style="Muted.TLabel")
         self.lbl_count.pack(side="right")
 
-        right = ttk.LabelFrame(paned, text="Sĩ số bán trú từng lớp", padding=4)
-        paned.add(right, weight=1)
-        frame, self.tree_sum = with_scrollbar(right, ttk.Treeview, columns=("ds", "so"), show="tree headings")
-        frame.pack(fill="both", expand=True)
-        self.tree_sum.heading("#0", text="Lớp")
-        self.tree_sum.heading("ds", text="Danh sách")
-        self.tree_sum.heading("so", text="Trong sổ")
-        self.tree_sum.column("#0", width=70)
-        self.tree_sum.column("ds", width=80, anchor="center")
-        self.tree_sum.column("so", width=80, anchor="center")
-        tag_colors(self.tree_sum)
-        ttk.Label(right, text="Đỏ = lệch: cần thêm/cắt em cho khớp,\nhoặc giữ sĩ số của sổ khi lưu.",
-                  style="Muted.TLabel", justify="left").pack(anchor="w", pady=(4, 0))
-
     # ------------------------------------------------------------------
     def refresh(self) -> None:
         codes = self.ws.roster.class_codes()
         self.cb_cls.configure(values=[ALL] + codes)
         self.refresh_list()
-        self.refresh_summary()
 
     def refresh_list(self) -> None:
         t = self.tree
@@ -102,16 +82,6 @@ class TabHocSinh(ttk.Frame):
                 s.lop, s.ho_ten, s.ngay_sinh, "x" if s.ban_tru else "",
                 self.ws.roster.display_name(s) if s.ban_tru else "", s.an_ghep, "; ".join(special), s.ghi_chu), tags=tag)
         self.lbl_count.configure(text=f"{len(items)} em")
-
-    def refresh_summary(self) -> None:
-        t = self.tree_sum
-        t.delete(*t.get_children())
-        st = self.ws.state
-        for code in self.ws.roster.class_codes():
-            ds = self.ws.roster.si_so(code, self.ws.day)
-            so = st.cd(code).sheet_si_so if st and code in st.classes else None
-            lech = so is not None and so != ds
-            t.insert("", "end", text=code, values=(ds, "" if so is None else so), tags=("err",) if lech else ())
 
     # ------------------------------------------------------------------
     def _selected(self) -> Student | None:
@@ -154,39 +124,33 @@ class TabHocSinh(ttk.Frame):
             return
         self.app.flash("Đã lưu danh sách học sinh.")
 
-    def export(self) -> None:
+    def export(self, parent=None) -> None:
         """Xuất danh sách gọn (lớp, họ tên, ngày sinh, X ăn bán trú, ghép lớp) theo một ngày."""
         from tkinter import simpledialog
 
         from ..excel.files import FileLockedError
         from ..excel.roster_export import export_roster
 
+        parent = parent or self
         raw = simpledialog.askstring("Xuất danh sách", "Đánh X cho các em ăn bán trú vào ngày (dd/mm/yyyy):",
-                                     initialvalue=fmt_date(self.ws.day), parent=self)
+                                     initialvalue=fmt_date(self.ws.day), parent=parent)
         if raw is None:
             return
         day = parse_date(raw)
         if not day:
-            messagebox.showwarning("Ngày không đúng", "Hãy nhập ngày dạng dd/mm/yyyy.", parent=self)
+            messagebox.showwarning("Ngày không đúng", "Hãy nhập ngày dạng dd/mm/yyyy.", parent=parent)
             return
         path = filedialog.asksaveasfilename(
-            parent=self, title="Lưu danh sách học sinh ăn bán trú", defaultextension=".xlsx",
+            parent=parent, title="Lưu danh sách học sinh ăn bán trú", defaultextension=".xlsx",
             initialfile="DANH_SACH_HOC_SINH_AN_BAN_TRU.xlsx", filetypes=[("Excel", "*.xlsx")])
         if not path:
             return
         try:
             n = export_roster(self.ws.roster, path, day)
         except FileLockedError:
-            messagebox.showwarning("File đang mở", "File đang mở trong Excel. Hãy đóng rồi xuất lại.", parent=self)
+            messagebox.showwarning("File đang mở", "File đang mở trong Excel. Hãy đóng rồi xuất lại.", parent=parent)
             return
         self.app.flash(f"Đã xuất danh sách ({n} em ăn bán trú ngày {fmt_date(day)}) ra {path}")
-
-    def import_cdhs(self) -> None:
-        path = filedialog.askopenfilename(
-            parent=self, title="Chọn file danh sách học sinh (CDHS, chữ đỏ = ăn bán trú)",
-            filetypes=[("Excel", "*.xls *.xlsx"), ("Tất cả", "*.*")])
-        if path:
-            self.app.import_cdhs(path)
 
 
 class StudentDialog(tk.Toplevel):

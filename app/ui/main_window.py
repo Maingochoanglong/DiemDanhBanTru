@@ -64,16 +64,16 @@ class MainWindow:
         self.nb.pack(fill="both", expand=True, padx=8)
         self.tab_dd = TabDiemDanh(self.nb, self)
         self.tab_sa = TabSuatAn(self.nb, self)
-        self.tab_lich = TabLich(self.nb, self)
-        # Tab "Học sinh" gồm 2 tab con: danh sách học sinh và ghép lớp (ít dùng hằng ngày)
+        # Tab "Học sinh" gồm 3 tab con ít dùng hằng ngày: danh sách, lịch thêm/cắt, ghép lớp
         self.tab_hs_group = _TabGroup(self.nb)
         self.tab_hs = TabHocSinh(self.tab_hs_group.nb, self)
+        self.tab_lich = TabLich(self.tab_hs_group.nb, self)
         self.tab_ghep = TabGhepLop(self.tab_hs_group.nb, self)
         self.tab_hs_group.nb.add(self.tab_hs, text="  Danh sách học sinh  ")
+        self.tab_hs_group.nb.add(self.tab_lich, text="  Lịch thêm/cắt  ")
         self.tab_hs_group.nb.add(self.tab_ghep, text="  Ghép lớp  ")
         self.nb.add(self.tab_dd, text="  Điểm danh  ")
         self.nb.add(self.tab_sa, text="  Suất ăn  ")
-        self.nb.add(self.tab_lich, text="  Lịch thêm/cắt  ")
         self.nb.add(self.tab_hs_group, text="  Học sinh  ")
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab)
         self.tab_hs_group.nb.bind("<<NotebookTabChanged>>", self._on_tab)
@@ -90,7 +90,7 @@ class MainWindow:
         self._flash_job = None
 
         root.bind_all("<Control-s>", lambda e: self.save())
-        root.bind_all("<Control-p>", lambda e: self.print_day(False))
+        root.bind_all("<Control-p>", lambda e: self.print_day())
         root.bind_all("<Control-z>", self._ctrl_z)
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.after(150, self.startup)
@@ -207,9 +207,6 @@ class MainWindow:
         self.tab_dd.show_sheet_checks()
         self.tab_dd.show_scheduled_changes()
 
-    def recheck_day(self) -> None:
-        self.open_day(self.ws.day)
-
     # ------------------------------------------------------------------ làm mới
     def refresh_all(self) -> None:
         if self.ws.state is None:
@@ -236,7 +233,7 @@ class MainWindow:
 
     def show_tab(self, tab) -> None:
         """Chuyển tới một tab (kể cả tab con trong tab Học sinh)."""
-        if tab in (self.tab_hs, self.tab_ghep):
+        if tab in (self.tab_hs, self.tab_lich, self.tab_ghep):
             self.nb.select(self.tab_hs_group)
             self.tab_hs_group.nb.select(tab)
         else:
@@ -247,7 +244,8 @@ class MainWindow:
             self.tab_cd.refresh()
         w = self.cd_win
         if not w.winfo_viewable():
-            w.geometry("980x560")
+            w.update_idletasks()  # cao vừa nội dung, rộng đủ hiện đường dẫn file
+            w.geometry(f"{max(980, w.winfo_reqwidth())}x{w.winfo_reqheight()}")
             from .widgets import center
 
             center(w, self.root)
@@ -336,7 +334,7 @@ class MainWindow:
             self.lbl_book.configure(text=f"Sổ: {bp.name} · sheet {self.ws.sheet_name}")
         self.tab_dd.refresh_light()
 
-    def print_day(self, preview: bool) -> None:
+    def print_day(self) -> None:
         st = self.ws.state
         if st is None or not self.ws.book_path:
             return
@@ -353,14 +351,14 @@ class MainWindow:
         self.flash("Đang gửi lệnh tới Excel…")
         self.root.update_idletasks()
         try:
-            printing.print_areas(self.ws.book_path, self.ws.sheet_name, areas, preview=preview)
+            printing.print_areas(self.ws.book_path, self.ws.sheet_name, areas)
         except printing.PrintError as e:
             if ask(self.root, "Không in trực tiếp được",
                    f"{e}\n\nCó thể mở sổ bằng Excel để in tay (vùng in: {' và '.join(areas)}).",
                    [("open", "Mở sổ bằng Excel"), ("close", "Đóng")], image="st_err") == "open":
                 printing.open_file(self.ws.book_path)
             return
-        self.flash("Đã gửi lệnh in 2 tờ." if not preview else "Đã mở xem trước trong Excel.")
+        self.flash("Đã gửi lệnh in 2 tờ.")
 
     def undo(self) -> None:
         if self.ws.undo():

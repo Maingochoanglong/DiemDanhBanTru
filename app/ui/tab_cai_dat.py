@@ -1,4 +1,4 @@
-"""Tab Cài đặt: đường dẫn file, vùng in."""
+"""Cửa sổ Cài đặt: đường dẫn file, nhập/xuất danh sách học sinh, thư mục."""
 
 from __future__ import annotations
 
@@ -31,19 +31,13 @@ class TabCaiDat(ttk.Frame):
             ttk.Entry(g, textvariable=var, state="readonly").grid(row=i, column=1, sticky="we")
             ttk.Button(g, text="Mở", command=lambda k=key: self._open(k)).grid(row=i, column=2, padx=4)
         ttk.Button(g, text="Chọn sổ khác…", command=self.app.choose_book).grid(row=1, column=3)
-        ttk.Button(g, text="Nhập lại…", command=self.app.ask_import_cdhs).grid(row=2, column=3)
 
-        box = ttk.LabelFrame(self, text="Vùng in (mỗi vùng in thành 1 tờ A4 ngang)", padding=10)
+        # việc ít làm với danh sách học sinh (đầu năm, khi trường có danh sách mới)
+        box = ttk.LabelFrame(self, text="Danh sách học sinh", padding=10)
         box.pack(fill="x", pady=(16, 0))
-        for i, (key, label) in enumerate([("vung_in_1", "Tờ 1 – bảng điểm danh (trống = tự tính, thường là A1:G46)"),
-                                          ("vung_in_2", "Tờ 2 – bảng suất ăn (trống = tự tìm, thường là G68:O80)")]):
-            ttk.Label(box, text=label).grid(row=i, column=0, sticky="w", pady=4, padx=(0, 10))
-            var = tk.StringVar()
-            self.vars[key] = var
-            ttk.Entry(box, textvariable=var, width=16).grid(row=i, column=1, sticky="w")
-        ttk.Button(box, text="Lưu vùng in", command=self.save_areas).grid(row=2, column=0, sticky="w", pady=(8, 0))
-        self.lbl_auto = ttk.Label(box, text="", style="Muted.TLabel")
-        self.lbl_auto.grid(row=2, column=1, sticky="w", pady=(8, 0))
+        ttk.Button(box, text="Nhập / cập nhật từ file CDHS…", command=self.app.ask_import_cdhs).pack(side="left")
+        ttk.Button(box, text="Đọc ghi chú trong sổ…", command=self.app.ask_note_suggestions).pack(side="left", padx=6)
+        ttk.Button(box, text="Xuất danh sách…", command=lambda: self.app.tab_hs.export(self)).pack(side="left")
 
         bar = ttk.Frame(self)
         bar.pack(fill="x", pady=(16, 0))
@@ -62,24 +56,6 @@ class TabCaiDat(ttk.Frame):
         self.vars["data"].set(str(self.ws.data.path))
         self.vars["so_file"].set(st.get("so_file", ""))
         self.vars["cdhs_file"].set(st.get("cdhs_file", ""))
-        self.vars["vung_in_1"].set(st.get("vung_in_1", ""))
-        self.vars["vung_in_2"].set(st.get("vung_in_2", ""))
-        try:
-            auto = self.ws.print_areas() if self.ws.book_path else []
-        except Exception:  # noqa: BLE001
-            auto = []
-        self.lbl_auto.configure(text=("Đang dùng: " + " và ".join(auto)) if auto else "")
-
-    def save_areas(self) -> None:
-        for k in ("vung_in_1", "vung_in_2"):
-            self.ws.settings[k] = self.vars[k].get().strip().upper().replace("$", "")
-        try:
-            self.ws.save_data()
-        except Exception as e:  # noqa: BLE001
-            self.app.show_save_error(e, self.ws.data.path)
-            return
-        self.refresh()
-        self.app.flash("Đã lưu vùng in.")
 
     def _path(self, key: str) -> Path | None:
         v = self.vars[key].get()

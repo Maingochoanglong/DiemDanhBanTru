@@ -90,9 +90,7 @@ class TabDiemDanh(ttk.Frame):
         bottom = ttk.Frame(self)
         bottom.pack(side="bottom", fill="x", pady=(8, 0))
         ttk.Button(bottom, text="In 2 tờ (Ctrl+P)", image=icon("print"), compound="left",
-                   command=lambda: self.app.print_day(False)).pack(side="right")
-        ttk.Button(bottom, text="Xem trước", image=icon("preview"), compound="left",
-                   command=lambda: self.app.print_day(True)).pack(side="right", padx=6)
+                   command=self.app.print_day).pack(side="right")
         ttk.Button(bottom, text="Lưu vào sổ (Ctrl+S)", style="Big.TButton", image=icon("save"), compound="left",
                    command=self.app.save).pack(side="right", padx=6)
         ttk.Button(bottom, text="Hoàn tác (Ctrl+Z)", image=icon("undo"), compound="left",
@@ -103,15 +101,12 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_saved.pack(side="left")
         self.lbl_saved.bind("<Button-1>", lambda e: self.ws.unresolved_count() and self.app.fix_unresolved())
 
-        # Ô dán tin nhắn
-        box = ttk.LabelFrame(self, text="Dán tin nhắn Zalo vào đây (Ctrl+V)", padding=(8, 6))
+        # Ô dán tin nhắn: dán vào là tự kiểm tra rồi tự xóa ô; gõ tay thì bấm Ctrl+Enter
+        box = ttk.LabelFrame(self, text="Dán tin nhắn Zalo vào đây (Ctrl+V) — app tự kiểm tra ngay; "
+                                        "gõ tay xong bấm Ctrl+Enter", padding=(8, 6))
         box.pack(fill="x")
         row = ttk.Frame(box)
         row.pack(fill="x")
-        ttk.Button(row, text="Xóa ô", image=icon("erase"), compound="left",
-                   command=lambda: self.paste.delete("1.0", "end")).pack(side="right", padx=(6, 0))
-        ttk.Button(row, text="Kiểm tra (Ctrl+Enter)", style="Big.TButton", image=icon("check"), compound="left",
-                   command=self.analyze).pack(side="right", padx=(6, 0))
         # ô dán chỉ cao 1 dòng khi không dùng; bấm vào thì mở ra 3 dòng
         self.paste = tk.Text(row, height=1, wrap="word", font=base, undo=True)
         self.paste.pack(side="left", fill="both", expand=True)
@@ -121,9 +116,8 @@ class TabDiemDanh(ttk.Frame):
         self.paste.bind("<Control-Return>", lambda e: (self.analyze(), "break")[1])
         srow = ttk.Frame(box)
         srow.pack(fill="x", pady=(6, 0))
-        ttk.Button(srow, text="Kiểm tra lại sổ", command=self.app.recheck_day).pack(side="right")
         ttk.Button(srow, text="Kết quả chi tiết…", image=icon("list"), compound="left",
-                   command=self.show_results).pack(side="right", padx=6)
+                   command=self.show_results).pack(side="right")
         sbox = ttk.Frame(srow)
         sbox.pack(side="left", fill="x", expand=True)
         # dòng 1: việc cần xử lý (đỏ/cam) · dòng 2: thông tin (xám)
@@ -200,9 +194,8 @@ class TabDiemDanh(ttk.Frame):
         brow = ttk.Frame(self.detail)
         brow.pack(fill="x", pady=(8, 4))
         ttk.Button(brow, text="Lớp này đủ", image=icon("st_ok"), compound="left", command=self.mark_full).pack(side="left")
-        ttk.Button(brow, text="Bỏ đã báo", command=self.unmark_reported).pack(side="left", padx=6)
         ttk.Button(brow, text="Thêm/cắt bán trú…", image=icon("calendar"), compound="left",
-                   command=lambda: self._schedule_menu_for(None)).pack(side="left")
+                   command=lambda: self._schedule_menu_for(None)).pack(side="left", padx=6)
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
         ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
@@ -581,13 +574,6 @@ class TabDiemDanh(ttk.Frame):
             return
         self.ws.push_undo()
         self.ws.state.mark_full(self.current_class)  # em cắt thứ 6 vẫn tính vắng vào thứ 6
-        self.refresh_light()
-
-    def unmark_reported(self) -> None:
-        if not self.current_class:
-            return
-        self.ws.push_undo()
-        self.ws.state.cd(self.current_class).reported = False
         self.refresh_light()
 
     def clear_extra(self) -> None:
