@@ -53,6 +53,7 @@ class PasteOutcome:
     results: list[matcher.MatchResult] = field(default_factory=list)
     guessed_from: list[str] = field(default_factory=list)  # các lớp đoán được khi tin không ghi lớp
     class_by: str = ""  # "sender": lớp theo tên người gửi; "names": theo tên học sinh
+    class_how: str = ""  # mô tả cách đoán lớp cho giáo vụ, vd. "theo tên Zalo Bích Nguyễn"
     suggestions: list = field(default_factory=list)  # đề nghị thêm/cắt bán trú (tin báo lịch)
     schedule_known: bool = False  # tin báo lịch nhưng lịch đó đã có sẵn
 
@@ -82,6 +83,7 @@ class Workspace:
         self.dirty = False  # ngày đang mở có thay đổi chưa ghi vào sổ
         self.data_dirty = False  # danh sách HS / ghép lớp có thay đổi chưa lưu
         self.paste_skipped: dict[dt.date, int] = {}  # tin Zalo của ngày khác (lần dán gần nhất)
+        self.unplaced: list[ParsedMessage] = []  # tin có tên vắng nhưng không tìm được lớp (chưa xử lý)
 
     # ---------------------------------------------------------------- dữ liệu
     @property
@@ -187,6 +189,7 @@ class Workspace:
         self._undo.clear()
         self.dirty = False
         self.sheet_checks = {}
+        self.unplaced = []
         path = self.book_for(day)
         self.book_path = path
         if path is None:
@@ -288,8 +291,50 @@ class Workspace:
                 c.teacher_present, c.teacher_total = msg.present, msg.total
             else:
                 po.results = self.state.apply_message(msg)
+            c = self.state.cd(msg.cls)
+            c.guess = po.class_how if msg.guessed else ""
+            c.guess_weak = msg.guessed and po.class_by == "names"
             out.append(po)
+        seen = {m.raw for m in self.unplaced}
+        self.unplaced += [po.message for po in out
+                          if po.message.cls is None and po.message.names and po.message.raw not in seen]
         return out
+
+    def assign_unplaced(self, msg: ParsedMessage, code: str) -> list[matcher.MatchResult]:
+        """Giáo vụ chọn lớp cho tin không rõ lớp: ghi tin vào lớp đó."""
+        assert self.state is not None
+        self.push_undo()
+        msg.cls, msg.guessed = code, False
+        if msg.full:
+            self.state.mark_full(code)
+            results = []
+        else:
+            results = self.state.apply_message(msg)
+        self.unplaced = [m for m in self.unplaced if m is not msg]
+        return results
+
+    def dismiss_unplaced(self, msg: ParsedMessage) -> None:
+        self.unplaced = [m for m in self.unplaced if m is not msg]
+
+    # ---------------------------------------------------------------- việc còn dở trước khi lưu
+    def pending_names(self) -> dict[str, list[str]]:
+        """Tên GV ghi mà app chưa xác định được em nào (chưa tính vắng), theo lớp."""
+        assert self.state is not None
+        out: dict[str, list[str]] = {}
+        for code, res in self.state.pending:
+            out.setdefault(code, []).append(res.query)
+        return out
+
+    def guessed_classes(self) -> dict[str, str]:
+        """Lớp có tin do app tự đoán lớp, giáo vụ chưa xem lại: mã lớp -> cách đoán."""
+        assert self.state is not None
+        return {code: c.guess for code, c in self.state.classes.items() if c.guess}
+
+    def confirm_guess(self, code: str) -> None:
+        assert self.state is not None
+        self.push_undo()
+        c = self.state.cd(code)
+        c.guess, c.guess_weak = "", False
 
     def _resolve_class(self, msg: ParsedMessage, po: PasteOutcome) -> None:
         """Tìm lớp cho tin không ghi mã lớp: theo tên Zalo người gửi, rồi theo tên học sinh."""
@@ -297,21 +342,24 @@ class Workspace:
 
         assert self.state is not None
         known = set(self.state.classes)
-        by_sender = None
+        by_sender, how = None, ""
         if msg.sender_class in known:
-            by_sender = msg.sender_class
+            by_sender, how = msg.sender_class, f"theo mã lớp trong tên Zalo {msg.sender}"
         elif msg.sender:
             gvcn = {c: info.gvcn for c, info in self.roster.classes.items() if c in known and info.gvcn}
-            by_sender = match_teacher(msg.sender, gvcn)
+            by_sender, how = match_teacher(msg.sender, gvcn), f"theo tên Zalo {msg.sender} giống GVCN"
             if by_sender is None:
                 learned = self.settings.get(sender_key(msg.sender))
                 by_sender = learned if learned in known else None
+                how = f"theo lớp {msg.sender} đã báo lần trước"
         guesses = matcher.guess_class(self.roster, msg.names, self.day) if msg.names else []
         po.guessed_from = guesses
         if by_sender and (not msg.names or by_sender in guesses or len(guesses) != 1):
             msg.cls, msg.guessed, po.class_by = by_sender, True, "sender"
+            po.class_how = how
         elif len(guesses) == 1:
             msg.cls, msg.guessed, po.class_by = guesses[0], True, "names"
+            po.class_how = "theo tên học sinh trong tin"
         if msg.cls and msg.sender:
             self._learn_sender(msg.sender, msg.cls)
 

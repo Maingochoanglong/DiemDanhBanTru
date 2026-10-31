@@ -107,3 +107,45 @@ def test_paste_learns_sender_class(ws):  # noqa: F811
     out = ws.paste("[29/10/2026 07:30:00] Bông Mexico: Vắng Mạnh Viên")  # không ghi lớp, không khớp GVCN
     assert out[0].message.cls == "2D17" and out[0].class_by == "sender"
     assert ws.data_dirty
+
+
+def test_guessed_class_is_marked_until_checked(ws):  # noqa: F811
+    _with_gvcn(ws)
+    ws.load_day(dt.date(2026, 10, 29))
+    ws.paste(LOG)
+    st = ws.state
+    assert ws.guessed_classes() == {"2D17": "theo tên Zalo Kim Trang giống GVCN"}
+    assert not st.cd("2D17").guess_weak
+    ws.push_undo()
+    sid = next(iter(st.cd("2D17").manual))
+    st.set_absent("2D17", sid, False)  # giáo vụ tự sửa lớp này -> coi như đã xem
+    assert ws.guessed_classes() == {}
+    assert ws.undo() and ws.guessed_classes() == {"2D17": "theo tên Zalo Kim Trang giống GVCN"}
+    ws.confirm_guess("2D17")
+    assert ws.guessed_classes() == {}
+    # tin sau có ghi mã lớp thì bỏ dấu "app đoán"
+    ws.paste("[29/10/2026 08:00:00] Kim Trang: Vắng Duy Mạnh")
+    assert ws.guessed_classes()
+    ws.paste("[29/10/2026 08:01:00] Kim Trang: 2D17: vắng Duy Mạnh")
+    assert ws.guessed_classes() == {}
+
+
+def test_guess_by_student_names_is_weak(ws):  # noqa: F811
+    ws.load_day(dt.date(2026, 10, 29))
+    ws.paste("Vắng Duy Mạnh, Hải Long")
+    c = ws.state.cd("2D17")
+    assert c.guess == "theo tên học sinh trong tin" and c.guess_weak
+
+
+def test_unresolved_names_and_unplaced_messages(ws):  # noqa: F811
+    ws.load_day(dt.date(2026, 10, 29))
+    ws.paste("Lớp 1D15: 5/6 vắng Bảo Ngọc")  # 3 em Bảo Ngọc -> chưa rõ
+    assert ws.pending_names() == {"1D15": ["Bảo Ngọc"]}
+    ws.paste("[29/10/2026 07:00:00] Ai Đó: Vắng Xyz Qwe")
+    ws.paste("[29/10/2026 07:00:00] Ai Đó: Vắng Xyz Qwe")  # dán lại không nhân đôi
+    assert [m.names for m in ws.unplaced] == [["Xyz Qwe"]]
+    res = ws.assign_unplaced(ws.unplaced[0], "2D17")
+    assert ws.unplaced == [] and res[0].status != "ok"
+    assert ws.pending_names()["2D17"] == ["Xyz Qwe"]
+    ws.load_day(dt.date(2026, 10, 29))
+    assert ws.unplaced == []

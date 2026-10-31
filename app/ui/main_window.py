@@ -19,6 +19,15 @@ from .tab_lich import TabLich
 from .widgets import ChoiceDialog
 
 
+class _TabGroup(ttk.Frame):
+    """Tab chứa các tab con (dùng cho tab Học sinh: danh sách + ghép lớp)."""
+
+    def __init__(self, parent):
+        super().__init__(parent, padding=(0, 4, 0, 0))
+        self.nb = ttk.Notebook(self)
+        self.nb.pack(fill="both", expand=True)
+
+
 class MainWindow:
     def __init__(self, root: tk.Tk, ws: Workspace):
         self.root = root
@@ -38,6 +47,7 @@ class MainWindow:
         ttk.Button(top, text="Hôm nay", command=lambda: self.open_day(dt.date.today())).pack(side="left", padx=4)
         self.lbl_wd = ttk.Label(top, text="", style="Title.TLabel")
         self.lbl_wd.pack(side="left", padx=8)
+        ttk.Button(top, text="⚙ Cài đặt", command=self.show_settings).pack(side="right", padx=(6, 0))
         ttk.Button(top, text="Mở sổ trong Excel", command=self.open_book_in_excel).pack(side="right")
         self.lbl_book = ttk.Label(top, text="", style="Muted.TLabel")
         self.lbl_book.pack(side="right", padx=8)
@@ -48,15 +58,26 @@ class MainWindow:
         self.nb.pack(fill="both", expand=True, padx=8)
         self.tab_dd = TabDiemDanh(self.nb, self)
         self.tab_lich = TabLich(self.nb, self)
-        self.tab_ghep = TabGhepLop(self.nb, self)
-        self.tab_hs = TabHocSinh(self.nb, self)
-        self.tab_cd = TabCaiDat(self.nb, self)
+        # Tab "Học sinh" gồm 2 tab con: danh sách học sinh và ghép lớp (ít dùng hằng ngày)
+        self.tab_hs_group = _TabGroup(self.nb)
+        self.tab_hs = TabHocSinh(self.tab_hs_group.nb, self)
+        self.tab_ghep = TabGhepLop(self.tab_hs_group.nb, self)
+        self.tab_hs_group.nb.add(self.tab_hs, text="  Danh sách học sinh  ")
+        self.tab_hs_group.nb.add(self.tab_ghep, text="  Ghép lớp  ")
         self.nb.add(self.tab_dd, text="  Điểm danh  ")
         self.nb.add(self.tab_lich, text="  Lịch thêm/cắt  ")
-        self.nb.add(self.tab_ghep, text="  Ghép lớp  ")
-        self.nb.add(self.tab_hs, text="  Học sinh  ")
-        self.nb.add(self.tab_cd, text="  Cài đặt  ")
+        self.nb.add(self.tab_hs_group, text="  Học sinh  ")
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab)
+        self.tab_hs_group.nb.bind("<<NotebookTabChanged>>", self._on_tab)
+        # Cài đặt: cửa sổ riêng, mở bằng nút ⚙
+        self.cd_win = tk.Toplevel(root)
+        self.cd_win.withdraw()
+        self.cd_win.title("Cài đặt")
+        self.cd_win.transient(root)
+        self.cd_win.protocol("WM_DELETE_WINDOW", self.cd_win.withdraw)
+        self.tab_cd = TabCaiDat(self.cd_win, self)
+        self.tab_cd.pack(fill="both", expand=True)
+        ttk.Button(self.tab_cd, text="Đóng", command=self.cd_win.withdraw).pack(anchor="e", pady=(12, 0))
 
         self._flash_job = None
 
@@ -142,7 +163,7 @@ class MainWindow:
 
     def _handle_new_month(self, day: dt.date, e: NeedMonthBook) -> bool:
         if e.prev is None:
-            self.flash("Chưa chọn sổ điểm danh. Vào tab Cài đặt → Chọn sổ khác…", error=True)
+            self.flash("Chưa chọn sổ điểm danh. Bấm ⚙ Cài đặt → Chọn sổ khác…", error=True)
             return False
         dlg = ChoiceDialog(
             self.root, "Sổ tháng mới",
@@ -202,8 +223,31 @@ class MainWindow:
 
     def _on_tab(self, _e=None) -> None:
         tab = self.nb.nametowidget(self.nb.select())
+        if isinstance(tab, _TabGroup):
+            tab = tab.nb.nametowidget(tab.nb.select())
         if hasattr(tab, "refresh") and self.ws.state is not None:
             tab.refresh()
+
+    def show_tab(self, tab) -> None:
+        """Chuyển tới một tab (kể cả tab con trong tab Học sinh)."""
+        if tab in (self.tab_hs, self.tab_ghep):
+            self.nb.select(self.tab_hs_group)
+            self.tab_hs_group.nb.select(tab)
+        else:
+            self.nb.select(tab)
+
+    def show_settings(self) -> None:
+        if self.ws.state is not None:
+            self.tab_cd.refresh()
+        w = self.cd_win
+        if not w.winfo_viewable():
+            w.geometry("980x560")
+            from .widgets import center
+
+            center(w, self.root)
+            w.deiconify()
+        w.lift()
+        w.focus_set()
 
     def flash(self, text: str, error: bool = False) -> None:
         self.status.configure(text=text, style="Err.TLabel" if error else "Ok.TLabel")
@@ -216,10 +260,12 @@ class MainWindow:
         if self.ws.state is None:
             return False
         if not self.ws.book_path:
-            messagebox.showwarning("Chưa có sổ", "Chưa có sổ điểm danh cho tháng này. Vào tab Cài đặt để chọn sổ.",
+            messagebox.showwarning("Chưa có sổ", "Chưa có sổ điểm danh cho tháng này. Bấm nút ⚙ Cài đặt để chọn sổ.",
                                    parent=self.root)
             return False
         self.tab_dd._save_note()
+        if not self._check_unresolved():
+            return False
         conflicts = self.ws.si_so_conflicts()
         if conflicts:
             lines = [f"{c}: theo danh sách {ds} em, trong sổ đang ghi {so} em" for c, ds, so in conflicts]
@@ -251,6 +297,31 @@ class MainWindow:
             self.flash(f"Đã lưu vào sổ {self.ws.book_path.name}, sheet {sheet}. Bản cũ đã sao lưu trong thư mục SaoLuu.")
         self._after_load_light()
         return True
+
+    def _check_unresolved(self) -> bool:
+        """Chốt chặn: còn tên chưa rõ / tin không rõ lớp (chưa tính vắng) thì hỏi trước khi lưu."""
+        pend = self.ws.pending_names()
+        unplaced = self.ws.unplaced
+        guessed = self.ws.guessed_classes()
+        if not pend and not unplaced:
+            return True
+        lines = [f"Lớp {code}: {', '.join(names)}" for code, names in pend.items()]
+        for m in unplaced:
+            who = f" (người gửi {m.sender})" if m.sender else ""
+            lines.append(f"Tin không rõ lớp{who}: {', '.join(m.names)}")
+        for code, how in guessed.items():
+            lines.append(f"Lớp {code}: app tự đoán lớp {how} — nên xem lại")
+        n = sum(len(v) for v in pend.values()) + sum(len(m.names) for m in unplaced)
+        dlg = ChoiceDialog(
+            self.root, "Còn tên chưa rõ",
+            f"Còn {n} tên GV báo vắng mà app CHƯA xác định được em nào. Các tên này CHƯA được tính vắng, "
+            "nên hiện diện và suất ăn có thể bị dư.",
+            lines, [("fix", "Xử lý trước"), ("save", "Vẫn lưu")])
+        if dlg.result[0] == "save":
+            return True
+        self.show_tab(self.tab_dd)
+        self.tab_dd.focus_problem()
+        return False
 
     def _after_load_light(self) -> None:
         bp = self.ws.book_path
