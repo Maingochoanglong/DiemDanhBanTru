@@ -28,6 +28,7 @@ class ClassDay:
     teacher_total: int | None = None
     guess: str = ""  # lớp do app tự đoán (tin không ghi mã lớp): cách đoán, vd. "theo tên Zalo …"
     guess_weak: bool = False  # đoán theo tên học sinh (kém chắc chắn) -> tính là cần xem
+    not_bt: list[str] = field(default_factory=list)  # tên GV báo vắng nhưng em không ăn bán trú (không tính)
 
 
 @dataclass
@@ -119,6 +120,7 @@ class DayState:
         c = self.cd(code)
         c.manual.clear()
         c.extra.clear()
+        c.not_bt.clear()
         c.reported = True
         c.guess, c.guess_weak = "", False
         self.pending = [p for p in self.pending if p[0] != code]
@@ -131,6 +133,7 @@ class DayState:
         results = [matcher.match_name(self.roster, code, q, self.date) for q in msg.names]
         c.manual = []
         c.extra = []
+        c.not_bt = [r.query for r in results if r.status == matcher.NOT_BT]
         self.pending = [p for p in self.pending if p[0] != code]
         for r in results:
             if r.status == matcher.OK and r.student and r.student.id not in c.manual:
@@ -267,6 +270,8 @@ class DayState:
                 out.append(f"GV báo vắng {told} em, đang ghi {n} tên")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
+        if c.not_bt:
+            out.append("Không ăn BT: " + ", ".join(c.not_bt))
         if self.si_so_mismatch(code):
             out.append(f"Sĩ số theo danh sách {self.roster.si_so(code, self.date)}, trong sổ đang ghi {c.sheet_si_so}")
         return out
