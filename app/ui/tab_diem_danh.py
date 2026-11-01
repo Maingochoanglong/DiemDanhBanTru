@@ -42,8 +42,8 @@ class ResultWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
         self.transient(tab.winfo_toplevel())
         box = dialog_body(self, padding=0)
-        ttk.Label(box, text="Bấm đúp: dòng có dấu cảnh báo / dấu X đỏ để chọn em đúng · dòng \"Lịch GV báo\" để áp dụng lịch · "
-                       "dòng \"không rõ lớp\" để chọn lớp.",
+        ttk.Label(box, text="Bấm đúp vào dòng có cảnh báo để xử lý. Dòng cần xử lý xếp trên; lớp đã ổn thu gọn "
+                       "ở dưới (bấm ▸ để xem tên).",
                   style="Muted.TLabel").pack(anchor="w", padx=10, pady=(8, 2))
         bar = ttk.Frame(box, padding=(10, 4, 10, 10))
         bar.pack(side="bottom", fill="x")
@@ -198,6 +198,8 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_cls_title = self.detail.head  # dải tiêu đề màu: "Lớp 1D15 (1.1) · GVCN …"
         self.lbl_class = ttk.Label(self.detail, text="", style="Title.TLabel")
         self.lbl_class.pack(anchor="w")
+        # cảnh báo của lớp (lệch số GV báo, tên chưa xác định…): ngay dưới dòng sĩ số, chỉ hiện khi có
+        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left", compound="left")
         brow = ttk.Frame(self.detail)
         brow.pack(fill="x", pady=(8, 4))
         ttk.Button(brow, text="Lớp này đủ", image=icon("st_ok"), compound="left", command=self.mark_full).pack(side="left")
@@ -227,8 +229,6 @@ class TabDiemDanh(ttk.Frame):
         e.bind("<FocusOut>", lambda ev: self._save_note())
         e.bind("<Return>", lambda ev: self._save_note())
         self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ tin nhắn gốc", command=self.clear_extra)
-        self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left", compound="left")
-        self.lbl_warn.pack(anchor="w")
 
     def _open_from_table(self, e) -> str | None:
         iid = self.tree.identify_row(e.y)
@@ -455,13 +455,17 @@ class TabDiemDanh(ttk.Frame):
         self.lbl_sched.configure(text=txt)
         if c.extra:
             self.lbl_extra.configure(text="Giữ tin nhắn gốc (tên chưa khớp danh sách): " + ", ".join(c.extra))
-            self.btn_clear_extra.pack(anchor="w", before=self.lbl_warn)
+            self.btn_clear_extra.pack(anchor="w", after=self.lbl_extra)
         else:
             self.lbl_extra.configure(text="")
             self.btn_clear_extra.pack_forget()
         self.note_var.set(c.note)
         warns = st.class_warnings(code)
         self.lbl_warn.configure(text="\n".join(warns), image=icon("st_err") if warns else "")
+        if warns:
+            self.lbl_warn.pack(anchor="w", pady=(4, 0), after=self.lbl_class)
+        else:
+            self.lbl_warn.pack_forget()
 
     def _refresh_meals(self) -> None:
         """Dòng "Tổng suất = hiện diện" trên màn Điểm danh; bảng đầy đủ ở tab Suất ăn."""
@@ -715,8 +719,24 @@ class TabDiemDanh(ttk.Frame):
         for iid in [i for i in self.unplaced_items if i not in before]:
             if self._place_message(iid, now=True) == "later":
                 break
+        self._sort_results()
         if self.sugg_items and any(po.suggestions for po in outcomes):
             self.show_results()  # đề nghị thêm/cắt cần giáo vụ xác nhận
+
+    def _sort_results(self) -> None:
+        """Kết quả chi tiết: dòng cần xử lý lên đầu, lớp đã ổn (đã thu gọn) xuống dưới."""
+        r = self.tree_res
+
+        def problem(iid: str) -> bool:
+            if iid in self.sugg_items or iid in self.unplaced_items or "err" in r.item(iid, "tags"):
+                return True
+            return any({"err", "warn"} & set(r.item(ch, "tags")) for ch in r.get_children(iid))
+
+        items = r.get_children("")
+        flags = {iid: problem(iid) for iid in items}
+        ordered = [i for i in items if flags[i]] + [i for i in items if not flags[i]]
+        for idx, iid in enumerate(ordered):
+            r.move(iid, "", idx)
 
     def _show_outcome(self, po) -> str | None:
         r = self.tree_res
@@ -747,7 +767,8 @@ class TabDiemDanh(ttk.Frame):
             head = f"{when}{count}ghi {st.absent_count(code)} tên vắng: {', '.join(st.absent_names(code))}"
         warns = st.class_warnings(code)
         tag = "err" if warns else ("ok" if msg.full else "warn")
-        pid = r.insert("", 0, text=code, values=(head,), tags=(tag, "bold"), open=True)
+        problem = bool(warns) or any(x.status in PROBLEM for x in po.results)
+        pid = r.insert("", 0, text=code, values=(head,), tags=(tag, "bold"), open=problem)  # lớp ổn: thu gọn
         for w in warns:
             r.insert(pid, "end", text="", image=icon("res_ambiguous"), values=(w,), tags=("err",))
         for res in po.results:

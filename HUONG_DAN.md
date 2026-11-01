@@ -86,7 +86,7 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 
 ### Kiểm tra tên
 
-Mỗi tên GV ghi được kiểm tra (xem trong **Kết quả chi tiết…**):
+Mỗi tên GV ghi được kiểm tra (xem trong **Kết quả chi tiết…**). Trong cửa sổ đó, dòng cần xử lý xếp trên cùng; lớp đã ổn được thu gọn ở dưới (bấm ▸ để xem tên):
 
 - **Vòng tròn tích xanh**: đúng em trong lớp, có ăn bán trú. Tên được ghi theo quy tắc (tên đệm + tên; trùng thì họ tên đầy đủ; trùng cả họ tên thì thêm A/B theo ngày sinh).
 - **Tam giác cam**: nhiều em trùng tên. **Bấm đúp** để chọn đúng em.
@@ -95,7 +95,7 @@ Mỗi tên GV ghi được kiểm tra (xem trong **Kết quả chi tiết…**):
 
 Tên chưa rõ cũng hiện thành nút trong **cửa sổ lớp** (bấm đúp vào lớp), bấm vào để xử lý.
 
-App còn đối chiếu số GV báo: nếu GV ghi "38/41" mà sĩ số là 40, hoặc ghi 3 tên nhưng số vắng là 2, dòng lớp đó tô đỏ và ghi lý do ở cột Ghi chú.
+App còn đối chiếu số GV báo: nếu GV ghi "38/41" mà sĩ số là 40, hoặc báo vắng 3 em nhưng mới ghi 2 tên, dòng lớp đó tô đỏ và ghi lý do ở cột Ghi chú (vd. "Thiếu 1 tên (GV báo vắng 3 em, mới ghi 2)"). Mở cửa sổ lớp, dòng đỏ này hiện ngay dưới dòng sĩ số.
 
 ### Lưu và in
 
@@ -104,6 +104,7 @@ Khi các lớp đã báo xong:
 1. Bấm **Lưu vào sổ** (Ctrl+S). Nếu chưa có sheet ngày hôm nay, app sao chép sheet hôm trước rồi điền số liệu.
    - Nếu còn **tên chưa rõ** hoặc **tin không rõ lớp**, app **chưa cho lưu và in** (các tên đó chưa được tính vắng nên suất ăn sẽ sai). Cạnh nút Lưu hiện chữ đỏ "Còn … tên chưa rõ"; bấm **Xử lý ngay** để app đưa bạn tới lớp cần xử lý. Với mỗi tên: **chọn em đúng**, **giữ tin nhắn gốc**, hoặc **bỏ qua tên này** — xử lý hết là lưu được.
 2. Bấm **In 2 tờ** (Ctrl+P): tờ 1 là bảng điểm danh, tờ 2 là bảng suất ăn.
+   - Nếu còn **lớp chưa báo**, app nhắc trước khi in: các lớp đó đang được **tính đủ** (không em nào vắng). Bấm **Vẫn in** (hoặc **Lưu rồi in**) nếu đúng vậy, hoặc **Ở lại** để chờ GV báo.
 
 Nút **Copy lớp chưa báo** chép danh sách lớp (kèm tên GVCN) chưa báo để dán vào Zalo nhắc.
 

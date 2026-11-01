@@ -169,7 +169,14 @@ def test_day_apply_and_names(roster):
     st.resolve_pending(code, pend, pend.candidates[2])
     assert st.absent_count("1D15") == 3 and not st.pending
     # GV báo 4/6 (vắng 2) nhưng đang ghi 3 tên -> cảnh báo
-    assert any("GV báo vắng 2" in w for w in st.class_warnings("1D15"))
+    assert "Thừa 1 tên (GV báo vắng 2 em, đang ghi 3)" in st.class_warnings("1D15")
+
+
+def test_warning_says_how_many_names_are_missing(roster):
+    st = DayState.new(DAY, roster, roster.class_codes())
+    msg = parse_messages("Lớp 1D15 : 3/6 Vắng : Tuấn Anh", KNOWN)[0]  # báo vắng 3 nhưng chỉ ghi 1 tên
+    st.apply_message(msg)
+    assert "Thiếu 2 tên (GV báo vắng 3 em, mới ghi 1)" in st.class_warnings("1D15")
 
 
 def test_day_friday_auto_absent(roster):
