@@ -2,6 +2,7 @@ import datetime as dt
 
 from app.core import matcher
 from app.core.day import DayState, split_names
+from app.core.models import Student
 from app.core.meals import MealLayout, MealRow
 from app.core.names import compute_display_names, short_name
 from app.core.parser import parse_messages
@@ -261,3 +262,51 @@ def test_parse_message_after_full_class_is_separate():
     msgs = parse_messages("1D16 đủ\nVắng Duy Mạnh, Hải Long\n4D22: vắng Toàn\nVắng Bé Xíu", KNOWN)
     assert [(m.cls, m.names) for m in msgs] == [
         ("1D16", []), (None, ["Duy Mạnh", "Hải Long"]), ("4D22", ["Toàn"]), (None, ["Bé Xíu"])]
+
+
+def test_initial_matches_family_name_and_asks_when_two_fit(roster):
+    day = dt.date(2026, 10, 29)
+    # chữ viết tắt là họ: "V. Bảo Ngọc" = Võ Hoàng Bảo Ngọc; là từ ngay trước tên: "Đ. Bảo Ngọc" = Đặng Bảo Ngọc
+    assert matcher.match_name(roster, "1D15", "V. Bảo Ngọc", day).student.ho_ten == "Võ Hoàng Bảo Ngọc"
+    assert matcher.match_name(roster, "1D15", "Đ. Bảo Ngọc", day).student.ho_ten == "Đặng Bảo Ngọc"
+    # "K. Bảo Ngọc": em có chữ K sát tên (Kha Bảo Ngọc) được ưu tiên hơn em chỉ có họ Kha (Kha Văn Bảo Ngọc)
+    roster.students.append(Student(id="HS9001", lop="1D15", ho_ten="Kha Văn Bảo Ngọc", ngay_sinh="01/01/2020",
+                                   ban_tru=True))
+    # 2 em chỉ khớp họ như nhau -> hỏi chọn em, không tự chọn
+    for i, name in enumerate(("Hà Văn Bảo Ngọc", "Hà Thị Bảo Ngọc")):
+        roster.students.append(Student(id=f"HS910{i}", lop="1D16", ho_ten=name, ngay_sinh="01/01/2020", ban_tru=True))
+    roster.invalidate()
+    assert matcher.match_name(roster, "1D15", "K. Bảo Ngọc", day).student.ho_ten == "Kha Bảo Ngọc"
+    r = matcher.match_name(roster, "1D16", "H. Bảo Ngọc", day)
+    assert r.status == matcher.AMBIGUOUS and len(r.candidates) == 2
+
+
+def test_wrong_names_are_matched_or_reported(roster):
+    """Tên GV gõ sai: sai dấu / i-y / không dấu thì tự nhận; sai hẳn hoặc không có trong lớp thì hỏi."""
+    day = dt.date(2026, 10, 29)
+
+    def m(cls, q):
+        return matcher.match_name(roster, cls, q, day)
+
+    for q, want in [("Minh Thu", "Ông Minh Thư"), ("Thanh Vi", "Kiều Thanh Vy"), ("Khue", "Âu Ngọc Khuê"),
+                    ("Gia Hưng B", "Lý Gia Hưng"), ("Thư", "Ông Minh Thư")]:
+        r = m("1D16", q)
+        assert r.status == matcher.OK and r.student.ho_ten == want, q
+    r = m("1D16", "Ngọc Khuyê")  # sai hẳn chữ -> chưa rõ, em gần giống nhất đứng đầu gợi ý
+    assert r.status == matcher.NOT_FOUND and r.candidates[0].ho_ten == "Âu Ngọc Khuê"
+    r = m("1D16", "Tuấn Kiệt")  # có ở lớp khác -> chưa rõ, báo lớp khác
+    assert r.status == matcher.OTHER_CLASS and r.candidates[0].lop == "2D17"
+    assert m("1D15", "Bảo Ngọc").status == matcher.AMBIGUOUS  # 3 em cùng tên -> hỏi
+
+
+def test_friday_count_without_friday_students_is_not_a_mismatch(roster):
+    roster.students[24].cat_thu6 = True  # Lục Thảo Mi 4D19 cắt thứ 6; lớp có 2 em
+    fri = dt.date(2026, 10, 30)
+    for text, ok in [("4D19: 1/2 đủ", True), ("4D19: 1/1 đủ", True), ("4D19 đủ", True), ("4D19: 2/2 đủ", False)]:
+        st = DayState.new(fri, roster, roster.class_codes())
+        msg = parse_messages(text, KNOWN | {"4D19"})[0]
+        st.mark_full("4D19")
+        c = st.cd("4D19")
+        c.teacher_present, c.teacher_total = msg.present, msg.total
+        assert st.absent_names("4D19") == ["Thảo Mi"]
+        assert (st.class_warnings("4D19") == []) == ok, text

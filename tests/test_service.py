@@ -28,11 +28,13 @@ def test_new_day_paste_save_reload(ws):
 Vắng : Tuấn Anh
 1D16 đủ
 Vắng Duy Mạnh, Hải Long""")
-    assert [o.message.cls for o in out] == ["1D15", "1D16", "2D17"]
-    assert out[2].message.guessed
+    # dòng cuối không ghi lớp, không có người gửi (tin riêng): giáo vụ chọn lớp, lớp khớp tên xếp đầu
+    assert [o.message.cls for o in out] == ["1D15", "1D16", None]
+    assert out[2].guessed_from == ["2D17"] and ws.unplaced == [out[2].message]
+    ws.assign_unplaced(out[2].message, "2D17")
     assert ws.state.absent_names("2D17") == ["Duy Mạnh", "Hải Long"]
     assert ws.dirty
-    assert ws.undo() and ws.state.absent_count("1D15") == 0
+    assert ws.undo() and ws.undo() and ws.state.absent_count("1D15") == 0  # bỏ lần chọn lớp, rồi lần dán
     ws.paste("Lớp 1D15 : 5/6 Vắng : Tuấn Anh")
     assert ws.save() == "29"
 

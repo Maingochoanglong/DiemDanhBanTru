@@ -314,7 +314,7 @@ class MainWindow:
         lines = [f"Lớp {code}: {', '.join(names)}" for code, names in self.ws.pending_names().items()]
         for m in self.ws.unplaced:
             who = f" (người gửi {m.sender})" if m.sender else ""
-            lines.append(f"Tin không rõ lớp{who}: {', '.join(m.names)}")
+            lines.append(f"Tin không rõ lớp{who}: {', '.join(m.names) or ' '.join(m.raw.split())[:60]}")
         ChoiceDialog(
             self.root, "Chưa lưu được",
             f"Còn {n} tên GV báo vắng chưa rõ là em nào, nên chưa tính vắng.\n"

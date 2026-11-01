@@ -297,7 +297,7 @@ class Workspace:
             out.append(po)
         seen = {m.raw for m in self.unplaced}
         self.unplaced += [po.message for po in out
-                          if po.message.cls is None and po.message.names and po.message.raw not in seen]
+                          if po.message.cls is None and po.message.is_report and po.message.raw not in seen]
         return out
 
     def assign_unplaced(self, msg: ParsedMessage, code: str) -> list[matcher.MatchResult]:
@@ -307,6 +307,8 @@ class Workspace:
         msg.cls, msg.guessed = code, False
         if msg.full:
             self.state.mark_full(code)
+            c = self.state.cd(code)
+            c.teacher_present, c.teacher_total = msg.present, msg.total
             results = []
         else:
             results = self.state.apply_message(msg)
@@ -329,7 +331,7 @@ class Workspace:
         """Số tên GV báo vắng chưa xác định được em nào (chưa tính vắng). Còn > 0 thì chưa cho lưu."""
         if self.state is None:
             return 0
-        return len(self.state.pending) + sum(len(m.names) for m in self.unplaced)
+        return len(self.state.pending) + sum(max(1, len(m.names)) for m in self.unplaced)
 
     def guessed_classes(self) -> dict[str, str]:
         """Lớp có tin do app tự đoán lớp, giáo vụ chưa xem lại: mã lớp -> cách đoán."""
@@ -363,7 +365,9 @@ class Workspace:
         if by_sender and (not msg.names or by_sender in guesses or len(guesses) != 1):
             msg.cls, msg.guessed, po.class_by = by_sender, True, "sender"
             po.class_how = how
-        elif len(guesses) == 1:
+        elif len(guesses) == 1 and msg.sender:
+            # chỉ tự xếp theo tên học sinh khi tin có người gửi; tin riêng (chép 1 tin, không có
+            # người gửi) để giáo vụ chọn lớp, lớp đoán theo tên nằm đầu danh sách chọn
             msg.cls, msg.guessed, po.class_by = guesses[0], True, "names"
             po.class_how = "theo tên học sinh trong tin"
         if msg.cls and msg.sender:

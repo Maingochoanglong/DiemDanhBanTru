@@ -52,23 +52,38 @@ def _is_subsequence(part: list[str], whole: list[str]) -> bool:
     return all(any(p == w for w in it) for p in part)
 
 
-def _match_level(s: Student, initials: list[str], core: list[str]) -> int:
+def _match_level(s: Student, initials: list[str], core: list[str]) -> float:
     """Mức khớp (cao hơn là tốt hơn), 0 = không khớp.
 
     5 = đúng đuôi tên, đúng dấu ("tuấn anh")      4 = đúng đuôi tên khi bỏ dấu ("Khanh Ngoc")
     3 = coi i/y như nhau ("Khôi Vĩ" ~ "Khôi Vỹ")   2 = viết dính chữ ("Lê ViVi")
     1 = bỏ bớt tên đệm, giữ tên cuối ("Ngô Triết")
+    Chữ viết tắt ("K. Bảo Ngọc") khớp từ ngay trước tên thì giữ mức; chỉ khớp họ (bỏ qua tên đệm,
+    "Kha Văn Bảo Ngọc") thì thấp hơn mọi mức trên, để em khớp sát tên được ưu tiên.
     """
     st = [lower(x) for x in words(s.ho_ten)]
     n = len(core)
     if not n or n > len(st):
         return 0
+    penalty = 0.0
     if initials:
-        if n + len(initials) > len(st):
+        # chữ viết tắt là từ ngay trước tên ("Kha Bảo Ngọc") hoặc, kém hơn, là họ ("Kha Văn Bảo Ngọc")
+        k = len(initials)
+        if n + k > len(st):
             return 0
-        before = st[len(st) - n - len(initials): len(st) - n]
-        if any(not fold(b).startswith(i) for b, i in zip(before, initials, strict=True)):
-            return 0
+
+        def fits(ws: list[str]) -> bool:
+            return all(fold(w).startswith(i) for w, i in zip(ws, initials, strict=True))
+
+        if not fits(st[len(st) - n - k: len(st) - n]):
+            if not fits(st[:k]):
+                return 0
+            penalty = 2.5
+    level = _tail_level(st, core, n, bool(initials))
+    return level - penalty if level else 0
+
+
+def _tail_level(st: list[str], core: list[str], n: int, has_initials: bool) -> int:
     tail = st[-n:]
     if tail == core:
         return 5
@@ -77,7 +92,7 @@ def _match_level(s: Student, initials: list[str], core: list[str]) -> int:
         return 4
     if [x.replace("y", "i") for x in sf[-n:]] == [x.replace("y", "i") for x in cf]:
         return 3
-    if initials:
+    if has_initials:
         return 0
     joined = "".join(cf)
     if len(joined) >= 4 and any("".join(sf[i:]) == joined for i in range(len(sf))):
