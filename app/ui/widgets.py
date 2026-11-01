@@ -100,19 +100,36 @@ class ScrollFrame(ttk.Frame):
         self.canvas.yview_moveto(0)
 
 
+def dialog_body(win, title: str | None = None, padding=14, color: str = ACCENT) -> ttk.Frame:
+    """Viền màu + dải tiêu đề màu cho cửa sổ con, để nó tách hẳn khỏi nền app.
+
+    Trả về khung chứa nội dung; dải tiêu đề là `.head` (đổi chữ bằng .head.configure(text=...)).
+    """
+    f = tkfont.nametofont("TkDefaultFont")
+    outer = tk.Frame(win, highlightthickness=3, highlightbackground=color, highlightcolor=color, borderwidth=0)
+    outer.pack(fill="both", expand=True)
+    head = tk.Label(outer, text=title if title is not None else win.title(), background=color, foreground="white",
+                    font=(f.actual("family"), f.actual("size") + 2, "bold"), anchor="w", padx=12, pady=6)
+    head.pack(fill="x")
+    body = ttk.Frame(outer, padding=padding)
+    body.pack(fill="both", expand=True)
+    body.head = head  # type: ignore[attr-defined]
+    return body
+
+
 class ChoiceDialog(tk.Toplevel):
     """Hộp thoại chọn 1 mục trong danh sách. result = (nút đã bấm, chỉ số mục chọn)."""
 
     def __init__(self, parent, title: str, message: str, options: list[str], buttons: list[tuple[str, str]],
-                 need_choice: set[str] | None = None, image: str | None = None, style: str = "TLabel"):
+                 need_choice: set[str] | None = None, image: str | None = None, style: str = "TLabel",
+                 color: str = ACCENT):
         super().__init__(parent)
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.resizable(True, True)
         self.result: tuple[str | None, int | None] = (None, None)
         self.need_choice = need_choice or set()
-        body = ttk.Frame(self, padding=14)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, title, color=color)
         msg = ttk.Label(body, text=message, wraplength=560, justify="left", style=style)
         if image:
             from .icons import bigger, icon
@@ -229,8 +246,7 @@ class TextDialog(tk.Toplevel):
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.result: str | None = None
-        body = ttk.Frame(self, padding=14)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, padding=14)
         ttk.Label(body, text=message, wraplength=560, justify="left").pack(anchor="w", pady=(0, 8))
         self.text = tk.Text(body, width=70, height=12, wrap="word", font=tkfont.nametofont("TkDefaultFont"))
         self.text.insert("1.0", initial)
@@ -267,8 +283,7 @@ class CheckListDialog(tk.Toplevel):
         self.transient(parent.winfo_toplevel())
         self.items = items
         self.ok = False
-        body = ttk.Frame(self, padding=12)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, padding=12)
         ttk.Label(body, text=intro, wraplength=780, justify="left").pack(anchor="w")
         ttk.Label(body, text="Bấm vào dòng để bật/tắt. Chỉ các dòng có dấu tích được áp dụng.",
                   style="Muted.TLabel").pack(anchor="w", pady=(6, 4))

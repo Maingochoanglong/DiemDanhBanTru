@@ -9,7 +9,7 @@ from ..core.models import Student
 from ..core.text import class_sort_key, clean_spaces, fmt_date, norm_class, parse_date
 from ..excel.roster_import import RosterFormatError, flag_mismatches
 from ..service import search_students
-from .widgets import _chk, CheckListDialog, ask, center, tag_colors, with_scrollbar
+from .widgets import _chk, CheckListDialog, ask, center, dialog_body, tag_colors, with_scrollbar
 
 ALL = "Tất cả"
 
@@ -175,8 +175,7 @@ class StudentDialog(tk.Toplevel):
         self.s = student
         self.ok = False
         self.vars: dict[str, tk.Variable] = {}
-        body = ttk.Frame(self, padding=14)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, padding=14)
         for i, (f, label, kind) in enumerate(self.FIELDS):
             ttk.Label(body, text=label).grid(row=i, column=0, sticky="w", pady=3, padx=(0, 10))
             v = getattr(student, f)
@@ -237,8 +236,7 @@ class ImportDialog(tk.Toplevel):
         self.transient(parent.winfo_toplevel())
         self.changes = changes
         self.ok = False
-        body = ttk.Frame(self, padding=12)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, padding=12)
         n_red = sum(1 for r in rows if r.red)
         ttk.Label(body, style="Title.TLabel",
                   text=f"Đọc được {len(rows)} học sinh, {n_red} em chữ đỏ (ăn bán trú).").pack(anchor="w")
