@@ -305,7 +305,7 @@ class MainWindow:
     def _check_unresolved(self) -> bool:
         """Chốt chặn: còn tên chưa rõ / tin không rõ lớp (chưa tính vắng) thì CHƯA cho lưu, in.
 
-        Không bị kẹt: mỗi tên chưa rõ đều chọn được "Chọn em này", "Giữ nguyên chữ GV ghi" hoặc "Bỏ qua tên này";
+        Không bị kẹt: mỗi tên chưa rõ đều chọn được "Chọn em này", "Giữ tin nhắn gốc" hoặc "Bỏ qua tên này";
         tin không rõ lớp chọn được "Ghi vào lớp này" hoặc "Bỏ tin này".
         """
         n = self.ws.unresolved_count()
@@ -318,7 +318,7 @@ class MainWindow:
         ChoiceDialog(
             self.root, "Chưa lưu được",
             f"Còn {n} tên GV báo vắng chưa rõ là em nào, nên chưa tính vắng.\n"
-            "Với mỗi tên: chọn em đúng, giữ nguyên chữ GV ghi, hoặc bỏ qua tên đó. Xử lý xong mới lưu được.",
+            "Với mỗi tên: chọn em đúng, giữ tin nhắn gốc, hoặc bỏ qua tên đó. Xử lý xong mới lưu được.",
             lines, [("fix", "Xử lý ngay")], image="st_err", style="Err.TLabel", color=ERR_COLOR)
         self.fix_unresolved()
         return False
