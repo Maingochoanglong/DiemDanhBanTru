@@ -26,8 +26,6 @@ class ClassDay:
     keep_sheet_si_so: bool = False
     teacher_present: int | None = None
     teacher_total: int | None = None
-    guess: str = ""  # lớp do app tự đoán (tin không ghi mã lớp): cách đoán, vd. "theo tên Zalo …"
-    guess_weak: bool = False  # đoán theo tên học sinh (kém chắc chắn) -> tính là cần xem
     not_bt: list[str] = field(default_factory=list)  # tên GV báo vắng nhưng em không ăn bán trú (không tính)
 
 
@@ -114,7 +112,6 @@ class DayState:
             if sid in auto:
                 c.auto_off.add(sid)
         c.reported = True
-        c.guess, c.guess_weak = "", False  # giáo vụ đã tự xem lớp này
 
     def mark_full(self, code: str) -> None:
         c = self.cd(code)
@@ -122,7 +119,6 @@ class DayState:
         c.extra.clear()
         c.not_bt.clear()
         c.reported = True
-        c.guess, c.guess_weak = "", False
         self.pending = [p for p in self.pending if p[0] != code]
 
     def apply_message(self, msg: ParsedMessage) -> list[matcher.MatchResult]:
