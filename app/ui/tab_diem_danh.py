@@ -146,7 +146,7 @@ class TabDiemDanh(ttk.Frame):
         for text, key in (("chưa báo", "muted"), ("đủ", "ok"), ("có vắng", "warn"), ("cần xem", "err")):
             tk.Label(legend, text=f" {text} ", image=icon(STATUS_ICON[key]), compound="left", padx=4,
                      background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
-        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch · [Máy tự xếp lớp] tin không ghi mã lớp",
+        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch · [Tự động phân lớp] tin không ghi mã lớp",
                   style="Muted.TLabel").pack(side="left", padx=6)
         ttk.Button(legend, text="Mở lớp đã chọn", image=icon("open"), compound="left",
                    command=lambda: self.open_class(self.current_class)).pack(side="right")
@@ -199,7 +199,7 @@ class TabDiemDanh(ttk.Frame):
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
         ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
         ttk.Label(brow, text="Tìm tên:").pack(side="right", padx=(0, 4))
-        # 2 dòng chỉ hiện khi có nội dung (lớp máy tự xếp, tên chưa rõ)
+        # 2 dòng chỉ hiện khi có nội dung (lớp tự động phân lớp, tên chưa rõ)
         self.guess_row = ttk.Frame(self.detail)
         self.pending_row = ttk.Frame(self.detail)
         self.lbl_hint = ttk.Label(self.detail, text="Tích ô = em vắng · chuột phải vào tên: cắt bán trú / cắt thứ 6",
@@ -219,7 +219,7 @@ class TabDiemDanh(ttk.Frame):
         e.pack(side="left", fill="x", expand=True, padx=4)
         e.bind("<FocusOut>", lambda ev: self._save_note())
         e.bind("<Return>", lambda ev: self._save_note())
-        self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ nguyên chữ", command=self.clear_extra)
+        self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ tin nhắn gốc", command=self.clear_extra)
         self.lbl_warn = ttk.Label(self.detail, text="", style="Err.TLabel", wraplength=800, justify="left", compound="left")
         self.lbl_warn.pack(anchor="w")
 
@@ -309,7 +309,7 @@ class TabDiemDanh(ttk.Frame):
         if st.scheduled_changes(code):
             note = "[Lịch] " + note
         if c.guess:
-            note = f"[Máy tự xếp lớp] {c.guess}" + (f" · {note}" if note else "")
+            note = f"[Tự động phân lớp] {c.guess}" + (f" · {note}" if note else "")
         vals = (info.gvcn if info else "", st.si_so(code), n, st.present(code), names, note)
         return vals, tag
 
@@ -354,7 +354,7 @@ class TabDiemDanh(ttk.Frame):
         students = self.ws.roster.sort_like_roster(self.ws.roster.boarding(code, st.date))
         auto = st.auto_absent(code)
         cols = self._check_cols()
-        for i, s in enumerate(students):
+        for s in students:
             var = tk.BooleanVar(value=st.is_absent(code, s.id))
             label = self.ws.roster.display_name(s)
             if s.id in auto:
@@ -367,7 +367,6 @@ class TabDiemDanh(ttk.Frame):
                 label += f"  [ăn {s.an_ghep}]"
             cb = ttk.Checkbutton(self.checks.inner, text=label, variable=var, style="Big.TCheckbutton",
                                  command=lambda sid=s.id, v=var: self._toggle(sid, v.get()))
-            cb.grid(row=i // cols, column=i % cols, sticky="w", padx=(4, 14), pady=1)
             cb.bind("<Button-3>", lambda e, st_=s: self._schedule_menu_for(st_, e))
             cb._search = fold(s.ho_ten + " " + label)  # type: ignore[attr-defined]
             self.check_vars[s.id] = var
@@ -396,15 +395,18 @@ class TabDiemDanh(ttk.Frame):
             var.set(st.is_absent(code, sid))
 
     def _filter_checks(self) -> None:
+        """Xếp các ô tích thành cột, đọc dọc A→Z (hết cột 1 mới sang cột 2) như danh sách giấy."""
         q = fold(self.search_var.get())
         cols = self._check_cols()
-        i = 0
+        shown = []
         for cb in self.check_widgets.values():
             if q and q not in cb._search:  # type: ignore[attr-defined]
                 cb.grid_remove()
             else:
-                cb.grid(row=i // cols, column=i % cols)
-                i += 1
+                shown.append(cb)
+        rows = max(1, -(-len(shown) // cols))
+        for i, cb in enumerate(shown):
+            cb.grid(row=i % rows, column=i // rows, sticky="w", padx=(4, 14), pady=1)
 
     def _refresh_detail_labels(self) -> None:
         st = self.ws.state
@@ -429,7 +431,7 @@ class TabDiemDanh(ttk.Frame):
         self.guess_row.pack_forget()
         self.pending_row.pack_forget()
         if c.guess:
-            ttk.Label(self.guess_row, text=f"Tin không ghi mã lớp, máy tự xếp vào lớp này ({c.guess}). "
+            ttk.Label(self.guess_row, text=f"Tin không ghi mã lớp, app tự động phân vào lớp này ({c.guess}). "
                                            "Xem lại tin của GV.",
                       style="Warn.TLabel", wraplength=640, justify="left").pack(side="left", fill="x", expand=True)
             ttk.Button(self.guess_row, text="Đúng lớp này", command=lambda: self.confirm_guess(code)).pack(side="right")
@@ -457,7 +459,7 @@ class TabDiemDanh(ttk.Frame):
             txt += ("\n" if txt else "") + "Sắp tới: " + nxt
         self.lbl_sched.configure(text=txt)
         if c.extra:
-            self.lbl_extra.configure(text="Giữ nguyên chữ GV ghi (chưa khớp danh sách): " + ", ".join(c.extra))
+            self.lbl_extra.configure(text="Giữ tin nhắn gốc (tên chưa khớp danh sách): " + ", ".join(c.extra))
             self.btn_clear_extra.pack(anchor="w", before=self.lbl_warn)
         else:
             self.lbl_extra.configure(text="")
@@ -517,7 +519,7 @@ class TabDiemDanh(ttk.Frame):
             todo.append((f"{len(self.ws.unplaced)} tin không rõ lớp", "err"))
         n_guess = len(self.ws.guessed_classes()) if st else 0
         if n_guess:
-            todo.append((f"{n_guess} lớp do máy tự xếp", "warn"))
+            todo.append((f"{n_guess} lớp tự động phân lớp", "warn"))
         n_sug = len(self.sugg_items)
         if n_sug:
             todo.append((f"{n_sug} lịch GV báo chưa áp dụng", "warn"))
@@ -739,7 +741,7 @@ class TabDiemDanh(ttk.Frame):
         if not msg.is_report:
             return code
         count = f"báo {msg.present}/{msg.total} · " if msg.total is not None else ""
-        guess = f" [Máy tự xếp lớp {po.class_how}]" if msg.guessed else ""
+        guess = f" [Tự động phân lớp {po.class_how}]" if msg.guessed else ""
         when = f"{msg.when:%H:%M} " if msg.when else ""
         if msg.full:
             head = f"{when}{count}đủ"
@@ -877,12 +879,12 @@ class TabDiemDanh(ttk.Frame):
         if res.status == matcher.OTHER_CLASS:
             where = "; ".join(f"{c.ho_ten} lớp {c.lop}{' (ăn BT)' if c.ban_tru else ''}" for c in res.candidates)
             msg = (f"'{res.query}' không có trong danh sách bán trú lớp {code}.\nCó em cùng tên ở: {where}.\n\n"
-                   "Nếu em này mới chuyển vào lớp, hãy sửa ở tab Học sinh. Hoặc chọn \"Giữ nguyên chữ GV ghi\".")
+                   "Nếu em này mới chuyển vào lớp, hãy sửa ở tab Học sinh. Hoặc chọn \"Giữ tin nhắn gốc\".")
         elif cands:
             msg = f"Lớp {code}: tên '{res.query}' — chọn em đúng:"
         else:
             msg = f"Lớp {code}: không tìm thấy '{res.query}' trong danh sách bán trú."
-        buttons = ([("pick", "Chọn em này")] if cands else []) + [("raw", "Giữ nguyên chữ GV ghi"), ("skip", "Bỏ qua tên này")]
+        buttons = ([("pick", "Chọn em này")] if cands else []) + [("raw", "Giữ tin nhắn gốc"), ("skip", "Bỏ qua tên này")]
         dlg = ChoiceDialog(self, "Chọn học sinh", msg, options, buttons, need_choice={"pick"})
         key, idx = dlg.result
         if key is None:
@@ -893,7 +895,7 @@ class TabDiemDanh(ttk.Frame):
             row = (res.query, f"→ {roster.display_name(cands[idx])}  (đã chọn)", "ok", "res_ok")
         elif key == "raw":
             st.resolve_pending(code, res, None, keep_raw=True)
-            row = (res.query, "Giữ nguyên chữ GV ghi vào sổ", "warn", "res_raw")
+            row = (res.query, "Giữ tin nhắn gốc: ghi vào sổ đúng chữ GV gõ", "warn", "res_raw")
         else:
             st.resolve_pending(code, res, None)
             row = (res.query, "Đã bỏ qua", "muted", "res_skip")
