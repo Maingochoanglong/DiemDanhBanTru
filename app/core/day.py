@@ -263,7 +263,11 @@ class DayState:
         if c.teacher_present is not None and c.teacher_total is not None:
             told = c.teacher_total - c.teacher_present
             if told != n and not (friday_net and told + k == n):
-                out.append(f"GV báo vắng {told} em, đang ghi {n} tên")
+                # điều cần biết đặt đầu câu: cột Ghi chú hẹp có thể cắt phần cuối
+                if told > n:
+                    out.append(f"Thiếu {told - n} tên (GV báo vắng {told} em, mới ghi {n})")
+                else:
+                    out.append(f"Thừa {n - told} tên (GV báo vắng {told} em, đang ghi {n})")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
         if c.not_bt:

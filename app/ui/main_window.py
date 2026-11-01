@@ -317,8 +317,7 @@ class MainWindow:
             lines.append(f"Tin không rõ lớp{who}: {', '.join(m.names) or ' '.join(m.raw.split())[:60]}")
         ChoiceDialog(
             self.root, "Chưa lưu được",
-            f"Còn {n} tên GV báo vắng chưa rõ là em nào, nên chưa tính vắng.\n"
-            "Với mỗi tên: chọn em đúng, giữ tin nhắn gốc, hoặc bỏ qua tên đó. Xử lý xong mới lưu được.",
+            f"Còn {n} tên chưa rõ — chưa lưu được.\nBấm Xử lý ngay để xử lý từng tên.",
             lines, [("fix", "Xử lý ngay")], image="st_err", style="Err.TLabel", color=ERR_COLOR)
         self.fix_unresolved()
         return False
@@ -338,14 +337,23 @@ class MainWindow:
         st = self.ws.state
         if st is None or not self.ws.book_path:
             return
-        if self.ws.dirty or not st.exists_in_book:
-            if self.ws.unresolved_count():
-                self._check_unresolved()
+        need_save = self.ws.dirty or not st.exists_in_book
+        if need_save and self.ws.unresolved_count():
+            self._check_unresolved()
+            return
+        # lớp chưa báo được tính đủ (không em nào vắng): nhắc trước khi in, vì bếp nấu theo tờ in
+        unrep = st.unreported()
+        parts = []
+        if unrep:
+            parts.append(f"Còn {len(unrep)} lớp chưa báo, đang tính đủ (không em nào vắng):\n{', '.join(unrep)}")
+        if need_save:
+            parts.append("Cần lưu ngày này vào sổ trước khi in.")
+        if parts:
+            title = "Còn lớp chưa báo" if unrep else "Lưu trước khi in"
+            go = "Lưu rồi in" if need_save else "Vẫn in"
+            if ask(self.root, title, "\n\n".join(parts), [("go", go), ("cancel", "Ở lại")]) != "go":
                 return
-            if ask(self.root, "Lưu trước khi in", "Cần lưu ngày này vào sổ trước khi in.",
-                   [("save", "Lưu rồi in"), ("cancel", "Hủy")]) != "save":
-                return
-            if not self.save():
+            if need_save and not self.save():
                 return
         areas = self.ws.print_areas()
         self.flash("Đang gửi lệnh tới Excel…")
