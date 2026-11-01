@@ -56,7 +56,6 @@ class ParsedMessage:
     total: int | None = None
     names: list[str] = field(default_factory=list)
     full: bool = False  # lớp báo đủ
-    guessed: bool = False  # lớp do app đoán (tin không ghi lớp)
     when: dt.datetime | None = None  # giờ gửi (tin chép từ Zalo máy tính)
     sender: str = ""  # tên Zalo người gửi
     schedule: str = ""  # phần báo lịch thêm/cắt bán trú trong tin, vd. "tháng 11 cắt bán trú Gia Huy"

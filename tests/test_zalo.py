@@ -83,9 +83,12 @@ def test_paste_zalo_only_open_day(ws):  # noqa: F811
     st = ws.state
     assert st.absent_names("1D15") == []  # tin 07:40 "đủ" ghi đè tin 07:20
     assert st.cd("1D15").reported
-    assert st.absent_names("2D17") == ["Duy Mạnh"]  # lớp đoán theo tên người gửi
-    by = {po.message.cls: po.class_by for po in out if po.class_by}
-    assert by == {"2D17": "sender"}
+    # tin không ghi lớp: KHÔNG tự xếp lớp, chờ giáo vụ chọn; lớp theo tên Zalo (GVCN) được gợi ý đầu
+    m = next(po for po in out if po.message.cls is None and po.message.names == ["Duy Mạnh"])
+    assert m.guessed_from[0] == "2D17" and m.message in ws.unplaced
+    assert st.absent_names("2D17") == [] and ws.unresolved_count() == 1
+    ws.assign_unplaced(m.message, "2D17")
+    assert st.absent_names("2D17") == ["Duy Mạnh"]
     assert st.cd("1D16").reported
 
     sched = [po for po in out if po.message.schedule]
@@ -105,37 +108,27 @@ def test_paste_learns_sender_class(ws):  # noqa: F811
     ws.load_day(dt.date(2026, 10, 29))
     ws.paste("[29/10/2026 07:00:00] Bông Mexico: 2D17: vắng Hải Long")
     out = ws.paste("[29/10/2026 07:30:00] Bông Mexico: Vắng Mạnh Viên")  # không ghi lớp, không khớp GVCN
-    assert out[0].message.cls == "2D17" and out[0].class_by == "sender"
+    # vẫn hỏi lớp; lớp người này đã báo lần trước được gợi ý đầu
+    assert out[0].message.cls is None and out[0].guessed_from[0] == "2D17"
     assert ws.data_dirty
 
 
-def test_guessed_class_is_marked_until_checked(ws):  # noqa: F811
+def test_message_without_class_always_asks(ws):  # noqa: F811
+    """Mọi tin không ghi mã lớp đều chờ giáo vụ chọn lớp (không tự xếp, không ghi chú "tự phân lớp")."""
     _with_gvcn(ws)
     ws.load_day(dt.date(2026, 10, 29))
-    ws.paste(LOG)
-    st = ws.state
-    assert ws.guessed_classes() == {"2D17": "theo tên Zalo Kim Trang giống GVCN"}
-    assert not st.cd("2D17").guess_weak
-    ws.push_undo()
-    sid = next(iter(st.cd("2D17").manual))
-    st.set_absent("2D17", sid, False)  # giáo vụ tự sửa lớp này -> coi như đã xem
-    assert ws.guessed_classes() == {}
-    assert ws.undo() and ws.guessed_classes() == {"2D17": "theo tên Zalo Kim Trang giống GVCN"}
-    ws.confirm_guess("2D17")
-    assert ws.guessed_classes() == {}
-    # tin sau có ghi mã lớp thì bỏ dấu "app đoán"
-    ws.paste("[29/10/2026 08:00:00] Kim Trang: Vắng Duy Mạnh")
-    assert ws.guessed_classes()
-    ws.paste("[29/10/2026 08:01:00] Kim Trang: 2D17: vắng Duy Mạnh")
-    assert ws.guessed_classes() == {}
-
-
-def test_guess_by_student_names_is_weak(ws):  # noqa: F811
-    ws.load_day(dt.date(2026, 10, 29))
-    # tin nhóm có người gửi lạ: tự động phân lớp theo tên học sinh, đánh dấu kém chắc (dòng đỏ)
-    ws.paste("[29/10/2026 07:00:00] Người Lạ: Vắng Duy Mạnh, Hải Long")
-    c = ws.state.cd("2D17")
-    assert c.guess == "theo tên học sinh trong tin" and c.guess_weak
+    # người gửi lạ: gợi ý theo tên học sinh; tên Zalo giống GVCN: gợi ý lớp của GVCN
+    for text, hint in [("[29/10/2026 07:00:00] Người Lạ: Vắng Duy Mạnh, Hải Long", "2D17"),
+                       ("[29/10/2026 07:05:00] Kim Trang: Vắng Duy Mạnh", "2D17"),
+                       ("[29/10/2026 07:06:00] Kim Trang: đủ ạ", "2D17")]:
+        po = ws.paste(text)[0]
+        assert po.message.cls is None and po.guessed_from[0] == hint, text
+        assert po.message in ws.unplaced
+    assert ws.state.absent_count("2D17") == 0 and not ws.state.cd("2D17").reported
+    # chọn lớp: ghi vào lớp đó, nhớ người gửi để lần sau gợi ý đầu
+    m = ws.unplaced[1]
+    ws.assign_unplaced(m, "2D17")
+    assert ws.state.absent_names("2D17") == ["Duy Mạnh"]
 
 
 def test_private_message_without_class_asks_for_class(ws):  # noqa: F811

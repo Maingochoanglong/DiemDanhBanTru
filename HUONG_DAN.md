@@ -50,8 +50,8 @@ Màn hình **Điểm danh** gồm:
 | Phần | Dùng để |
 |---|---|
 | **Ô dán tin nhắn Zalo** (trên cùng) | Copy tin nhắn của GVCN trong Zalo, bấm vào ô rồi **Ctrl+V**: app **tự kiểm tra ngay** và tự xóa ô. Dán 1 tin hay cả đoạn nhiều tin đều được; gõ tay thì gõ xong bấm **Ctrl+Enter**. Bên dưới có 2 dòng: dòng 1 **"Cần xử lý: …"** (đỏ/cam) là việc bạn phải làm, dòng 2 (xám) là thông tin. Bấm vào đó (hoặc nút **Kết quả chi tiết…**) để xem từng tên. |
-| **Bảng điểm danh** (rộng hết màn hình) | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng có icon và màu: **vòng tròn xám** = chưa báo, **tích xanh** = đủ, **chấm cam** = có vắng, **tam giác đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt; **[Tự động phân lớp]** = tin của lớp này không ghi mã lớp, app tự tìm lớp. Chữ dài bị cắt: rê chuột vào ô để xem đủ. Dòng trên bảng có **Tổng suất = hiện diện** kèm dấu tích xanh (đỏ khi lệch, bấm vào để xem tab Suất ăn). |
-| **Cửa sổ lớp** (bấm đúp vào 1 lớp, hoặc chọn lớp rồi bấm **Mở lớp đã chọn**, hoặc chuột phải → **Mở lớp này**) | Danh sách em ăn bán trú của lớp, **tích = vắng**. Có nút *Lớp này đủ*, các tên chưa rõ để chọn em đúng, ô tìm tên, ô ghi chú cột H; lớp được tự động phân lớp có nút **Đúng lớp này**. Bấm **Xong** để đóng. |
+| **Bảng điểm danh** (rộng hết màn hình) | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng có icon và màu: **vòng tròn xám** = chưa báo, **tích xanh** = đủ, **chấm cam** = có vắng, **tam giác đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt; Chữ dài bị cắt: rê chuột vào ô để xem đủ. Dòng trên bảng có **Tổng suất = hiện diện** kèm dấu tích xanh (đỏ khi lệch, bấm vào để xem tab Suất ăn). |
+| **Cửa sổ lớp** (bấm đúp vào 1 lớp, hoặc chọn lớp rồi bấm **Mở lớp đã chọn**, hoặc chuột phải → **Mở lớp này**) | Danh sách em ăn bán trú của lớp, **tích = vắng**. Có nút *Lớp này đủ*, các tên chưa rõ để chọn em đúng, ô tìm tên, ô ghi chú cột H. Bấm **Xong** để đóng. |
 
 Tab **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ các em ghép vắng. Dòng trên cùng phải là **Tổng suất = hiện diện** kèm dấu tích xanh. Bấm vào 1 nhóm để xem tên em ghép vắng.
 
@@ -65,9 +65,9 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 
 - App **chỉ lấy tin của ngày đang mở**. Tin của ngày khác được bỏ qua và báo lại (vd. "bỏ qua 50 tin ngày khác"). Muốn nhập ngày khác thì mở ngày đó rồi dán lại cùng đoạn tin.
 - Tin được đọc **theo giờ gửi**: GV nhắn sửa thì tin sau thay cho tin trước của cùng lớp.
-- Tin **không ghi mã lớp** (vd. "Vắng Hải Long và Tuấn Anh"): app tìm lớp theo **tên Zalo người gửi** so với cột GVCN của sổ (vd. tên Zalo "Lan Nguyễn" là cô Nguyễn Thị Ngọc Lan, "Phamthanhtam" là thầy Phạm Thanh Tâm). Người gửi đã từng nhắn kèm mã lớp thì app nhớ lớp của người đó. Nếu vẫn không biết, app tìm theo tên học sinh.
-  - Lớp được tự động phân lớp ghi **[Tự động phân lớp]** ở cột Ghi chú. Xem lại tin của GV; nếu đúng, bấm **Đúng lớp này** trong cửa sổ lớp. Xếp theo tên học sinh (kém chắc chắn) thì dòng lớp tô đỏ để chắc chắn bạn xem lại.
-  - Tin **không tìm được lớp**: trong **Kết quả chi tiết…**, bấm đúp dòng "không rõ lớp" để chọn lớp cho tin đó (hoặc bỏ tin).
+- Tin **không ghi mã lớp** (vd. "Vắng Hải Long và Tuấn Anh", hay chỉ "đủ"): app **không tự xếp lớp**. Dán xong app hỏi ngay **"Tin này của lớp nào?"** để bạn chọn.
+  - Lớp gợi ý nằm đầu danh sách, ghi "(gợi ý)": lớp có GVCN giống **tên Zalo người gửi** (vd. tên Zalo "Lan Nguyễn" là cô Nguyễn Thị Ngọc Lan), lớp người đó đã báo lần trước, rồi lớp có các tên học sinh trong tin.
+  - Bấm **Để sau** thì tin nằm chờ trong **Kết quả chi tiết…** (bấm đúp dòng "không rõ lớp" để chọn lớp hoặc bỏ tin) và app chưa cho lưu.
 - Lời chào, "dạ", "ok cô"… không có chữ "vắng/nghỉ/đủ" hay sĩ số thì app bỏ qua.
 - **Tin báo lịch** (vd. "Lớp 5D21: tháng 11 cắt bán trú Gia Huy") không tính là vắng. App hiện dòng **Lịch GV báo**: bấm đúp để áp dụng, app tự cắt/thêm em đó và ghi chú cột H ("Tháng 11 cắt bán trú …"). Nếu lịch đó đã có sẵn, app chỉ báo "đã có".
 
@@ -77,8 +77,7 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 |---|---|
 | `2D17: 32/34 vắng Hải Long, Tuấn Kiệt` | Ghi vắng 2 em, đối chiếu số 34/36 |
 | `1D19 đủ`, `2D21: 10/10` | Lớp đủ |
-| Tin nhóm không ghi lớp: `Vắng Duy Mạnh` | Tìm lớp theo tên Zalo người gửi, ghi **[Tự động phân lớp]** để bạn xem lại |
-| **Tin nhắn riêng** chép 1 tin (không có lớp, không có tên người gửi): `Vắng Minh Khôi`, `đủ`, `Dạ cô ơi lớp em đủ ạ` | App **hỏi ngay "Tin này của lớp nào?"**; lớp có tên khớp nằm đầu danh sách. Bấm **Để sau** thì tin vẫn chờ trong Kết quả chi tiết và chưa cho lưu |
+| **Mọi tin không ghi mã lớp** (tin nhóm `Vắng Duy Mạnh`, tin nhắn riêng `đủ`, `Dạ cô ơi lớp em đủ ạ`…) | App **hỏi ngay "Tin này của lớp nào?"**, không tự xếp lớp. Lớp gợi ý (theo tên Zalo người gửi, theo tên học sinh) nằm đầu danh sách. Bấm **Để sau** thì tin vẫn chờ trong Kết quả chi tiết và chưa cho lưu |
 | Viết tắt: `Bảo B`, `Gia Hưng A`, `Đ. Anh Thư`, `K. Bảo Ngọc` | Hiểu đúng em: A/B theo ngày sinh; chữ viết tắt ưu tiên em có chữ đó **sát tên** (K. Bảo Ngọc = Kha Bảo Ngọc, không phải Kha Văn Bảo Ngọc). Còn 2 em cùng hợp thì hỏi |
 | Thứ 6: `32/34 đủ` hoặc `32/32 đủ` (sĩ số đã trừ em cắt thứ 6) | Em cắt thứ 6 tự tính vắng; cả 2 cách báo đều không bị báo lệch |
 | Gõ sai tên: `Minh Khoi`, `Khanh Ngoc`, `Thanh Vi` | Tự nhận đúng em. Sai hẳn hoặc không có trong lớp thì báo **tên chưa rõ** để bạn chọn |

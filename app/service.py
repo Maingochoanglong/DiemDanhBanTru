@@ -51,9 +51,7 @@ def next_school_day(day: dt.date, step: int = 1) -> dt.date:
 class PasteOutcome:
     message: ParsedMessage
     results: list[matcher.MatchResult] = field(default_factory=list)
-    guessed_from: list[str] = field(default_factory=list)  # các lớp đoán được khi tin không ghi lớp
-    class_by: str = ""  # "sender": lớp theo tên người gửi; "names": theo tên học sinh
-    class_how: str = ""  # mô tả cách đoán lớp cho giáo vụ, vd. "theo tên Zalo Bích Nguyễn"
+    guessed_from: list[str] = field(default_factory=list)  # lớp gợi ý (xếp đầu khi chọn) cho tin không ghi lớp
     suggestions: list = field(default_factory=list)  # đề nghị thêm/cắt bán trú (tin báo lịch)
     schedule_known: bool = False  # tin báo lịch nhưng lịch đó đã có sẵn
 
@@ -291,9 +289,6 @@ class Workspace:
                 c.teacher_present, c.teacher_total = msg.present, msg.total
             else:
                 po.results = self.state.apply_message(msg)
-            c = self.state.cd(msg.cls)
-            c.guess = po.class_how if msg.guessed else ""
-            c.guess_weak = msg.guessed and po.class_by == "names"
             out.append(po)
         seen = {m.raw for m in self.unplaced}
         self.unplaced += [po.message for po in out
@@ -304,7 +299,9 @@ class Workspace:
         """Giáo vụ chọn lớp cho tin không rõ lớp: ghi tin vào lớp đó."""
         assert self.state is not None
         self.push_undo()
-        msg.cls, msg.guessed = code, False
+        msg.cls = code
+        if msg.sender:
+            self._learn_sender(msg.sender, code)  # lần sau tin không ghi lớp của người này: lớp này xếp đầu
         if msg.full:
             self.state.mark_full(code)
             c = self.state.cd(code)
@@ -333,45 +330,29 @@ class Workspace:
             return 0
         return len(self.state.pending) + sum(max(1, len(m.names)) for m in self.unplaced)
 
-    def guessed_classes(self) -> dict[str, str]:
-        """Lớp có tin do app tự đoán lớp, giáo vụ chưa xem lại: mã lớp -> cách đoán."""
-        assert self.state is not None
-        return {code: c.guess for code, c in self.state.classes.items() if c.guess}
-
-    def confirm_guess(self, code: str) -> None:
-        assert self.state is not None
-        self.push_undo()
-        c = self.state.cd(code)
-        c.guess, c.guess_weak = "", False
-
     def _resolve_class(self, msg: ParsedMessage, po: PasteOutcome) -> None:
-        """Tìm lớp cho tin không ghi mã lớp: theo tên Zalo người gửi, rồi theo tên học sinh."""
+        """Tin không ghi mã lớp: KHÔNG tự xếp lớp, giáo vụ luôn tự chọn lớp.
+
+        Chỉ tìm các lớp gợi ý để xếp đầu danh sách chọn: mã lớp trong tên Zalo, tên Zalo giống GVCN,
+        lớp người gửi đã báo lần trước, rồi lớp có các tên học sinh trong tin."""
         from .core.senders import match_teacher, sender_key
 
         assert self.state is not None
         known = set(self.state.classes)
-        by_sender, how = None, ""
+        hints: list[str] = []
         if msg.sender_class in known:
-            by_sender, how = msg.sender_class, f"theo mã lớp trong tên Zalo {msg.sender}"
-        elif msg.sender:
+            hints.append(msg.sender_class)
+        if msg.sender:
             gvcn = {c: info.gvcn for c, info in self.roster.classes.items() if c in known and info.gvcn}
-            by_sender, how = match_teacher(msg.sender, gvcn), f"theo tên Zalo {msg.sender} giống GVCN"
-            if by_sender is None:
-                learned = self.settings.get(sender_key(msg.sender))
-                by_sender = learned if learned in known else None
-                how = f"theo lớp {msg.sender} đã báo lần trước"
-        guesses = matcher.guess_class(self.roster, msg.names, self.day) if msg.names else []
-        po.guessed_from = guesses
-        if by_sender and (not msg.names or by_sender in guesses or len(guesses) != 1):
-            msg.cls, msg.guessed, po.class_by = by_sender, True, "sender"
-            po.class_how = how
-        elif len(guesses) == 1 and msg.sender:
-            # chỉ tự xếp theo tên học sinh khi tin có người gửi; tin riêng (chép 1 tin, không có
-            # người gửi) để giáo vụ chọn lớp, lớp đoán theo tên nằm đầu danh sách chọn
-            msg.cls, msg.guessed, po.class_by = guesses[0], True, "names"
-            po.class_how = "theo tên học sinh trong tin"
-        if msg.cls and msg.sender:
-            self._learn_sender(msg.sender, msg.cls)
+            teacher = match_teacher(msg.sender, gvcn)
+            if teacher:
+                hints.append(teacher)
+            learned = self.settings.get(sender_key(msg.sender))
+            if learned in known:
+                hints.append(learned)
+        if msg.names:
+            hints += matcher.guess_class(self.roster, msg.names, self.day)
+        po.guessed_from = list(dict.fromkeys(hints))
 
     def _learn_sender(self, sender: str, code: str) -> None:
         from .core.senders import sender_key

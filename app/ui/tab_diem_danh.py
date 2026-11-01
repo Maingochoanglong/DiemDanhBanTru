@@ -154,7 +154,7 @@ class TabDiemDanh(ttk.Frame):
         for text, key in (("chưa báo", "muted"), ("đủ", "ok"), ("có vắng", "warn"), ("cần xem", "err")):
             tk.Label(legend, text=f" {text} ", image=icon(STATUS_ICON[key]), compound="left", padx=4,
                      background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
-        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch · [Tự động phân lớp] tin không ghi mã lớp",
+        ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch thêm/cắt",
                   style="Muted.TLabel").pack(side="left", padx=6)
         ttk.Button(legend, text="Mở lớp đã chọn", image=icon("open"), compound="left",
                    command=lambda: self.open_class(self.current_class)).pack(side="right")
@@ -207,8 +207,7 @@ class TabDiemDanh(ttk.Frame):
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
         ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
         ttk.Label(brow, text="Tìm tên:").pack(side="right", padx=(0, 4))
-        # 2 dòng chỉ hiện khi có nội dung (lớp tự động phân lớp, tên chưa rõ)
-        self.guess_row = ttk.Frame(self.detail)
+        # dòng tên chưa rõ: chỉ hiện khi có
         self.pending_row = ttk.Frame(self.detail)
         self.lbl_hint = ttk.Label(self.detail, text="Tích ô = em vắng · chuột phải vào tên: cắt bán trú / cắt thứ 6",
                                   style="Muted.TLabel")
@@ -291,8 +290,7 @@ class TabDiemDanh(ttk.Frame):
         st = self.ws.state
         c = st.cd(code)
         n = st.absent_count(code)
-        problem = (bool(c.extra) or any(p[0] == code for p in st.pending) or bool(st.class_warnings(code))
-                   or c.guess_weak)
+        problem = bool(c.extra) or any(p[0] == code for p in st.pending) or bool(st.class_warnings(code))
         if problem:
             return "err"
         if not c.reported and not n:
@@ -316,8 +314,6 @@ class TabDiemDanh(ttk.Frame):
             note = warns[0] + (f" · {note}" if note else "")
         if st.scheduled_changes(code):
             note = "[Lịch] " + note
-        if c.guess:
-            note = f"[Tự động phân lớp] {c.guess}" + (f" · {note}" if note else "")
         vals = (info.gvcn if info else "", st.si_so(code), n, st.present(code), names, note)
         return vals, tag
 
@@ -433,17 +429,8 @@ class TabDiemDanh(ttk.Frame):
         # tên chưa rõ của lớp: mỗi tên 1 nút để chọn em đúng
         for w in self.pending_row.winfo_children():
             w.destroy()
-        for w in self.guess_row.winfo_children():
-            w.destroy()
-        # khung trống vẫn giữ chiều cao cũ -> ẩn hẳn khi không có gì, hiện lại đúng thứ tự khi có
-        self.guess_row.pack_forget()
+        # khung trống vẫn giữ chiều cao cũ -> ẩn hẳn khi không có gì, hiện lại khi có
         self.pending_row.pack_forget()
-        if c.guess:
-            ttk.Label(self.guess_row, text=f"Tin không ghi mã lớp, app tự động phân vào lớp này ({c.guess}). "
-                                           "Xem lại tin của GV.",
-                      style="Warn.TLabel", wraplength=640, justify="left").pack(side="left", fill="x", expand=True)
-            ttk.Button(self.guess_row, text="Đúng lớp này", command=lambda: self.confirm_guess(code)).pack(side="right")
-            self.guess_row.pack(fill="x", before=self.lbl_hint)
         pend = [res for p_code, res in st.pending if p_code == code]
         if pend:
             ttk.Label(self.pending_row, text="Tên chưa rõ:", style="Err.TLabel").pack(side="left")
@@ -525,9 +512,6 @@ class TabDiemDanh(ttk.Frame):
             todo.append((f"{n_pending} tên chưa rõ", "err"))
         if st and self.ws.unplaced:
             todo.append((f"{len(self.ws.unplaced)} tin không rõ lớp", "err"))
-        n_guess = len(self.ws.guessed_classes()) if st else 0
-        if n_guess:
-            todo.append((f"{n_guess} lớp tự động phân lớp", "warn"))
         n_sug = len(self.sugg_items)
         if n_sug:
             todo.append((f"{n_sug} lịch GV báo chưa áp dụng", "warn"))
@@ -739,11 +723,13 @@ class TabDiemDanh(ttk.Frame):
         msg = po.message
         st = self.ws.state
         if msg.cls is None:
-            if po.guessed_from:
-                why = "tên khớp lớp " + ", ".join(po.guessed_from)
-            else:
-                why = "không xếp được lớp"
             who = f" ({msg.sender})" if msg.sender else ""
+            if not msg.is_report:  # chỉ báo thêm/cắt, không rõ lớp: không tính gì, chỉ hiện để biết
+                r.insert("", 0, text=f" Lịch GV báo{who}", image=icon("res_schedule"),
+                         values=(f"\"{msg.schedule or _msg_text(msg)}\" — không ghi mã lớp, không tính là vắng",),
+                         tags=("muted",))
+                return None
+            why = ("gợi ý lớp " + ", ".join(po.guessed_from)) if po.guessed_from else "chưa rõ lớp"
             iid = r.insert("", 0, text=f" không rõ lớp{who}", image=icon("res_unknown"),
                            values=(f"{_msg_text(msg)} — {why} — bấm đúp để chọn lớp",), tags=("err",))
             self.unplaced_items[iid] = (msg, po.guessed_from)
@@ -754,7 +740,6 @@ class TabDiemDanh(ttk.Frame):
         if not msg.is_report:
             return code
         count = f"báo {msg.present}/{msg.total} · " if msg.total is not None else ""
-        guess = f" [Tự động phân lớp {po.class_how}]" if msg.guessed else ""
         when = f"{msg.when:%H:%M} " if msg.when else ""
         if msg.full:
             head = f"{when}{count}đủ"
@@ -762,7 +747,7 @@ class TabDiemDanh(ttk.Frame):
             head = f"{when}{count}ghi {st.absent_count(code)} tên vắng: {', '.join(st.absent_names(code))}"
         warns = st.class_warnings(code)
         tag = "err" if warns else ("ok" if msg.full else "warn")
-        pid = r.insert("", 0, text=f"{code}{guess}", values=(head,), tags=(tag, "bold"), open=True)
+        pid = r.insert("", 0, text=code, values=(head,), tags=(tag, "bold"), open=True)
         for w in warns:
             r.insert(pid, "end", text="", image=icon("res_ambiguous"), values=(w,), tags=("err",))
         for res in po.results:
@@ -924,10 +909,6 @@ class TabDiemDanh(ttk.Frame):
     def _resolve_from_detail(self, code: str, res: matcher.MatchResult) -> None:
         self._resolve(code, res)
 
-    def confirm_guess(self, code: str) -> None:
-        self.ws.confirm_guess(code)
-        self.refresh_light()
-
     def focus_problem(self) -> None:
         """Sau hộp "Còn tên chưa rõ": đưa giáo vụ tới chỗ cần xử lý."""
         st = self.ws.state
@@ -946,7 +927,7 @@ class TabDiemDanh(ttk.Frame):
         options = []
         for c in order:
             info = self.ws.roster.classes.get(c)
-            hint = "  (có tên khớp)" if c in guesses else ""
+            hint = "  (gợi ý)" if c in guesses else ""
             options.append(f"{c}  —  GVCN {info.gvcn if info and info.gvcn else '?'}{hint}")
         who = f" của {msg.sender}" if msg.sender else ""
         buttons = [("pick", "Ghi vào lớp này"), ("skip", "Bỏ tin này")] + ([("later", "Để sau")] if now else [])
