@@ -132,9 +132,37 @@ def test_guessed_class_is_marked_until_checked(ws):  # noqa: F811
 
 def test_guess_by_student_names_is_weak(ws):  # noqa: F811
     ws.load_day(dt.date(2026, 10, 29))
-    ws.paste("Vắng Duy Mạnh, Hải Long")
+    # tin nhóm có người gửi lạ: tự động phân lớp theo tên học sinh, đánh dấu kém chắc (dòng đỏ)
+    ws.paste("[29/10/2026 07:00:00] Người Lạ: Vắng Duy Mạnh, Hải Long")
     c = ws.state.cd("2D17")
     assert c.guess == "theo tên học sinh trong tin" and c.guess_weak
+
+
+def test_private_message_without_class_asks_for_class(ws):  # noqa: F811
+    """Tin riêng chép 1 tin (không lớp, không người gửi): không tự xếp lớp, chặn lưu tới khi chọn lớp."""
+    ws.load_day(dt.date(2026, 10, 29))
+    out = ws.paste("Vắng Duy Mạnh, Hải Long")
+    assert out[0].message.cls is None and out[0].guessed_from == ["2D17"]
+    assert ws.state.absent_count("2D17") == 0 and ws.unresolved_count() == 2
+    for text in ("đủ", "Đủ ạ", "32/34 đủ", "Lớp em đủ", "Dạ cô ơi lớp em đủ ạ"):
+        ws.load_day(dt.date(2026, 10, 29))
+        out = ws.paste(text)
+        assert len(out) == 1, text
+        m = out[0].message
+        assert m.cls is None and m.full and not m.names, text
+        assert ws.unplaced == [m] and ws.unresolved_count() == 1, text
+    # tin cuối "Dạ cô ơi lớp em đủ ạ": chọn lớp 1D16 -> lớp đủ, hết chặn lưu
+    ws.assign_unplaced(m, "1D16")
+    assert ws.state.cd("1D16").reported and ws.state.absent_count("1D16") == 0
+    assert ws.unresolved_count() == 0
+    # "32/34 đủ": chọn lớp thì giữ số GV báo để đối chiếu
+    ws.load_day(dt.date(2026, 10, 29))
+    m = ws.paste("32/34 đủ")[0].message
+    ws.assign_unplaced(m, "1D16")
+    c = ws.state.cd("1D16")
+    assert (c.teacher_present, c.teacher_total) == (32, 34)
+    # tin có mã lớp vẫn ưu tiên mã lớp
+    assert ws.paste("1D15 đủ")[0].message.cls == "1D15"
 
 
 def test_unresolved_names_and_unplaced_messages(ws):  # noqa: F811

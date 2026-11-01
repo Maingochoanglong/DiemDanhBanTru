@@ -17,6 +17,14 @@ from .widgets import ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog,
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
 
+def _msg_text(msg) -> str:
+    """Nội dung ngắn của tin để hiện cho giáo vụ: các tên vắng, hoặc nguyên câu ("đủ", "32/34 đủ")."""
+    if msg.names:
+        return ", ".join(msg.names)
+    text = " ".join(msg.raw.split())
+    return text if len(text) <= 60 else text[:57] + "…"
+
+
 # màu nền từng dòng lớp trong bảng: chưa báo / đủ / có vắng / cần xem
 ROW_BG = {"muted": "#f2f2f2", "ok": "#e5f4e9", "warn": "#fff0d9", "err": "#fde2e2"}
 ROW_FG = {"muted": MUTED_COLOR, "ok": "#145c2c", "warn": "#7a4300", "err": ERR_COLOR}
@@ -691,6 +699,7 @@ class TabDiemDanh(ttk.Frame):
         self.paste.delete("1.0", "end")
         self.paste.configure(height=1)
         self.tree.focus_set()
+        before = set(self.unplaced_items)
         r = self.tree_res
         if skipped:
             days = ", ".join(f"{d:%d/%m} ({n})" for d, n in sorted(skipped.items()))
@@ -718,6 +727,10 @@ class TabDiemDanh(ttk.Frame):
         self.refresh()
         if last:
             self.select_class(last)
+        # tin không ghi lớp (vd. tin nhắn riêng "đủ", "Vắng Minh Khôi"): hỏi chọn lớp ngay
+        for iid in [i for i in self.unplaced_items if i not in before]:
+            if self._place_message(iid, now=True) == "later":
+                break
         if self.sugg_items and any(po.suggestions for po in outcomes):
             self.show_results()  # đề nghị thêm/cắt cần giáo vụ xác nhận
 
@@ -727,12 +740,12 @@ class TabDiemDanh(ttk.Frame):
         st = self.ws.state
         if msg.cls is None:
             if po.guessed_from:
-                why = "nhiều lớp cùng có các tên này: " + ", ".join(po.guessed_from)
+                why = "tên khớp lớp " + ", ".join(po.guessed_from)
             else:
-                why = "không xếp được lớp — hãy dán kèm mã lớp (vd. 2D17) hoặc tích tay"
+                why = "không xếp được lớp"
             who = f" ({msg.sender})" if msg.sender else ""
             iid = r.insert("", 0, text=f" không rõ lớp{who}", image=icon("res_unknown"),
-                           values=(f"{', '.join(msg.names)} — {why} — bấm đúp để chọn lớp",), tags=("err",))
+                           values=(f"{_msg_text(msg)} — {why} — bấm đúp để chọn lớp",), tags=("err",))
             self.unplaced_items[iid] = (msg, po.guessed_from)
             return None
         code = msg.cls
@@ -925,8 +938,8 @@ class TabDiemDanh(ttk.Frame):
         if self.ws.unplaced:
             self.show_results()
 
-    def _place_message(self, iid: str) -> None:
-        """Chọn lớp cho tin không rõ lớp."""
+    def _place_message(self, iid: str, now: bool = False) -> str | None:
+        """Chọn lớp cho tin không rõ lớp. now=True: hỏi ngay khi vừa dán (có nút "Để sau")."""
         msg, guesses = self.unplaced_items[iid]
         codes = list(self.ws.state.classes)
         order = [c for c in guesses if c in codes] + [c for c in codes if c not in guesses]
@@ -936,12 +949,14 @@ class TabDiemDanh(ttk.Frame):
             hint = "  (có tên khớp)" if c in guesses else ""
             options.append(f"{c}  —  GVCN {info.gvcn if info and info.gvcn else '?'}{hint}")
         who = f" của {msg.sender}" if msg.sender else ""
-        dlg = ChoiceDialog(self.results, "Chọn lớp cho tin",
-                           f"Tin{who}: \"{', '.join(msg.names)}\" không ghi mã lớp. Tin này của lớp nào?",
-                           options, [("pick", "Ghi vào lớp này"), ("skip", "Bỏ tin này")], need_choice={"pick"})
+        buttons = [("pick", "Ghi vào lớp này"), ("skip", "Bỏ tin này")] + ([("later", "Để sau")] if now else [])
+        parent = self.results if self.results.winfo_viewable() else self.winfo_toplevel()
+        dlg = ChoiceDialog(parent, "Tin này của lớp nào?",
+                           f"Tin{who}: \"{_msg_text(msg)}\" không ghi mã lớp. Tin này của lớp nào?",
+                           options, buttons, need_choice={"pick"})
         key, idx = dlg.result
-        if key is None:
-            return
+        if key in (None, "later"):
+            return "later"
         if key == "skip":
             self.ws.dismiss_unplaced(msg)
             self.tree_res.item(iid, values=("Đã bỏ tin này",), tags=("muted",))
@@ -955,3 +970,4 @@ class TabDiemDanh(ttk.Frame):
             self.select_class(code)
         del self.unplaced_items[iid]
         self.refresh_light()
+        return key

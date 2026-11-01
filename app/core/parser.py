@@ -42,8 +42,10 @@ STOP = {
     "sĩ", "số", "ss", "cp", "kp", "ốm", "bệnh", "sốt", "lý", "do", "bạn", "là", "ạ",
     "nha", "nhé", "cô", "thầy", "ăn", "bán", "trú", "bt", "hôm", "nay", "sáng", "ngày",
     "tổng", "hiện", "diện", "còn", "chỉ", "thôi",
+    # lời chào, xưng hô trong tin nhắn: "Dạ cô ơi lớp em đủ ạ"
+    "dạ", "ơi", "vâng", "mình", "ok", "oke", "nhá", "nhen",
 }
-STOP_FOLD = {"vang", "nghi", "phep", "khong", "om", "benh", "gom", "cac", "hom", "nay"}
+STOP_FOLD = {"vang", "nghi", "phep", "khong", "om", "benh", "gom", "cac", "hom", "nay", "oi"}
 
 
 @dataclass
@@ -307,11 +309,12 @@ def _parse_plain(text: str, known_classes: set[str] | None = None) -> list[Parse
             raw, rest = _cut_complete(raw)
         body = CLASS_RE.sub(" ", raw) if cls else raw
         msg = _parse_segment(raw, body, cls)
-        if cls is not None or msg.names:
+        # tin riêng không ghi lớp: "đủ", "32/34 đủ" cũng là tin báo (giáo vụ sẽ chọn lớp)
+        if cls is not None or msg.is_report:
             out.append(msg)
         if rest.strip():
             extra = _parse_segment(rest, rest, None)
-            if extra.names:
+            if extra.is_report:
                 out.append(extra)
     return out
 

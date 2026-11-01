@@ -71,6 +71,18 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 - Lời chào, "dạ", "ok cô"… không có chữ "vắng/nghỉ/đủ" hay sĩ số thì app bỏ qua.
 - **Tin báo lịch** (vd. "Lớp 5D21: tháng 11 cắt bán trú Gia Huy") không tính là vắng. App hiện dòng **Lịch GV báo**: bấm đúp để áp dụng, app tự cắt/thêm em đó và ghi chú cột H ("Tháng 11 cắt bán trú …"). Nếu lịch đó đã có sẵn, app chỉ báo "đã có".
 
+### Các dạng tin app hiểu
+
+| GV nhắn | App làm |
+|---|---|
+| `2D17: 32/34 vắng Hải Long, Tuấn Kiệt` | Ghi vắng 2 em, đối chiếu số 34/36 |
+| `1D19 đủ`, `2D21: 10/10` | Lớp đủ |
+| Tin nhóm không ghi lớp: `Vắng Duy Mạnh` | Tìm lớp theo tên Zalo người gửi, ghi **[Tự động phân lớp]** để bạn xem lại |
+| **Tin nhắn riêng** chép 1 tin (không có lớp, không có tên người gửi): `Vắng Minh Khôi`, `đủ`, `Dạ cô ơi lớp em đủ ạ` | App **hỏi ngay "Tin này của lớp nào?"**; lớp có tên khớp nằm đầu danh sách. Bấm **Để sau** thì tin vẫn chờ trong Kết quả chi tiết và chưa cho lưu |
+| Viết tắt: `Bảo B`, `Gia Hưng A`, `Đ. Anh Thư`, `K. Bảo Ngọc` | Hiểu đúng em: A/B theo ngày sinh; chữ viết tắt ưu tiên em có chữ đó **sát tên** (K. Bảo Ngọc = Kha Bảo Ngọc, không phải Kha Văn Bảo Ngọc). Còn 2 em cùng hợp thì hỏi |
+| Thứ 6: `32/34 đủ` hoặc `32/32 đủ` (sĩ số đã trừ em cắt thứ 6) | Em cắt thứ 6 tự tính vắng; cả 2 cách báo đều không bị báo lệch |
+| Gõ sai tên: `Minh Khoi`, `Khanh Ngoc`, `Thanh Vi` | Tự nhận đúng em. Sai hẳn hoặc không có trong lớp thì báo **tên chưa rõ** để bạn chọn |
+
 ### Kiểm tra tên
 
 Mỗi tên GV ghi được kiểm tra (xem trong **Kết quả chi tiết…**):

@@ -255,11 +255,16 @@ class DayState:
         c = self.cd(code)
         out = []
         n = self.absent_count(code)
-        if c.teacher_total is not None and c.teacher_total != self.si_so(code):
-            out.append(f"GV báo sĩ số {c.teacher_total}, sổ tính {self.si_so(code)}")
+        si = self.si_so(code)
+        # thứ 6: GV có thể báo sĩ số đã trừ các em cắt thứ 6 ("32/32 đủ" khi sĩ số 34, 2 em cắt thứ 6)
+        k = sum(1 for sid in self.auto_absent(code) if sid not in c.auto_off)
+        friday_net = bool(k) and c.teacher_total == si - k
+        if c.teacher_total is not None and c.teacher_total != si and not friday_net:
+            out.append(f"GV báo sĩ số {c.teacher_total}, sổ tính {si}")
         if c.teacher_present is not None and c.teacher_total is not None:
-            if c.teacher_total - c.teacher_present != n:
-                out.append(f"GV báo vắng {c.teacher_total - c.teacher_present} em, đang ghi {n} tên")
+            told = c.teacher_total - c.teacher_present
+            if told != n and not (friday_net and told + k == n):
+                out.append(f"GV báo vắng {told} em, đang ghi {n} tên")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
         if self.si_so_mismatch(code):
