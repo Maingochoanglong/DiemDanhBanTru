@@ -43,7 +43,7 @@ STOP = {
     "nha", "nhé", "cô", "thầy", "ăn", "bán", "trú", "bt", "hôm", "nay", "sáng", "ngày",
     "tổng", "hiện", "diện", "còn", "chỉ", "thôi",
     # lời chào, xưng hô trong tin nhắn: "Dạ cô ơi lớp em đủ ạ"
-    "dạ", "ơi", "vâng", "mình", "ok", "oke", "nhá", "nhen",
+    "dạ", "ơi", "vâng", "mình", "ok", "oke", "nhá", "nhen", "thêm",
 }
 STOP_FOLD = {"vang", "nghi", "phep", "khong", "om", "benh", "gom", "cac", "hom", "nay", "oi"}
 
@@ -164,14 +164,25 @@ _ZALO_HEAD = re.compile(
     r"^\s*\[\s*(\d{1,2})/(\d{1,2})/(\d{2,4})[\s,]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*\]\s?(.*)$"
 )
 _REPORT_WORD = re.compile(r"(?<!\w)(vang|nghi|du|ss|si so|hien dien)(?!\w)")
-# Báo lịch: "cắt …" (đúng dấu: "Cát Tiên" là tên), "tháng 11 thêm …", "thêm bán trú …".
+# Báo thêm/cắt bán trú (không phải báo vắng): "cắt …" (đúng dấu: "Cát Tiên" là tên), "tháng 11 thêm …",
+# "thêm bán trú …", "thêm mới 1 HS: …", "bổ sung …", "chuyển trường …", "thôi ăn", "từ mai … nghỉ ăn".
+# Không đụng tới "vắng thêm …" và "nghỉ: A, B" (là báo vắng).
 _SCHED = re.compile(
     r"(?<!\w)(?:(?:từ\s*(?:ngày\s*)?)?\d{1,2}\s*/\s*\d{1,2}\s*|(?:tháng|t)\s*\d{1,2}\s*"
     r"|từ\s*(?:ngày\s*)?mai\s*|(?:đầu\s*)?tháng\s*sau\s*)?"
     r"(?:cắt|(?<!vắng )(?<!nghỉ )thêm(?=\s*bán\s*trú))(?!\w)"
     r"|(?<!\w)(?:(?:từ\s*(?:ngày\s*)?)?\d{1,2}\s*/\s*\d{1,2}|(?:tháng|t)\s*\d{1,2}|(?:đầu\s*)?tháng\s*sau)\s*thêm(?!\w)"
+    r"|(?<!\w)(?<!vắng )(?<!nghỉ )thêm\s+(?:mới|\d+\s*(?:em|hs|học\s*sinh|bạn)|em|hs|học\s*sinh|bạn)(?!\w)"
+    r"|(?<!\w)bổ\s*sung(?!\w)"
+    r"|(?<!\w)chuyển\s*(?:trường|lớp|đi)(?!\w)"
+    r"|(?<!\w)(?:thôi|ngưng|dừng)\s*ăn(?!\w)"
+    r"|(?<!\w)không\s*ăn(?:\s*bán\s*trú)?\s*nữa(?!\w)"
+    r"|(?<!\w)nghỉ\s*ăn(?=\s*(?:bán\s*trú|từ|luôn|hẳn|nữa))"
+    r"|(?<!\w)từ\s*(?:ngày\s*)?mai(?=[^\n.]*?(?:nghỉ|thôi|không)\s*ăn)"
 )
-_SCHED_END = re.compile(r"(?i)(?<!\w)(vắng|nghỉ)(?!\w)")
+_SCHED_END = re.compile(r"(?i)(?<!\w)(vắng|nghỉ)(?!\w)(?!\s*ăn)")
+# Báo cắt mà tên em đứng TRƯỚC: "Mai Thanh thôi ăn từ thứ 2", "Tuấn Kiệt chuyển trường"
+_NAME_BEFORE = re.compile(r"(?:thôi|ngưng|dừng|nghỉ|không)\s*ăn|chuyển\s*(?:trường|lớp|đi)")
 
 
 @dataclass
@@ -217,20 +228,33 @@ def split_zalo(text: str) -> list[ZaloLine] | None:
 
 
 def split_schedule(body: str) -> tuple[str, str]:
-    """Tách phần báo lịch thêm/cắt bán trú ra khỏi tin. Trả về (phần còn lại, phần báo lịch).
+    """Tách các phần báo thêm/cắt bán trú ra khỏi tin. Trả về (phần còn lại, các phần báo lịch nối bằng "; ").
 
-    Phần báo lịch kéo tới hết dòng, hoặc tới chữ "vắng/nghỉ" phía sau nếu có."""
+    Mỗi phần báo lịch kéo tới hết câu/dòng, hoặc tới chữ "vắng/nghỉ" phía sau nếu có."""
     text = nfc(body)
-    m = _SCHED.search(text.lower())
-    if not m:
-        return text, ""
-    line_end = text.find("\n", m.start())
-    line_end = len(text) if line_end < 0 else line_end
-    stop = _SCHED_END.search(text, m.end(), line_end)
-    end = stop.start() if stop else line_end
-    sched = text[m.start():end].strip(" ,.;:()-\n")
-    rest = (text[: m.start()] + " " + text[end:]).strip()
-    return rest, sched
+    found: list[str] = []
+    while True:
+        m = _SCHED.search(text.lower())
+        if not m:
+            break
+        start = m.start()
+        if _NAME_BEFORE.match(text.lower(), start):
+            # lấy cả tên em phía trước, tới đầu vế câu (sau dấu câu, chữ "vắng/nghỉ" hay mã lớp)
+            cut = max(text.rfind(ch, 0, start) for ch in ".;,:\n") + 1
+            head = text[cut:start]
+            ends = [x.end() for x in _SCHED_END.finditer(head)] + [x.end() for x in CLASS_RE.finditer(head)]
+            start = cut + max(ends, default=0)
+            while start < m.start() and text[start].isspace():
+                start += 1
+        line_end = text.find("\n", m.start())
+        line_end = len(text) if line_end < 0 else line_end
+        stop = _SCHED_END.search(text, m.end(), line_end)
+        end = stop.start() if stop and stop.start() > m.end() else line_end
+        part = text[start:end].strip(" ,.;:()-\n")
+        if part:
+            found.append(part)
+        text = (text[:start] + " " + text[end:]).strip()
+    return text, "; ".join(found)
 
 
 def parse_messages(text: str, known_classes: set[str] | None = None) -> list[ParsedMessage]:
@@ -304,11 +328,14 @@ def _parse_plain(text: str, known_classes: set[str] | None = None) -> list[Parse
     out = []
     for cls, start, end in merged:
         raw = text[start:end]
+        # phần báo thêm/cắt ("Thêm mới 1 HS: …", "Cắt bán trú …") không phải tên vắng
+        raw, sched = split_schedule(raw)
         rest = ""
         if cls:
             raw, rest = _cut_complete(raw)
         body = CLASS_RE.sub(" ", raw) if cls else raw
         msg = _parse_segment(raw, body, cls)
+        msg.schedule = sched
         # tin riêng không ghi lớp: "đủ", "32/34 đủ" cũng là tin báo (giáo vụ sẽ chọn lớp)
         if cls is not None or msg.is_report:
             out.append(msg)

@@ -212,3 +212,37 @@ def test_zalo_multi_line_and_multi_class_messages():
         "1D15": (5, 6, ["Tuấn Anh"]),
         "4D19": (None, None, ["Hoài Nam"]),
     }
+
+
+def test_add_or_cut_lines_are_not_absent_names():
+    """Tin kèm thêm/cắt bán trú: phần đó không phải tên vắng (tin chép riêng và tin Zalo có người gửi)."""
+    known = {"2D17", "3D18"}
+    cases = [
+        ("3D18: 38/41\nVắng 2: Hải Long, Tuấn Kiệt\nThêm mới 1 HS: Nguyễn Văn Mới", ["Hải Long", "Tuấn Kiệt"],
+         "Thêm mới 1 HS: Nguyễn Văn Mới"),
+        ("3D18: 38/41 vắng Hải Long. Thêm 1 em Văn Mới", ["Hải Long"], "Thêm 1 em Văn Mới"),
+        ("2D17 vắng Hải Long, chuyển trường Tuấn Kiệt", ["Hải Long"], "chuyển trường Tuấn Kiệt"),
+        ("2D17 vắng Hải Long, Tuấn Kiệt chuyển trường", ["Hải Long"], "Tuấn Kiệt chuyển trường"),
+        ("2D17: 30/31 vắng Hải Long. Từ mai bạn Tuấn Kiệt nghỉ ăn", ["Hải Long"], "Từ mai bạn Tuấn Kiệt nghỉ ăn"),
+        ("2D17 vắng Hải Long. Phương Thanh thôi ăn từ thứ 2", ["Hải Long"], "Phương Thanh thôi ăn từ thứ 2"),
+        ("2D17: bổ sung bán trú em Văn Mới", [], "bổ sung bán trú em Văn Mới"),
+        # vẫn là báo vắng
+        ("2D17 vắng thêm Hải Long", ["Hải Long"], ""),
+        ("2D17 nghỉ: Hải Long, Tuấn Kiệt", ["Hải Long", "Tuấn Kiệt"], ""),
+    ]
+    for text, names, sched in cases:
+        for pre in ("", "[29/10/2026 07:00:00] Cô Lan: "):
+            m = parse_messages(pre + text, known)[0]
+            assert (m.names, m.schedule) == (names, sched), (pre, text)
+    m = parse_messages("2D17 đủ. Cắt bán trú Tuấn Kiệt từ thứ 2", known)[0]
+    assert m.full and m.schedule == "Cắt bán trú Tuấn Kiệt từ thứ 2"
+
+
+def test_not_boarding_name_is_warned_not_counted(ws):  # noqa: F811
+    ws.load_day(dt.date(2026, 10, 29))
+    ws.paste("1D15: 5/6 vắng Quỳnh Anh")  # Mạc Trần Quỳnh Anh có trong lớp nhưng không ăn bán trú
+    st = ws.state
+    assert st.absent_count("1D15") == 0 and not ws.pending_names()
+    assert "Không ăn BT: Quỳnh Anh" in st.class_warnings("1D15")
+    ws.paste("1D15 đủ")
+    assert not any("Không ăn BT" in w for w in st.class_warnings("1D15"))

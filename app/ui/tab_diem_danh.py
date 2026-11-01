@@ -720,7 +720,7 @@ class TabDiemDanh(ttk.Frame):
         elif skipped:
             parts.append((f"Không có tin nào của ngày {st.date:%d/%m}", "warn"))
         if not_bt:
-            parts.append((f"{not_bt} tên không ăn BT (bỏ qua)", "ok"))
+            parts.append((f"{not_bt} tên không ăn BT (không tính vắng)", "warn"))
         if skipped:
             parts.append((f"bỏ qua {sum(skipped.values())} tin ngày khác", "ok"))
         self._summary = parts
@@ -775,7 +775,7 @@ class TabDiemDanh(ttk.Frame):
         src = f"{msg.cls}: \"{msg.schedule}\"" + (f" ({msg.sender} {msg.when:%d/%m %H:%M})" if msg.when else "")
         if po.schedule_known:
             r.insert("", 0, text=f" Lịch GV báo {msg.cls}", image=icon("res_schedule"),
-                     values=(f"{src} — lịch này đã có, không cần làm gì",),
+                     values=(f"{src} — không tính là vắng; nếu chưa làm thì đặt ở tab Học sinh → Lịch thêm/cắt",),
                      tags=("muted",))
             return
         for sug in po.suggestions:

@@ -387,7 +387,9 @@ class Workspace:
         if not msg.cls:
             return
         seen = msg.when.date() if msg.when else self.day
-        po.suggestions = suggest_from_note(self.roster, msg.cls, _relative_dates(msg.schedule, seen), seen)
+        sugs = suggest_from_note(self.roster, msg.cls, _relative_dates(msg.schedule, seen), seen)
+        # "Thêm mới 1 HS: …": bỏ đề nghị thêm em tên "mới"/"em"/"HS" (chữ đệm, không phải tên)
+        po.suggestions = [s for s in sugs if fold(s.new_name) not in {"moi", "em", "hs", "hoc sinh", "ban"}]
         po.schedule_known = not po.suggestions
 
     def apply_paste_suggestion(self, sug) -> str:

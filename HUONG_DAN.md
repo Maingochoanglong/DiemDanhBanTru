@@ -82,6 +82,8 @@ Có thể chép **cả đoạn tin nhắn** trong nhóm Zalo trên máy tính, m
 | Viết tắt: `Bảo B`, `Gia Hưng A`, `Đ. Anh Thư`, `K. Bảo Ngọc` | Hiểu đúng em: A/B theo ngày sinh; chữ viết tắt ưu tiên em có chữ đó **sát tên** (K. Bảo Ngọc = Kha Bảo Ngọc, không phải Kha Văn Bảo Ngọc). Còn 2 em cùng hợp thì hỏi |
 | Thứ 6: `32/34 đủ` hoặc `32/32 đủ` (sĩ số đã trừ em cắt thứ 6) | Em cắt thứ 6 tự tính vắng; cả 2 cách báo đều không bị báo lệch |
 | Gõ sai tên: `Minh Khoi`, `Khanh Ngoc`, `Thanh Vi` | Tự nhận đúng em. Sai hẳn hoặc không có trong lớp thì báo **tên chưa rõ** để bạn chọn |
+| Tin kèm thêm/cắt: `Thêm mới 1 HS: …`, `Cắt bán trú … từ thứ 2`, `… chuyển trường`, `Từ mai … nghỉ ăn` | Phần đó **không tính là vắng**, hiện ở Kết quả chi tiết thành dòng **Lịch GV báo** để bạn nhớ đặt lịch ở tab Học sinh → Lịch thêm/cắt (nếu chưa làm) |
+| Tên có trong lớp nhưng **không ăn bán trú** | Không tính vắng (suất ăn không đổi). Lớp tô đỏ, cột Ghi chú ghi **"Không ăn BT: …"** để bạn hỏi lại GV nếu cần |
 
 ### Kiểm tra tên
 
