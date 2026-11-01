@@ -13,7 +13,7 @@ from tkinter import font as tkfont
 from ..core import matcher
 from ..core.text import fold
 from .icons import RESULT_ICON, STATUS_ICON, icon
-from .widgets import ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog, ScrollFrame, TreeTooltip, ask, center, tag_colors, with_scrollbar
+from .widgets import ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog, ScrollFrame, TreeTooltip, ask, center, dialog_body, tag_colors, with_scrollbar
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
 
@@ -33,14 +33,15 @@ class ResultWindow(tk.Toplevel):
         self.title("Kết quả kiểm tra tin nhắn")
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
         self.transient(tab.winfo_toplevel())
-        ttk.Label(self, text="Bấm đúp: dòng có dấu cảnh báo / dấu X đỏ để chọn em đúng · dòng \"Lịch GV báo\" để áp dụng lịch · "
+        box = dialog_body(self, padding=0)
+        ttk.Label(box, text="Bấm đúp: dòng có dấu cảnh báo / dấu X đỏ để chọn em đúng · dòng \"Lịch GV báo\" để áp dụng lịch · "
                        "dòng \"không rõ lớp\" để chọn lớp.",
                   style="Muted.TLabel").pack(anchor="w", padx=10, pady=(8, 2))
-        bar = ttk.Frame(self, padding=(10, 4, 10, 10))
+        bar = ttk.Frame(box, padding=(10, 4, 10, 10))
         bar.pack(side="bottom", fill="x")
         ttk.Button(bar, text="Đóng", command=self.withdraw).pack(side="right")
         ttk.Button(bar, text="Xóa kết quả", command=tab.clear_results).pack(side="right", padx=6)
-        frame, self.tree = with_scrollbar(self, ttk.Treeview, columns=("kq",), show="tree headings")
+        frame, self.tree = with_scrollbar(box, ttk.Treeview, columns=("kq",), show="tree headings")
         frame.pack(fill="both", expand=True, padx=10)
         t = self.tree
         t.heading("#0", text="Lớp / tên GV ghi")
@@ -182,15 +183,13 @@ class TabDiemDanh(ttk.Frame):
         win.protocol("WM_DELETE_WINDOW", self.close_class)
         win.bind("<Escape>", lambda e: self.close_class())
         ttk.Style().configure("Big.TCheckbutton", font=(family, size + 1))
-        self.detail = ttk.Frame(win, padding=14)
-        self.detail.pack(fill="both", expand=True)
+        self.detail = dialog_body(win, "Lớp")
         bar = ttk.Frame(self.detail)
         bar.pack(side="bottom", fill="x", pady=(10, 0))
         ttk.Button(bar, text="Xong", style="Big.TButton", command=self.close_class).pack(side="right")
-        self.lbl_cls_title = ttk.Label(self.detail, text="", style="Title.TLabel")
-        self.lbl_cls_title.pack(anchor="w")
+        self.lbl_cls_title = self.detail.head  # dải tiêu đề màu: "Lớp 1D15 (1.1) · GVCN …"
         self.lbl_class = ttk.Label(self.detail, text="", style="Title.TLabel")
-        self.lbl_class.pack(anchor="w", pady=(4, 0))
+        self.lbl_class.pack(anchor="w")
         brow = ttk.Frame(self.detail)
         brow.pack(fill="x", pady=(8, 4))
         ttk.Button(brow, text="Lớp này đủ", image=icon("st_ok"), compound="left", command=self.mark_full).pack(side="left")

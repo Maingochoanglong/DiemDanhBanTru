@@ -11,7 +11,7 @@ from ..core import schedule as sch
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, parse_date
 from ..service import next_school_day
 from .icons import icon
-from .widgets import ask, center, tag_colors, with_scrollbar
+from .widgets import ask, center, dialog_body, tag_colors, with_scrollbar
 
 KIND_ORDER = [sch.CUT, sch.ADD, sch.FRIDAY]
 
@@ -139,8 +139,7 @@ class ScheduleDialog(tk.Toplevel):
         self.day_month = sch.next_month_start(base)
         f = tkfont.nametofont("TkDefaultFont")
 
-        body = ttk.Frame(self, padding=14)
-        body.pack(fill="both", expand=True)
+        body = dialog_body(self, padding=14)
         row = ttk.Frame(body)
         row.pack(fill="x")
         ttk.Label(row, text="Việc:").pack(side="left")

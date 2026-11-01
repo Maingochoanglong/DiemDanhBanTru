@@ -18,7 +18,7 @@ from .tab_hoc_sinh import TabHocSinh, ask_import, ask_notes
 from .tab_lich import TabLich
 from .icons import icon, set_app_icon
 from .tab_suat_an import TabSuatAn
-from .widgets import ChoiceDialog, ask
+from .widgets import ERR_COLOR, ChoiceDialog, ask, dialog_body
 
 
 class _TabGroup(ttk.Frame):
@@ -83,7 +83,7 @@ class MainWindow:
         self.cd_win.title("Cài đặt")
         self.cd_win.transient(root)
         self.cd_win.protocol("WM_DELETE_WINDOW", self.cd_win.withdraw)
-        self.tab_cd = TabCaiDat(self.cd_win, self)
+        self.tab_cd = TabCaiDat(dialog_body(self.cd_win, "Cài đặt", padding=0), self)
         self.tab_cd.pack(fill="both", expand=True)
         ttk.Button(self.tab_cd, text="Đóng", command=self.cd_win.withdraw).pack(anchor="e", pady=(12, 0))
 
@@ -319,7 +319,7 @@ class MainWindow:
             self.root, "Chưa lưu được",
             f"Còn {n} tên GV báo vắng chưa rõ là em nào, nên chưa tính vắng.\n"
             "Với mỗi tên: chọn em đúng, giữ nguyên chữ GV ghi, hoặc bỏ qua tên đó. Xử lý xong mới lưu được.",
-            lines, [("fix", "Xử lý ngay")], image="st_err", style="Err.TLabel")
+            lines, [("fix", "Xử lý ngay")], image="st_err", style="Err.TLabel", color=ERR_COLOR)
         self.fix_unresolved()
         return False
 
