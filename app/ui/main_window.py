@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -37,31 +38,37 @@ class MainWindow:
         root.title("Điểm danh bán trú")
         set_app_icon(root)
         root.minsize(1100, 680)
+        if sys.platform == "win32":
+            root.state("zoomed")  # mở to hết màn hình: laptop 1366x768 không bị thiếu chỗ
 
-        top = ttk.Frame(root, padding=(10, 8, 10, 4))
+        # thanh trên cùng: chọn ngày, sổ, cài đặt — tách khỏi phần dưới bằng đường kẻ
+        top = ttk.Frame(root, padding=(12, 10, 12, 8))
         top.pack(fill="x")
+        ttk.Separator(root, orient="horizontal").pack(fill="x")
         ttk.Label(top, text="Ngày:", style="Title.TLabel").pack(side="left")
-        ttk.Button(top, image=icon("prev"), command=lambda: self.step_day(-1)).pack(side="left", padx=(6, 2))
+        ttk.Button(top, image=icon("prev"), style="Top.TButton",
+                   command=lambda: self.step_day(-1)).pack(side="left", padx=(8, 2))
         self.date_var = tk.StringVar()
-        e = ttk.Entry(top, textvariable=self.date_var, width=11, font=("TkDefaultFont", 12, "bold"), justify="center")
-        e.pack(side="left")
+        e = ttk.Entry(top, textvariable=self.date_var, width=11, font=("TkDefaultFont", 14, "bold"), justify="center")
+        e.pack(side="left", ipady=4)
         e.bind("<Return>", lambda ev: self.open_typed_day())
-        ttk.Button(top, image=icon("next"), command=lambda: self.step_day(1)).pack(side="left", padx=(2, 4))
-        ttk.Button(top, text="Hôm nay", image=icon("today"), compound="left",
-                   command=lambda: self.open_day(dt.date.today())).pack(side="left", padx=4)
+        ttk.Button(top, image=icon("next"), style="Top.TButton",
+                   command=lambda: self.step_day(1)).pack(side="left", padx=(2, 6))
+        ttk.Button(top, text="Hôm nay", image=icon("today"), compound="left", style="Top.TButton",
+                   command=lambda: self.open_day(dt.date.today())).pack(side="left", padx=6)
         self.lbl_wd = ttk.Label(top, text="", style="Title.TLabel")
-        self.lbl_wd.pack(side="left", padx=8)
-        ttk.Button(top, text="Cài đặt", image=icon("settings"), compound="left",
-                   command=self.show_settings).pack(side="right", padx=(6, 0))
-        ttk.Button(top, text="Mở sổ trong Excel", image=icon("excel"), compound="left",
+        self.lbl_wd.pack(side="left", padx=10)
+        ttk.Button(top, text="Cài đặt", image=icon("settings"), compound="left", style="Top.TButton",
+                   command=self.show_settings).pack(side="right", padx=(10, 0))
+        ttk.Button(top, text="Mở sổ trong Excel", image=icon("excel"), compound="left", style="Top.TButton",
                    command=self.open_book_in_excel).pack(side="right")
         self.lbl_book = ttk.Label(top, text="", style="Muted.TLabel")
-        self.lbl_book.pack(side="right", padx=8)
+        self.lbl_book.pack(side="right", padx=10)
 
-        self.status = ttk.Label(root, text="", padding=(10, 2, 10, 6))
+        self.status = ttk.Label(root, text="", padding=(12, 4, 12, 8))
         self.status.pack(side="bottom", fill="x")
         self.nb = ttk.Notebook(root)
-        self.nb.pack(fill="both", expand=True, padx=8)
+        self.nb.pack(fill="both", expand=True, padx=10, pady=(8, 0))
         self.tab_dd = TabDiemDanh(self.nb, self)
         self.tab_sa = TabSuatAn(self.nb, self)
         # Tab "Học sinh" gồm 3 tab con ít dùng hằng ngày: danh sách, lịch thêm/cắt, ghép lớp
@@ -97,35 +104,9 @@ class MainWindow:
 
     # ------------------------------------------------------------------ khởi động
     def startup(self) -> None:
-        self._first_run = False
-        if self.ws.needs_setup:
-            self.setup_wizard()
+        # Không hỏi chọn file khi mới mở: người dùng tự vào Cài đặt khi sẵn sàng (màn chính có ghi hướng dẫn)
         today = dt.date.today()
         self.open_day(today if today.weekday() < 5 else next_school_day(today), ask=False)
-        if self._first_run and self.ws.book_path and self.ws.roster.students:
-            if ask_notes(self.root, self.ws, quiet=True):
-                self.open_day(self.ws.day, ask=False)
-
-    def setup_wizard(self) -> None:
-        messagebox.showinfo(
-            "Bắt đầu sử dụng",
-            "Chào bạn! Lần đầu dùng cần 2 bước:\n\n"
-            "1. Chọn file danh sách học sinh (file CDHS, em tô chữ ĐỎ là có ăn bán trú).\n"
-            "2. Chọn sổ điểm danh bán trú của tháng hiện tại (file .xlsx, mỗi ngày 1 sheet).\n\n"
-            f"Dữ liệu của app sẽ lưu tại:\n{self.ws.data.path}", parent=self.root)
-        path = filedialog.askopenfilename(
-            parent=self.root, title="Bước 1: chọn file danh sách học sinh (CDHS)",
-            filetypes=[("Excel", "*.xls *.xlsx"), ("Tất cả", "*.*")])
-        if path:
-            n = ask_import(self.root, self.ws, path)
-            if n is not None:
-                n_bt = sum(1 for s in self.ws.roster.students if s.ban_tru)
-                messagebox.showinfo("Đã nhập danh sách",
-                                    f"Đã nhập {len(self.ws.roster.students)} học sinh, {n_bt} em ăn bán trú.",
-                                    parent=self.root)
-        if not self.ws.settings.get("so_file"):
-            self.choose_book(title="Bước 2: chọn sổ điểm danh tháng hiện tại", reopen=False)
-        self._first_run = True
 
     # ------------------------------------------------------------------ chọn ngày
     def open_typed_day(self) -> None:
@@ -167,8 +148,7 @@ class MainWindow:
         self._after_load()
 
     def _handle_new_month(self, day: dt.date, e: NeedMonthBook) -> bool:
-        if e.prev is None:
-            self.flash("Chưa chọn sổ điểm danh. Bấm nút Cài đặt → Chọn sổ khác…", error=True)
+        if e.prev is None:  # chưa chọn sổ: màn chính đã ghi hướng dẫn, không báo lỗi
             return False
         dlg = ChoiceDialog(
             self.root, "Sổ tháng mới",
@@ -198,8 +178,8 @@ class MainWindow:
         bp = self.ws.book_path
         if bp:
             sheet = self.ws.sheet_name or str(self.ws.day.day)
-            where = f"sheet {sheet}" if st and st.exists_in_book else f"sẽ tạo sheet {sheet} (mẫu: sheet {self.ws.template_name})"
-            self.lbl_book.configure(text=f"Sổ: {bp.name} · {where}")
+            where = f"sheet {sheet}" if st and st.exists_in_book else f"sheet {sheet} (mới)"
+            self.lbl_book.configure(text=f"{bp.stem} · {where}")
         else:
             self.lbl_book.configure(text="Chưa có sổ cho tháng này")
         self.tab_dd.clear_results()
@@ -245,11 +225,9 @@ class MainWindow:
         w = self.cd_win
         if not w.winfo_viewable():
             w.update_idletasks()  # cao vừa nội dung, rộng đủ hiện đường dẫn file
-            w.geometry(f"{max(980, w.winfo_reqwidth())}x{w.winfo_reqheight()}")
             from .widgets import center
 
-            center(w, self.root)
-            w.deiconify()
+            center(w, self.root, size=(max(980, w.winfo_reqwidth()), w.winfo_reqheight()))
         w.lift()
         w.focus_set()
 
@@ -305,7 +283,7 @@ class MainWindow:
     def _check_unresolved(self) -> bool:
         """Chốt chặn: còn tên chưa rõ / tin không rõ lớp (chưa tính vắng) thì CHƯA cho lưu, in.
 
-        Không bị kẹt: mỗi tên chưa rõ đều chọn được "Chọn em này", "Giữ tin nhắn gốc" hoặc "Bỏ qua tên này";
+        Không bị kẹt: mỗi tên chưa rõ đều chọn được "Chọn em này", "Giữ nguyên chữ đã ghi" hoặc "Bỏ qua tên này";
         tin không rõ lớp chọn được "Ghi vào lớp này" hoặc "Bỏ tin này".
         """
         n = self.ws.unresolved_count()
@@ -330,7 +308,7 @@ class MainWindow:
     def _after_load_light(self) -> None:
         bp = self.ws.book_path
         if bp:
-            self.lbl_book.configure(text=f"Sổ: {bp.name} · sheet {self.ws.sheet_name}")
+            self.lbl_book.configure(text=f"{bp.stem} · sheet {self.ws.sheet_name}")
         self.tab_dd.refresh_light()
 
     def print_day(self) -> None:
@@ -374,8 +352,8 @@ class MainWindow:
             self.flash("Đã hoàn tác.")
 
     def _ctrl_z(self, e) -> None:
-        if isinstance(e.widget, (tk.Text, ttk.Entry, tk.Entry)):
-            return  # để ô chữ tự hoàn tác
+        if isinstance(e.widget, (tk.Text, ttk.Entry, tk.Entry)) and not getattr(e.widget, "_app_undo", False):
+            return  # để ô chữ tự hoàn tác (riêng ô tìm học sinh: Ctrl+Z = hoàn tác điểm danh)
         self.undo()
 
     def show_save_error(self, e: Exception, path) -> None:
@@ -396,7 +374,7 @@ class MainWindow:
         return True
 
     def ask_import_cdhs(self) -> None:
-        path = filedialog.askopenfilename(parent=self.root, title="Chọn file danh sách học sinh (CDHS)",
+        path = filedialog.askopenfilename(parent=self.root, title="Chọn file danh sách học sinh (Excel)",
                                           filetypes=[("Excel", "*.xls *.xlsx"), ("Tất cả", "*.*")])
         if path:
             self.import_cdhs(path)

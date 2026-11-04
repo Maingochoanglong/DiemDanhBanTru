@@ -22,7 +22,7 @@ class TabCaiDat(ttk.Frame):
         rows = [
             ("data", "File dữ liệu của app (danh sách HS, ghép lớp)"),
             ("so_file", "Sổ điểm danh tháng đang dùng"),
-            ("cdhs_file", "File danh sách CDHS đã nhập"),
+            ("cdhs_file", "File danh sách học sinh đã nhập"),
         ]
         for i, (key, label) in enumerate(rows):
             ttk.Label(g, text=label).grid(row=i, column=0, sticky="w", pady=6, padx=(0, 10))
@@ -35,7 +35,12 @@ class TabCaiDat(ttk.Frame):
         # việc ít làm với danh sách học sinh (đầu năm, khi trường có danh sách mới)
         box = ttk.LabelFrame(self, text="Danh sách học sinh", padding=10)
         box.pack(fill="x", pady=(16, 0))
-        ttk.Button(box, text="Nhập / cập nhật từ file CDHS…", command=self.app.ask_import_cdhs).pack(side="left")
+        ttk.Label(box, style="Muted.TLabel", wraplength=900, justify="left", text=(
+            "File Excel gồm các cột Lớp, Họ và tên, Ngày sinh, Ăn bán trú (có/không). "
+            "File CDHS của trường (em tô chữ đỏ là ăn bán trú) cũng nhập được.")).pack(side="bottom", anchor="w",
+                                                                                     pady=(8, 0))
+        ttk.Button(box, text="Nhập danh sách học sinh (file Excel)…", style="Big.TButton",
+                   command=self.app.ask_import_cdhs).pack(side="left")
         ttk.Button(box, text="Đọc ghi chú trong sổ…", command=self.app.ask_note_suggestions).pack(side="left", padx=6)
         ttk.Button(box, text="Xuất danh sách…", command=lambda: self.app.tab_hs.export(self)).pack(side="left")
 

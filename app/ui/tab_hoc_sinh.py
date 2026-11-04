@@ -125,14 +125,14 @@ class TabHocSinh(ttk.Frame):
         self.app.flash("Đã lưu danh sách học sinh.")
 
     def export(self, parent=None) -> None:
-        """Xuất danh sách gọn (lớp, họ tên, ngày sinh, X ăn bán trú, ghép lớp) theo một ngày."""
+        """Xuất danh sách đơn giản (lớp, họ và tên, ngày sinh, ăn bán trú có/không) theo một ngày."""
         from tkinter import simpledialog
 
         from ..excel.files import FileLockedError
         from ..excel.roster_export import export_roster
 
         parent = parent or self
-        raw = simpledialog.askstring("Xuất danh sách", "Đánh X cho các em ăn bán trú vào ngày (dd/mm/yyyy):",
+        raw = simpledialog.askstring("Xuất danh sách", "Ghi \"có\" cho các em ăn bán trú vào ngày (dd/mm/yyyy):",
                                      initialvalue=fmt_date(self.ws.day), parent=parent)
         if raw is None:
             return
@@ -170,6 +170,7 @@ class StudentDialog(tk.Toplevel):
 
     def __init__(self, parent, title: str, student: Student):
         super().__init__(parent)
+        self.withdraw()
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.s = student
@@ -193,8 +194,8 @@ class StudentDialog(tk.Toplevel):
         ttk.Button(bar, text="Lưu", style="Big.TButton", command=self._ok).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Hủy", command=self.destroy).pack(side="left")
         self.bind("<Escape>", lambda e: self.destroy())
-        self.grab_set()
         center(self, parent)
+        self.grab_set()
         self.wait_window()
 
     def _ok(self) -> None:
@@ -232,6 +233,7 @@ class ImportDialog(tk.Toplevel):
 
     def __init__(self, parent, changes, rows):
         super().__init__(parent)
+        self.withdraw()
         self.title("Nhập danh sách học sinh")
         self.transient(parent.winfo_toplevel())
         self.changes = changes
@@ -267,8 +269,8 @@ class ImportDialog(tk.Toplevel):
         ttk.Button(bar, text="Chọn hết", command=lambda: self._all(True)).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Bỏ hết", command=lambda: self._all(False)).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Hủy", command=self.destroy).pack(side="left")
-        self.grab_set()
         center(self, parent)
+        self.grab_set()
         self.wait_window()
 
     def _toggle(self, e) -> None:

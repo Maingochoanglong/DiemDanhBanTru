@@ -1,4 +1,6 @@
-"""Tab Điểm danh: ô dán tin Zalo + bảng điểm danh giống tờ sổ (rộng hết màn hình).
+"""Tab Điểm danh: ô tìm học sinh (chữ to) + bảng điểm danh giống tờ sổ (rộng hết màn hình).
+
+Đọc tin nhắn Zalo tạm ẩn (sẽ phát triển sau): phần mã đọc tin (analyze, ResultWindow…) vẫn giữ.
 
 Bấm đúp vào một lớp để mở cửa sổ của lớp đó (tích vắng, tên chưa rõ, ghi chú cột H).
 Bảng suất ăn nằm ở tab Suất ăn. Icon là ảnh (app/ui/icons.py), không dùng ký tự.
@@ -11,9 +13,10 @@ from tkinter import ttk
 from tkinter import font as tkfont
 
 from ..core import matcher
+from ..core.search import find_students
 from ..core.text import fold
 from .icons import RESULT_ICON, STATUS_ICON, icon
-from .widgets import ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog, ScrollFrame, TreeTooltip, ask, center, dialog_body, tag_colors, with_scrollbar
+from .widgets import ACCENT, ERR_COLOR, MUTED_COLOR, OK_COLOR, WARN_COLOR, ChoiceDialog, ScrollFrame, TreeTooltip, ask, center, dialog_body, tag_colors, with_scrollbar
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
 
@@ -29,6 +32,8 @@ def _msg_text(msg) -> str:
 ROW_BG = {"muted": "#f2f2f2", "ok": "#e5f4e9", "warn": "#fff0d9", "err": "#fde2e2"}
 ROW_FG = {"muted": MUTED_COLOR, "ok": "#145c2c", "warn": "#7a4300", "err": ERR_COLOR}
 PROBLEM = (matcher.AMBIGUOUS, matcher.OTHER_CLASS, matcher.NOT_FOUND)
+TABLE_TITLE = " Bảng điểm danh — bấm đúp vào một lớp để mở lớp "
+HITS_TITLE = " Kết quả tìm — bấm vào tên để đánh vắng / bỏ vắng "
 
 
 class ResultWindow(tk.Toplevel):
@@ -95,76 +100,109 @@ class TabDiemDanh(ttk.Frame):
         style.configure("So.Treeview.Heading", font=(family, size + 1, "bold"))
         style.configure("Link.TLabel", font=(family, size, "bold"))
 
+        # kết quả tìm học sinh: chữ to, dòng cao
+        style.configure("Hit.Treeview", rowheight=40 if compact else 46, font=(family, size + 5))
+        style.configure("Hit.Treeview.Heading", font=(family, size + 1, "bold"))
+
         # Thanh dưới (đóng gói trước để luôn hiện đủ khi cửa sổ thấp)
         bottom = ttk.Frame(self)
-        bottom.pack(side="bottom", fill="x", pady=(8, 0))
-        ttk.Button(bottom, text="In 2 tờ (Ctrl+P)", image=icon("print"), compound="left",
+        bottom.pack(side="bottom", fill="x", pady=(12, 0))
+        ttk.Button(bottom, text="In 2 tờ (Ctrl+P)", image=icon("print"), compound="left", style="Top.TButton",
                    command=self.app.print_day).pack(side="right")
-        ttk.Button(bottom, text="Lưu vào sổ (Ctrl+S)", style="Big.TButton", image=icon("save"), compound="left",
-                   command=self.app.save).pack(side="right", padx=6)
-        ttk.Button(bottom, text="Hoàn tác (Ctrl+Z)", image=icon("undo"), compound="left",
-                   command=self.app.undo).pack(side="right", padx=6)
-        ttk.Button(bottom, text="Copy lớp chưa báo", image=icon("copy"), compound="left",
-                   command=self.copy_unreported).pack(side="right", padx=6)
+        ttk.Button(bottom, text="Lưu vào sổ (Ctrl+S)", style="Top.TButton", image=icon("save"), compound="left",
+                   command=self.app.save).pack(side="right", padx=8)
+        ttk.Button(bottom, text="Hoàn tác (Ctrl+Z)", image=icon("undo"), compound="left", style="Top.TButton",
+                   command=self.app.undo).pack(side="right", padx=8)
+        ttk.Button(bottom, text="Copy lớp chưa báo", image=icon("copy"), compound="left", style="Top.TButton",
+                   command=self.copy_unreported).pack(side="right", padx=8)
         self.lbl_saved = ttk.Label(bottom, text="")
         self.lbl_saved.pack(side="left")
         self.lbl_saved.bind("<Button-1>", lambda e: self.ws.unresolved_count() and self.app.fix_unresolved())
 
-        # Ô dán tin nhắn: dán vào là tự kiểm tra rồi tự xóa ô; gõ tay thì bấm Ctrl+Enter
-        box = ttk.LabelFrame(self, text="Dán tin nhắn Zalo vào đây (Ctrl+V) — app tự kiểm tra ngay; "
-                                        "gõ tay xong bấm Ctrl+Enter", padding=(8, 6))
-        box.pack(fill="x")
-        row = ttk.Frame(box)
-        row.pack(fill="x")
-        # ô dán chỉ cao 1 dòng khi không dùng; bấm vào thì mở ra 3 dòng
-        self.paste = tk.Text(row, height=1, wrap="word", font=base, undo=True)
-        self.paste.pack(side="left", fill="both", expand=True)
-        self.paste.bind("<FocusIn>", lambda e: self.paste.configure(height=3))
-        self.paste.bind("<FocusOut>", lambda e: self._shrink_paste())
-        self.paste.bind("<<Paste>>", lambda e: self.after(80, self.analyze))
-        self.paste.bind("<Control-Return>", lambda e: (self.analyze(), "break")[1])
-        srow = ttk.Frame(box)
-        srow.pack(fill="x", pady=(6, 0))
-        ttk.Button(srow, text="Kết quả chi tiết…", image=icon("list"), compound="left",
-                   command=self.show_results).pack(side="right")
-        sbox = ttk.Frame(srow)
-        sbox.pack(side="left", fill="x", expand=True)
-        # dòng 1: việc cần xử lý (đỏ/cam) · dòng 2: thông tin (xám)
-        self.lbl_summary = ttk.Label(sbox, text="", style="Link.TLabel", cursor="hand2", justify="left", compound="left")
-        self.lbl_summary.pack(anchor="w")
-        self.lbl_info = ttk.Label(sbox, text="", style="Muted.TLabel", cursor="hand2", justify="left")
-        self.lbl_info.pack(anchor="w")
-        for lbl in (self.lbl_summary, self.lbl_info):
-            lbl.bind("<Button-1>", lambda e: self.show_results())
-        srow.bind("<Configure>", lambda e: [lbl.configure(wraplength=max(300, e.width - 300))
-                                            for lbl in (self.lbl_summary, self.lbl_info)])
+        # Vùng 1: ô tìm học sinh — việc chính mỗi sáng (chữ to, rõ)
+        sbox = ttk.LabelFrame(self, text=" Tìm học sinh vắng — gõ tên, không cần dấu (gõ kèm lớp nếu muốn, "
+                                         "vd: 1D15 long), rồi bấm vào tên để đánh vắng ", style="Card.TLabelframe")
+        sbox.pack(fill="x")
+        srch = ttk.Frame(sbox)
+        srch.pack(fill="x")
+        self.search_main = tk.StringVar()
+        self.ent_search = tk.Entry(srch, textvariable=self.search_main, font=(family, size + 8), relief="solid",
+                                   borderwidth=1, highlightthickness=2, highlightcolor=ACCENT,
+                                   highlightbackground="#a9b6c8")
+        self.ent_search._app_undo = True  # type: ignore[attr-defined]  # Ctrl+Z ở ô này = hoàn tác điểm danh
+        self.ent_search.pack(side="left", fill="x", expand=True, ipady=4)
+        ttk.Button(srch, text="Xóa ô (Esc)", style="Top.TButton", command=self.clear_search).pack(side="left",
+                                                                                                padx=(10, 0))
+        self.search_main.trace_add("write", lambda *a: self._on_search())
+        self.ent_search.bind("<Escape>", lambda e: self.clear_search())
+        self.ent_search.bind("<Down>", lambda e: self._focus_hits())
+        self.ent_search.bind("<Return>", lambda e: self._enter_search())
 
-        # Bảng điểm danh giống sổ, rộng hết màn hình
-        left = ttk.LabelFrame(self, text="Bảng điểm danh — bấm đúp vào một lớp để tích vắng, xử lý tên", padding=6)
-        left.pack(fill="both", expand=True, pady=(8, 0))
+        # Vùng 2: bảng điểm danh giống sổ; khi đang gõ tên thì thay bằng kết quả tìm
+        self.main_box = ttk.LabelFrame(self, text=TABLE_TITLE, style="Card.TLabelframe")
+        self.main_box.pack(fill="both", expand=True, pady=(12, 0))
+        left = self.main_box
         trow = ttk.Frame(left)
-        trow.pack(fill="x", pady=(0, 4))
+        trow.pack(fill="x", pady=(0, 6))
         self.lbl_totals = ttk.Label(trow, text="", style="Title.TLabel")
         self.lbl_totals.pack(side="left")
         self.lbl_meal_total = ttk.Label(trow, text="", style="Title.TLabel", cursor="hand2", compound="left")
         self.lbl_meal_total.pack(side="left", padx=(16, 0))
         self.lbl_meal_total.bind("<Button-1>", lambda e: self.app.show_tab(self.app.tab_sa))
-        legend = ttk.Frame(left)
-        legend.pack(side="bottom", fill="x", pady=(4, 0))
+        # việc cần xử lý / hướng dẫn bước đầu: chỉ hiện khi có
+        self.srow = ttk.Frame(left)
+        self.lbl_summary = ttk.Label(self.srow, text="", style="Link.TLabel", cursor="hand2", justify="left",
+                                     compound="left")
+        self.lbl_summary.pack(anchor="w")
+        self.lbl_info = ttk.Label(self.srow, text="", style="Muted.TLabel", cursor="hand2", justify="left")
+        self.lbl_info.pack(anchor="w")
+        for lbl in (self.lbl_summary, self.lbl_info):
+            lbl.bind("<Button-1>", lambda e: self._on_summary_click())
+        self.srow.bind("<Configure>", lambda e: [lbl.configure(wraplength=max(300, e.width - 20))
+                                                 for lbl in (self.lbl_summary, self.lbl_info)])
+
+        self.table_frame = ttk.Frame(left)
+        self.table_frame.pack(fill="both", expand=True)
+        legend = ttk.Frame(self.table_frame)
+        legend.pack(side="bottom", fill="x", pady=(8, 0))
         for text, key in (("chưa báo", "muted"), ("đủ", "ok"), ("có vắng", "warn"), ("cần xem", "err")):
-            tk.Label(legend, text=f" {text} ", image=icon(STATUS_ICON[key]), compound="left", padx=4,
-                     background=ROW_BG[key], foreground=ROW_FG[key]).pack(side="left", padx=(0, 6))
+            tk.Label(legend, text=f" {text} ", image=icon(STATUS_ICON[key]), compound="left", padx=8, pady=2,
+                     background=ROW_BG[key], foreground=ROW_FG[key], highlightthickness=1,
+                     highlightbackground="#c4c4c4").pack(side="left", padx=(0, 12))
         ttk.Label(legend, text="[Lịch] sĩ số đổi theo lịch thêm/cắt",
                   style="Muted.TLabel").pack(side="left", padx=6)
         ttk.Button(legend, text="Mở lớp đã chọn", image=icon("open"), compound="left",
                    command=lambda: self.open_class(self.current_class)).pack(side="right")
+
+        # kết quả tìm: Vắng | Họ và tên | Lớp | Ngày sinh — bấm vào dòng để đánh vắng / bỏ vắng
+        self._search_mode = False
+        self.hits_frame = ttk.Frame(left)
+        self.lbl_hits = ttk.Label(self.hits_frame, text="", style="Title.TLabel")
+        self.lbl_hits.pack(side="bottom", anchor="w", pady=(8, 0))
+        hf, self.hits = with_scrollbar(self.hits_frame, ttk.Treeview, columns=("vang", "ten", "lop", "ns"),
+                                       show="headings", selectmode="browse", style="Hit.Treeview")
+        hf.pack(fill="both", expand=True)
+        h = self.hits
+        for c, (title, w, anchor, stretch) in {"vang": ("Vắng", 190, "center", False),
+                                                "ten": ("Họ và tên", 460, "w", True),
+                                                "lop": ("Lớp", 150, "center", False),
+                                                "ns": ("Ngày sinh", 190, "center", False)}.items():
+            h.heading(c, text=title, anchor=anchor)
+            h.column(c, width=w, anchor=anchor, stretch=stretch, minwidth=80)
+        h.tag_configure("absent", background=ROW_BG["err"], foreground=ERR_COLOR)
+        h.tag_configure("notbt", foreground=MUTED_COLOR)
+        h.bind("<ButtonRelease-1>", self._on_hit_click)
+        h.bind("<Return>", lambda e: self._toggle_selected_hit())
+        h.bind("<space>", lambda e: self._toggle_selected_hit())
+        h.bind("<Escape>", lambda e: self.clear_search())
+
         cols = ("gv", "siso", "vang", "hd", "ten", "note")
-        frame, self.tree = with_scrollbar(left, ttk.Treeview, columns=cols, show="tree headings",
+        frame, self.tree = with_scrollbar(self.table_frame, ttk.Treeview, columns=cols, show="tree headings",
                                           selectmode="browse", style="So.Treeview")
         frame.pack(fill="both", expand=True)
         t = self.tree
         t.heading("#0", text="Lớp", anchor="w")
-        t.column("#0", width=110, stretch=False, minwidth=90)
+        t.column("#0", width=150, stretch=False, minwidth=120)
         heads = {"gv": ("GVCN", 220, "w"), "siso": ("Sĩ số", 64, "center"),
                  "vang": ("Vắng", 64, "center"), "hd": ("Hiện diện", 100, "center"),
                  "ten": ("Tên học sinh vắng", 360, "w"), "note": ("Ghi chú", 340, "w")}
@@ -190,7 +228,7 @@ class TabDiemDanh(ttk.Frame):
         win.transient(self.winfo_toplevel())
         win.protocol("WM_DELETE_WINDOW", self.close_class)
         win.bind("<Escape>", lambda e: self.close_class())
-        ttk.Style().configure("Big.TCheckbutton", font=(family, size + 1))
+        ttk.Style().configure("Big.TCheckbutton", font=(family, size + 3))
         self.detail = dialog_body(win, "Lớp")
         bar = ttk.Frame(self.detail)
         bar.pack(side="bottom", fill="x", pady=(10, 0))
@@ -207,8 +245,11 @@ class TabDiemDanh(ttk.Frame):
                    command=lambda: self._schedule_menu_for(None)).pack(side="left", padx=6)
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *a: self._filter_checks())
-        ttk.Entry(brow, textvariable=self.search_var, width=16).pack(side="right")
-        ttk.Label(brow, text="Tìm tên:").pack(side="right", padx=(0, 4))
+        self.ent_cls_search = tk.Entry(brow, textvariable=self.search_var, width=18, font=(family, size + 5),
+                                       relief="solid", borderwidth=1, highlightthickness=2, highlightcolor=ACCENT,
+                                       highlightbackground="#a9b6c8")
+        self.ent_cls_search.pack(side="right", ipady=2)
+        ttk.Label(brow, text="Tìm tên:", style="Title.TLabel").pack(side="right", padx=(0, 6))
         # dòng tên chưa rõ: chỉ hiện khi có
         self.pending_row = ttk.Frame(self.detail)
         self.lbl_hint = ttk.Label(self.detail, text="Tích ô = em vắng · chuột phải vào tên: cắt bán trú / cắt thứ 6",
@@ -228,7 +269,7 @@ class TabDiemDanh(ttk.Frame):
         e.pack(side="left", fill="x", expand=True, padx=4)
         e.bind("<FocusOut>", lambda ev: self._save_note())
         e.bind("<Return>", lambda ev: self._save_note())
-        self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ tin nhắn gốc", command=self.clear_extra)
+        self.btn_clear_extra = ttk.Button(self.detail, text="Xóa các tên giữ nguyên chữ", command=self.clear_extra)
 
     def _open_from_table(self, e) -> str | None:
         iid = self.tree.identify_row(e.y)
@@ -244,25 +285,16 @@ class TabDiemDanh(ttk.Frame):
         self.select_class(code)
         win = self.cls_win
         if not win.winfo_viewable():
-            top = self.winfo_toplevel()
-            w = min(940, top.winfo_width() - 40)
-            h = min(660, top.winfo_height() - 40)
-            win.geometry(f"{w}x{h}")
-            center(win, top)
-            win.deiconify()
+            center(win, size=(1040, 720))  # giữa màn hình; màn nhỏ thì tự co lại cho vừa
         self._build_checks()
         self._refresh_detail_labels()
         win.lift()
-        win.focus_set()
+        self.ent_cls_search.focus_set()
 
     def close_class(self) -> None:
         self._save_note()
         self.cls_win.withdraw()
         self.tree.focus_set()
-
-    def _shrink_paste(self) -> None:
-        if not self.paste.get("1.0", "end").strip():
-            self.paste.configure(height=1)
 
     # ------------------------------------------------------------------ làm mới
     def refresh(self) -> None:
@@ -276,6 +308,8 @@ class TabDiemDanh(ttk.Frame):
         self._refresh_detail_labels()
         self._refresh_meals()
         self._refresh_totals()
+        if self._search_mode:
+            self._refresh_hits()
 
     def refresh_light(self) -> None:
         """Làm mới số liệu, không dựng lại danh sách ô tích (giữ vị trí cuộn)."""
@@ -284,6 +318,9 @@ class TabDiemDanh(ttk.Frame):
         self._refresh_detail_labels()
         self._refresh_meals()
         self._refresh_totals()
+        if self._search_mode:
+            for sid in self.hits.get_children():
+                self._update_hit(sid)
 
     def _class_status(self, code: str) -> str:
         """Mức màu của 1 lớp: muted (chưa báo) / ok (đủ) / warn (có vắng) / err (cần xem)."""
@@ -454,7 +491,7 @@ class TabDiemDanh(ttk.Frame):
             txt += ("\n" if txt else "") + "Sắp tới: " + nxt
         self.lbl_sched.configure(text=txt)
         if c.extra:
-            self.lbl_extra.configure(text="Giữ tin nhắn gốc (tên chưa khớp danh sách): " + ", ".join(c.extra))
+            self.lbl_extra.configure(text="Giữ nguyên chữ đã ghi (tên chưa khớp danh sách): " + ", ".join(c.extra))
             self.btn_clear_extra.pack(anchor="w", after=self.lbl_extra)
         else:
             self.lbl_extra.configure(text="")
@@ -506,8 +543,31 @@ class TabDiemDanh(ttk.Frame):
         self._summary = parts
         self._show_summary()
 
+    def setup_hint(self) -> str:
+        """Hướng dẫn bước đầu khi chưa có danh sách / chưa chọn sổ (không bắt chọn file lúc mở app)."""
+        steps = []
+        if not self.ws.roster.students:
+            steps.append("nhập danh sách học sinh (file Excel)")
+        if not self.ws.book_path:
+            steps.append("chọn sổ điểm danh tháng này")
+        if not steps:
+            return ""
+        return "Bấm nút Cài đặt (góc trên bên phải) để " + " và ".join(steps) + "."
+
+    def _on_summary_click(self) -> None:
+        if self.setup_hint():
+            self.app.show_settings()
+        else:
+            self.show_results()
+
     def _show_summary(self) -> None:
-        """Dòng 1: việc cần xử lý (đỏ/cam, bấm để xem). Dòng 2: thông tin (xám)."""
+        """Dòng 1: việc cần xử lý (đỏ/cam, bấm để xem). Dòng 2: thông tin (xám). Không có gì thì ẩn."""
+        hint = self.setup_hint()
+        if hint:
+            self.lbl_summary.configure(text=" " + hint, foreground=WARN_COLOR, image=icon("settings"))
+            self.lbl_info.configure(text="")
+            self.srow.pack(fill="x", pady=(0, 6), before=self.table_frame if not self._search_mode else self.hits_frame)
+            return
         st = self.ws.state
         todo = [(t, k) for t, k in self._summary if k != "ok"]
         info = [t for t, k in self._summary if k == "ok"]
@@ -523,15 +583,138 @@ class TabDiemDanh(ttk.Frame):
             self.lbl_info.configure(text="")
             if info:
                 self.lbl_summary.configure(text=" " + "  ·  ".join(info), foreground=OK_COLOR, image=icon("st_ok"))
+                self.srow.pack(fill="x", pady=(0, 6), before=self.hits_frame if self._search_mode else self.table_frame)
             else:
-                self.lbl_summary.configure(text="Chưa dán tin nào.", foreground=MUTED_COLOR, image="")
+                self.lbl_summary.configure(text="", image="")
+                self.srow.pack_forget()
             return
+        self.srow.pack(fill="x", pady=(0, 6), before=self.hits_frame if self._search_mode else self.table_frame)
         worst = "err" if any(k == "err" for _, k in todo) else "warn"
         self.lbl_summary.configure(
             text=" Cần xử lý: " + "  ·  ".join(t for t, _ in todo) + "  — bấm để xem",
             foreground=ERR_COLOR if worst == "err" else WARN_COLOR,
             image=icon("st_err" if worst == "err" else "res_ambiguous"))
         self.lbl_info.configure(text="  ·  ".join(info))
+
+    # ------------------------------------------------------------------ tìm học sinh (ô tìm chữ to)
+    def _on_search(self) -> None:
+        q = self.search_main.get().strip()
+        if q and not self._search_mode:
+            self._search_mode = True
+            self.table_frame.pack_forget()
+            self.hits_frame.pack(fill="both", expand=True)
+            self.main_box.configure(text=HITS_TITLE)
+        elif not q and self._search_mode:
+            self._search_mode = False
+            self.hits_frame.pack_forget()
+            self.table_frame.pack(fill="both", expand=True)
+            self.main_box.configure(text=TABLE_TITLE)
+        if self.srow.winfo_manager():
+            self.srow.pack_configure(before=self.hits_frame if self._search_mode else self.table_frame)
+        if q:
+            self._refresh_hits()
+
+    def clear_search(self) -> str:
+        self.search_main.set("")
+        self.ent_search.focus_set()
+        return "break"
+
+    def _refresh_hits(self) -> None:
+        h = self.hits
+        h.delete(*h.get_children())
+        st = self.ws.state
+        q = self.search_main.get().strip()
+        if st is None or not q:
+            return
+        found = find_students(self.ws.roster.students, q, st.date)
+        for s in found:
+            h.insert("", "end", iid=s.id)
+            self._update_hit(s.id)
+        if len(found) >= 60:
+            self.lbl_hits.configure(text=f"Nhiều em khớp “{q}” — gõ thêm chữ (hoặc mã lớp) để thu hẹp", foreground="")
+        elif found:
+            self.lbl_hits.configure(text=f"{len(found)} em khớp “{q}”", foreground="")
+        elif not self.ws.roster.students:
+            self.lbl_hits.configure(text="Chưa có danh sách học sinh. " + self.setup_hint(), foreground=WARN_COLOR)
+        else:
+            self.lbl_hits.configure(text=f"Không tìm thấy em nào khớp “{q}”. Thử gõ ít chữ hơn, ví dụ chỉ gõ tên.",
+                                    foreground=WARN_COLOR)
+
+    def _hit_state(self, s) -> tuple[str, str]:
+        """(chữ cột Vắng, tag màu) của 1 em trong kết quả tìm."""
+        st = self.ws.state
+        code = s.lop_tinh
+        if not s.is_boarding(st.date) or code not in st.classes:
+            return "không ăn BT", "notbt"
+        if st.is_absent(code, s.id):
+            reason = st.auto_absent(code).get(s.id)
+            return ("☑ VẮNG" + (" (T6)" if reason else "")), "absent"
+        return "☐", ""
+
+    def _update_hit(self, sid: str) -> None:
+        s = self.ws.roster.by_id(sid)
+        if s is None or not self.hits.exists(sid):
+            return
+        vang, tag = self._hit_state(s)
+        lop = s.lop_tinh + (f" (học {s.lop})" if s.lop_tinh != s.lop else "")
+        self.hits.item(sid, values=(vang, s.ho_ten, lop, s.ngay_sinh), tags=(tag,) if tag else ())
+
+    def _toggle_student(self, sid: str) -> None:
+        """Đánh vắng / bỏ vắng 1 em (dùng cho ô tìm)."""
+        st = self.ws.state
+        s = self.ws.roster.by_id(sid)
+        if st is None or s is None:
+            return
+        code = s.lop_tinh
+        if not s.is_boarding(st.date) or code not in st.classes:
+            self.app.flash(f"{s.ho_ten} (lớp {s.lop}) không ăn bán trú hôm nay — không đánh vắng.", error=True)
+            return
+        absent = not st.is_absent(code, sid)
+        self.ws.push_undo()
+        st.set_absent(code, sid, absent)
+        self.current_class = code
+        self.refresh_light()
+        name = self.ws.roster.display_name(s)
+        self.app.flash(f"Đã đánh vắng: {name} — lớp {code}. Bấm lại vào tên để bỏ vắng."
+                        if absent else f"Đã bỏ vắng: {name} — lớp {code}.")
+
+    def _on_hit_click(self, e) -> None:
+        h = self.hits
+        if h.identify_region(e.x, e.y) not in ("cell", "tree"):
+            return
+        sid = h.identify_row(e.y)
+        if not sid:
+            return
+        self._toggle_student(sid)
+        h.selection_remove(*h.selection())  # để thấy rõ màu đỏ của dòng vừa đánh vắng
+        # quay lại ô tìm, bôi đen chữ cũ: gõ tên tiếp theo là thay luôn
+        self.ent_search.focus_set()
+        self.ent_search.select_range(0, "end")
+
+    def _toggle_selected_hit(self) -> str:
+        sel = self.hits.selection()
+        if sel:
+            self._toggle_student(sel[0])
+        return "break"
+
+    def _focus_hits(self) -> str:
+        kids = self.hits.get_children()
+        if self._search_mode and kids:
+            self.hits.focus_set()
+            self.hits.selection_set(kids[0])
+            self.hits.focus(kids[0])
+        return "break"
+
+    def _enter_search(self) -> str:
+        """Enter ở ô tìm: chỉ có 1 em ăn bán trú khớp thì đánh vắng luôn; nhiều em thì xuống danh sách để chọn."""
+        st = self.ws.state
+        kids = self.hits.get_children()
+        boarding = [sid for sid in kids if "notbt" not in self.hits.item(sid, "tags")]
+        if st is not None and len(boarding) == 1:
+            self._toggle_student(boarding[0])
+            self.ent_search.select_range(0, "end")
+            return "break"
+        return self._focus_hits()
 
     def show_results(self) -> None:
         self.results.show()
@@ -898,12 +1081,12 @@ class TabDiemDanh(ttk.Frame):
         if res.status == matcher.OTHER_CLASS:
             where = "; ".join(f"{c.ho_ten} lớp {c.lop}{' (ăn BT)' if c.ban_tru else ''}" for c in res.candidates)
             msg = (f"'{res.query}' không có trong danh sách bán trú lớp {code}.\nCó em cùng tên ở: {where}.\n\n"
-                   "Nếu em này mới chuyển vào lớp, hãy sửa ở tab Học sinh. Hoặc chọn \"Giữ tin nhắn gốc\".")
+                   "Nếu em này mới chuyển vào lớp, hãy sửa ở tab Học sinh. Hoặc chọn \"Giữ nguyên chữ đã ghi\".")
         elif cands:
             msg = f"Lớp {code}: tên '{res.query}' — chọn em đúng:"
         else:
             msg = f"Lớp {code}: không tìm thấy '{res.query}' trong danh sách bán trú."
-        buttons = ([("pick", "Chọn em này")] if cands else []) + [("raw", "Giữ tin nhắn gốc"), ("skip", "Bỏ qua tên này")]
+        buttons = ([("pick", "Chọn em này")] if cands else []) + [("raw", "Giữ nguyên chữ đã ghi"), ("skip", "Bỏ qua tên này")]
         dlg = ChoiceDialog(self, "Chọn học sinh", msg, options, buttons, need_choice={"pick"})
         key, idx = dlg.result
         if key is None:
@@ -914,7 +1097,7 @@ class TabDiemDanh(ttk.Frame):
             row = (res.query, f"→ {roster.display_name(cands[idx])}  (đã chọn)", "ok", "res_ok")
         elif key == "raw":
             st.resolve_pending(code, res, None, keep_raw=True)
-            row = (res.query, "Giữ tin nhắn gốc: ghi vào sổ đúng chữ GV gõ", "warn", "res_raw")
+            row = (res.query, "Giữ nguyên chữ đã ghi: ghi vào sổ đúng chữ GV gõ", "warn", "res_raw")
         else:
             st.resolve_pending(code, res, None)
             row = (res.query, "Đã bỏ qua", "muted", "res_skip")

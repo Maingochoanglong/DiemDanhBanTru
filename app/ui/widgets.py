@@ -22,22 +22,27 @@ def setup_style(root: tk.Tk) -> str:
         style.theme_use("clam")
     family = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
     compact = root.winfo_screenheight() < 850  # laptop 1366x768: chữ nhỏ hơn 1 cỡ
-    size = 10 if compact else 11
+    size = 11 if compact else 12
     for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont"):
         try:
             tkfont.nametofont(name).configure(family=family, size=size)
         except tk.TclError:
             pass
-    style.configure("Treeview", rowheight=22 if compact else 26, font=(family, size))
+    style.configure("Treeview", rowheight=26 if compact else 30, font=(family, size))
     style.configure("Treeview.Heading", font=(family, size - 1, "bold"))
     style.configure("TLabelframe.Label", font=(family, size, "bold"), foreground=ACCENT)
     style.configure("Title.TLabel", font=(family, size + 2, "bold"))
-    style.configure("Big.TButton", font=(family, size, "bold"), padding=(10, 3) if compact else (12, 5))
+    style.configure("Big.TButton", font=(family, size, "bold"), padding=(14, 6) if compact else (16, 8))
+    # nút trên cùng (Hôm nay, Mở sổ, Cài đặt) và thanh dưới: to, dễ bấm
+    style.configure("Top.TButton", font=(family, size + 1, "bold"), padding=(14, 6) if compact else (16, 8))
+    style.configure("TButton", padding=(10, 4) if compact else (12, 6))
+    style.configure("Card.TLabelframe", padding=10)
+    style.configure("Card.TLabelframe.Label", font=(family, size + 2, "bold"), foreground=ACCENT)
     style.configure("Muted.TLabel", foreground=MUTED_COLOR)
     style.configure("Ok.TLabel", foreground=OK_COLOR)
     style.configure("Warn.TLabel", foreground=WARN_COLOR)
     style.configure("Err.TLabel", foreground=ERR_COLOR)
-    style.configure("TNotebook.Tab", padding=(12, 4) if compact else (14, 6), font=(family, size, "bold"))
+    style.configure("TNotebook.Tab", padding=(16, 6) if compact else (18, 8), font=(family, size + 1, "bold"))
     root.compact = compact  # type: ignore[attr-defined]
     return family
 
@@ -124,6 +129,7 @@ class ChoiceDialog(tk.Toplevel):
                  need_choice: set[str] | None = None, image: str | None = None, style: str = "TLabel",
                  color: str = ACCENT):
         super().__init__(parent)
+        self.withdraw()
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.resizable(True, True)
@@ -157,9 +163,9 @@ class ChoiceDialog(tk.Toplevel):
             b.pack(side="left", padx=(0, 8))
         self.bind("<Escape>", lambda e: self.destroy())
         self.bind("<Return>", lambda e: self._press(buttons[0][0]))
+        center(self, parent)
         self.grab_set()
         self.focus_set()
-        center(self, parent)
         self.wait_window()
 
     def _press(self, key: str) -> None:
@@ -243,6 +249,7 @@ class TextDialog(tk.Toplevel):
 
     def __init__(self, parent, title: str, message: str, initial: str = ""):
         super().__init__(parent)
+        self.withdraw()
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.result: str | None = None
@@ -256,9 +263,9 @@ class TextDialog(tk.Toplevel):
         ttk.Button(bar, text="Đồng ý", style="Big.TButton", command=self._ok).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Hủy", command=self.destroy).pack(side="left")
         self.bind("<Escape>", lambda e: self.destroy())
+        center(self, parent)
         self.grab_set()
         self.text.focus_set()
-        center(self, parent)
         self.wait_window()
 
     def _ok(self) -> None:
@@ -266,12 +273,20 @@ class TextDialog(tk.Toplevel):
         self.destroy()
 
 
-def center(win: tk.Toplevel, parent) -> None:
+def center(win: tk.Toplevel, parent=None, size: tuple[int, int] | None = None) -> None:
+    """Đặt cửa sổ con vào giữa màn hình, co lại nếu to hơn màn hình (kể cả khi phóng chữ 125%), rồi hiện ra.
+
+    size: kích thước mong muốn; mặc định là kích thước vừa nội dung."""
     win.update_idletasks()
-    top = parent.winfo_toplevel()
-    x = top.winfo_rootx() + (top.winfo_width() - win.winfo_width()) // 2
-    y = top.winfo_rooty() + (top.winfo_height() - win.winfo_height()) // 3
-    win.geometry(f"+{max(0, x)}+{max(0, y)}")
+    sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+    w, h = size or (win.winfo_reqwidth(), win.winfo_reqheight())
+    w = max(240, min(int(w), sw - 40))
+    h = max(120, min(int(h), sh - 100))  # chừa thanh tác vụ của Windows
+    x = (sw - w) // 2
+    y = max(10, (sh - 50 - h) // 2)
+    win.geometry(f"{w}x{h}+{x}+{y}")
+    win.deiconify()
+    win.lift()
 
 
 class CheckListDialog(tk.Toplevel):
@@ -279,6 +294,7 @@ class CheckListDialog(tk.Toplevel):
 
     def __init__(self, parent, title: str, intro: str, items: list, ok_text: str = "Áp dụng"):
         super().__init__(parent)
+        self.withdraw()
         self.title(title)
         self.transient(parent.winfo_toplevel())
         self.items = items
@@ -304,8 +320,8 @@ class CheckListDialog(tk.Toplevel):
         ttk.Button(bar, text="Chọn hết", command=lambda: self._all(True)).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Bỏ hết", command=lambda: self._all(False)).pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Hủy", command=self.destroy).pack(side="left")
-        self.grab_set()
         center(self, parent)
+        self.grab_set()
         self.wait_window()
 
     def _toggle(self, e) -> None:

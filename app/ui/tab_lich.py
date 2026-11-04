@@ -128,6 +128,7 @@ class ScheduleDialog(tk.Toplevel):
 
     def __init__(self, parent, ws, kind: str, code: str, ids: tuple[str, ...] = ()):
         super().__init__(parent)
+        self.withdraw()
         self.title("Lên lịch thêm / cắt bán trú")
         self.transient(parent.winfo_toplevel())
         self.ws = ws
@@ -201,8 +202,8 @@ class ScheduleDialog(tk.Toplevel):
         ttk.Button(bar, text="Hủy", command=self.destroy).pack(side="left")
         self.bind("<Escape>", lambda e: self.destroy())
         self._kind_changed()
-        self.grab_set()
         center(self, parent)
+        self.grab_set()
         self.wait_window()
 
     # ------------------------------------------------------------------
