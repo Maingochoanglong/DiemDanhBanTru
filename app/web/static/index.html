@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Điểm danh bán trú</title>
+<link rel="stylesheet" href="vendor/bootstrap.min.css">
+<link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app d-flex">
+  <aside class="sidebar">
+    <div class="brand">Điểm danh<br>bán trú</div>
+    <nav class="nav flex-column nav-pills" id="nav">
+      <a class="nav-link active" data-page="dd" href="#"><i class="bi bi-clipboard-check"></i>Điểm danh</a>
+      <a class="nav-link" data-page="sa" href="#"><i class="bi bi-cup-hot"></i>Suất ăn</a>
+      <a class="nav-link" data-page="hs" href="#"><i class="bi bi-people"></i>Học sinh</a>
+      <a class="nav-link" data-page="lich" href="#"><i class="bi bi-calendar-event"></i>Lịch thêm/cắt</a>
+      <a class="nav-link" data-page="ghep" href="#"><i class="bi bi-diagram-3"></i>Ghép lớp</a>
+      <a class="nav-link" data-page="cd" href="#"><i class="bi bi-gear"></i>Cài đặt</a>
+    </nav>
+    <div class="ver" id="ver"></div>
+  </aside>
+
+  <main class="flex-grow-1 d-flex flex-column">
+    <!-- thanh ngày -->
+    <div class="card topbar shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2">
+      <button class="btn btn-outline-secondary" id="dayPrev" title="Ngày học trước"><i class="bi bi-chevron-left"></i></button>
+      <div class="input-group" style="width:auto">
+        <input class="form-control form-control-lg" id="dayInput" placeholder="dd/mm/yyyy" title="Gõ ngày rồi bấm Enter">
+        <button class="btn btn-outline-secondary" id="dayPickBtn" title="Chọn ngày trên lịch"><i class="bi bi-calendar3"></i></button>
+      </div>
+      <input type="date" id="dayPick" tabindex="-1" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none">
+      <button class="btn btn-outline-secondary" id="dayNext" title="Ngày học sau"><i class="bi bi-chevron-right"></i></button>
+      <button class="btn btn-outline-primary" id="dayToday"><i class="bi bi-calendar-day"></i> Hôm nay</button>
+      <span class="weekday ms-2" id="weekday"></span>
+      <span class="ms-auto book" id="book"></span>
+      <button class="btn btn-outline-success" id="openBook"><i class="bi bi-file-earmark-excel"></i> Mở sổ Excel</button>
+    </div></div>
+
+    <!-- ===== Điểm danh ===== -->
+    <section class="page show" id="page-dd">
+      <div class="summary" id="summary"></div>
+      <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
+        <div class="card-header bg-white d-flex align-items-center gap-3 flex-wrap">
+          <span class="fw-bold fs-6" id="totals"></span>
+          <span id="mealBadge"></span>
+          <span class="ms-auto text-muted small">Bấm vào một lớp để chọn em vắng</span>
+        </div>
+        <div class="so-wrap">
+          <table class="table table-bordered so">
+            <thead><tr><th>Lớp</th><th>GVCN</th><th class="num">Sĩ số</th><th class="num">Vắng</th><th class="num">Hiện diện</th><th>Tên học sinh vắng</th><th>Ghi chú</th></tr></thead>
+            <tbody id="soBody"></tbody>
+          </table>
+        </div>
+        <div class="card-footer bg-white legend d-flex gap-2 align-items-center flex-wrap">
+          <span class="badge text-bg-light"><span class="dot muted"></span>chưa báo</span>
+          <span class="badge text-bg-light"><span class="dot ok"></span>đủ</span>
+          <span class="badge text-bg-light"><span class="dot warn"></span>có vắng</span>
+          <span class="badge text-bg-light"><span class="dot err"></span>cần xem</span>
+          <span class="text-muted small ms-2">[Lịch] = sĩ số đổi theo lịch thêm/cắt</span>
+        </div>
+      </div>
+      <div class="actionbar">
+        <span class="state" id="saveState"></span>
+        <button class="btn btn-outline-secondary" id="btnCopy"><i class="bi bi-clipboard"></i> Copy lớp chưa báo</button>
+        <button class="btn btn-outline-secondary" id="btnUndo"><i class="bi bi-arrow-counterclockwise"></i> Hoàn tác</button>
+        <button class="btn btn-primary" id="btnSave"><i class="bi bi-save"></i> Lưu vào sổ</button>
+        <button class="btn btn-outline-dark" id="btnPrint"><i class="bi bi-printer"></i> In 2 tờ</button>
+      </div>
+    </section>
+
+    <!-- ===== Suất ăn ===== -->
+    <section class="page" id="page-sa">
+      <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
+        <div class="card-header bg-white"><span class="fs-5 fw-bold" id="mealTotal"></span></div>
+        <div class="so-wrap"><table class="table table-hover mb-0 sticky-head">
+          <thead><tr><th style="width:200px">Nhóm</th><th>Gồm</th><th class="text-center" style="width:110px">Suất</th></tr></thead>
+          <tbody id="mealBody"></tbody></table></div>
+        <div class="card-footer bg-white small" id="mealInfo"></div>
+      </div>
+    </section>
+
+    <!-- ===== Học sinh ===== -->
+    <section class="page" id="page-hs">
+      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2 flex-wrap">
+        <select class="form-select" id="hsClass" style="width:130px"></select>
+        <input class="form-control" id="hsQ" placeholder="Tìm tên (không cần dấu)" style="max-width:280px">
+        <div class="form-check ms-2"><input class="form-check-input" type="checkbox" id="hsBt" checked><label class="form-check-label" for="hsBt">Chỉ em ăn bán trú</label></div>
+        <span class="text-muted ms-2" id="hsCount"></span>
+        <button class="btn btn-outline-primary ms-auto" id="hsAdd"><i class="bi bi-person-plus"></i> Thêm học sinh</button>
+        <button class="btn btn-primary" id="hsSave"><i class="bi bi-save"></i> Lưu thay đổi</button>
+      </div></div>
+      <div class="card shadow-sm flex-grow-1" style="min-height:0"><div class="so-wrap h-100">
+        <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
+          <th>Lớp</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn BT</th><th>Tên ghi sổ</th><th>Ăn ghép</th><th>Đặc biệt</th><th>Ghi chú</th></tr></thead>
+          <tbody id="hsBody"></tbody></table></div></div>
+      <div class="text-muted small">Bấm vào một dòng để sửa. Sửa xong bấm <b>Lưu thay đổi</b>.</div>
+    </section>
+
+    <!-- ===== Lịch thêm/cắt ===== -->
+    <section class="page" id="page-lich">
+      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2 flex-wrap">
+        <span class="text-muted">Đặt trước ngày cắt hoặc thêm; tới ngày đó app tự đổi sĩ số. Em "cắt thứ 6" tự tính vắng mỗi thứ 6.</span>
+        <button class="btn btn-danger ms-auto" data-sched="cat"><i class="bi bi-scissors"></i> Cắt bán trú…</button>
+        <button class="btn btn-success" data-sched="them"><i class="bi bi-person-plus"></i> Thêm bán trú…</button>
+        <button class="btn btn-outline-secondary" data-sched="thu6"><i class="bi bi-calendar-minus"></i> Cắt thứ 6 hàng tuần…</button>
+      </div></div>
+      <div class="card shadow-sm flex-grow-1" style="min-height:0"><div class="so-wrap h-100">
+        <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
+          <th style="width:42px"></th><th>Ngày áp dụng</th><th>Lớp</th><th>Học sinh</th><th>Việc</th></tr></thead>
+          <tbody id="lichBody"></tbody></table></div></div>
+      <div><button class="btn btn-outline-danger" id="lichCancel"><i class="bi bi-x-circle"></i> Hủy các lịch đã tích</button></div>
+    </section>
+
+    <!-- ===== Ghép lớp ===== -->
+    <section class="page" id="page-ghep">
+      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2">
+        <span class="text-muted">Lớp ghép không có hàng riêng trong bảng suất ăn; tích các em rồi bấm nhóm ăn. Em vắng thì app tự trừ đúng nhóm.</span>
+        <button class="btn btn-primary ms-auto" id="ghepSave"><i class="bi bi-save"></i> Lưu danh sách ghép</button>
+      </div></div>
+      <div class="so-wrap" id="ghepBody"></div>
+    </section>
+
+    <!-- ===== Cài đặt ===== -->
+    <section class="page" id="page-cd">
+      <div class="card shadow-sm"><div class="card-body">
+        <h5 class="card-title">File đang dùng</h5>
+        <div id="cdFiles"></div>
+        <div class="mt-2 d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary" id="cdBook"><i class="bi bi-journal-arrow-up"></i> Chọn sổ điểm danh…</button>
+          <button class="btn btn-outline-secondary" data-open="so_folder"><i class="bi bi-folder2-open"></i> Mở thư mục sổ</button>
+          <button class="btn btn-outline-secondary" data-open="backup"><i class="bi bi-clock-history"></i> Mở thư mục sao lưu</button>
+          <button class="btn btn-outline-secondary" data-open="data_folder"><i class="bi bi-folder"></i> Mở thư mục dữ liệu</button>
+        </div>
+      </div></div>
+      <div class="card shadow-sm"><div class="card-body">
+        <h5 class="card-title">Danh sách học sinh</h5>
+        <p class="text-muted mb-2">File Excel gồm các cột <b>Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không)</b>. File CDHS của trường (em tô chữ đỏ là ăn bán trú) cũng nhập được.</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary" id="cdImport"><i class="bi bi-file-earmark-arrow-down"></i> Nhập danh sách học sinh…</button>
+          <button class="btn btn-outline-primary" id="cdNotes"><i class="bi bi-journal-text"></i> Đọc ghi chú trong sổ…</button>
+          <button class="btn btn-outline-primary" id="cdExport"><i class="bi bi-file-earmark-arrow-up"></i> Xuất danh sách…</button>
+        </div>
+      </div></div>
+      <div class="text-muted small px-1">
+        • Mỗi lần ghi, app tự sao lưu file cũ vào thư mục SaoLuu cạnh file (giữ 30 bản gần nhất).<br>
+        • Nếu sổ đang mở trong Excel, hãy đóng Excel rồi bấm Lưu lại.
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- bảng chọn tên của 1 lớp -->
+<div class="modal fade" id="mdClass" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl"><div class="modal-content">
+  <div class="modal-header">
+    <div class="me-3"><h4 class="modal-title mb-0" id="clsTitle"></h4><div class="text-muted" id="clsGv"></div></div>
+    <div class="ms-auto d-flex gap-2 fs-6" id="clsCounts"></div>
+    <button type="button" class="btn-close ms-3" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div id="clsAlerts"></div>
+    <div class="d-flex gap-2 mb-3">
+      <div class="input-group input-group-lg">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control search-lg" id="clsSearch" placeholder="Tìm tên trong lớp (không cần dấu)" autocomplete="off">
+      </div>
+      <button class="btn btn-outline-success btn-lg text-nowrap" id="clsFull"><i class="bi bi-check2-all"></i> Lớp này đủ</button>
+    </div>
+    <div class="names" id="clsNames"></div>
+  </div>
+  <div class="modal-footer d-block">
+    <div class="d-flex gap-2 align-items-center">
+      <label class="text-nowrap" for="clsNote">Ghi chú (cột H):</label>
+      <input class="form-control" id="clsNote">
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle text-nowrap" data-bs-toggle="dropdown"><i class="bi bi-calendar-event"></i> Thêm/cắt bán trú</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#" data-clsched="cat"><i class="bi bi-scissors"></i> Cắt bán trú từ ngày…</a></li>
+          <li><a class="dropdown-item" href="#" data-clsched="them"><i class="bi bi-person-plus"></i> Thêm em vào bán trú…</a></li>
+          <li><a class="dropdown-item" href="#" data-clsched="thu6"><i class="bi bi-calendar-minus"></i> Cắt thứ 6 hàng tuần…</a></li>
+        </ul>
+      </div>
+      <button class="btn btn-primary btn-lg px-4" data-bs-dismiss="modal">Xong</button>
+    </div>
+  </div>
+</div></div></div>
+
+<!-- hộp hỏi chung -->
+<div class="modal fade" id="mdAsk" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="askTitle"></h5></div>
+  <div class="modal-body" id="askBody"></div>
+  <div class="modal-footer" id="askBtns"></div>
+</div></div></div>
+
+<!-- hộp nhiều mục (form) dùng chung: sửa học sinh, lịch, nhập danh sách… -->
+<div class="modal fade" id="mdForm" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="formTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="formBody"></div>
+  <div class="modal-footer"><span class="text-danger me-auto" id="formErr"></span><span id="formBtns"></span></div>
+</div></div></div>
+
+<div id="toasts"></div>
+<script src="devmode.js"></script><!-- chỉ có ở máy chủ thử; trong app thì không có file này -->
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

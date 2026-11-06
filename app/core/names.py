@@ -16,7 +16,7 @@ from .text import clean_spaces, letter_label, lower, parse_date, words
 
 def short_name(full: str) -> str:
     w = words(full)
-    # danh sách có thể ghi sẵn chữ A/B cho em trùng họ tên: "Nguyễn Gia Hưng A" -> "Gia Hưng A"
+    # danh sách có thể ghi sẵn chữ A/B cho em trùng họ tên: "Lý Gia Hưng A" -> "Gia Hưng A"
     if len(w) >= 3 and len(w[-1]) == 1 and w[-1].isupper():
         return " ".join(w[-3:])
     return " ".join(w[-2:]) if len(w) >= 2 else clean_spaces(full)

@@ -32,7 +32,7 @@ def test_display_names_rules(roster):
 
 
 def test_short_name_keeps_written_ab_letter():
-    assert short_name("Nguyễn Gia Hưng A") == "Gia Hưng A"
+    assert short_name("Lý Gia Hưng A") == "Gia Hưng A"
     assert short_name("Lâm Quốc Tuấn Anh") == "Tuấn Anh"
 
 

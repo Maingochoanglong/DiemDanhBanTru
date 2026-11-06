@@ -27,7 +27,8 @@ jobs:
         run: python -m pytest -q
 
       - name: Dựng file .exe
-        run: pyinstaller --noconfirm --onefile --windowed --name DiemDanhBanTru run_app.py
+        # giao diện web (HTML/Bootstrap) nằm trong app/web/static: đóng kèm vào file .exe
+        run: pyinstaller --noconfirm --onefile --windowed --name DiemDanhBanTru --add-data "app/web/static;app/web/static" run_app.py
 
       - name: Kiểm tra file .exe chạy được
         shell: pwsh
