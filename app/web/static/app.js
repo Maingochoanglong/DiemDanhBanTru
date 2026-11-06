@@ -568,6 +568,14 @@ function wire() {
     if (e.ctrlKey && e.key.toLowerCase() === "p") { e.preventDefault(); doPrint(); }
     if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.target.matches("input,textarea")) { e.preventDefault(); $("#btnUndo").click(); }
   });
+  // Esc khi có hộp nhỏ mở trên cửa sổ lớp: chỉ đóng hộp nhỏ, giữ cửa sổ lớp
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const open = [...document.querySelectorAll(".modal.show")];
+    if (open.length < 2) return;
+    e.preventDefault(); e.stopPropagation();
+    bootstrap.Modal.getInstance(open[open.length - 1])?.hide();
+  }, true);
 
   // bảng chọn tên
   $("#clsNames").onclick = e => { const b = e.target.closest(".nm"); if (b) toggleName(b); };
