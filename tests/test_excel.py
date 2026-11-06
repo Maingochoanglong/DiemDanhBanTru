@@ -232,6 +232,7 @@ def test_export_simple_then_import(tmp_path, roster):
     assert [c.value for c in ws[1]] == ["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú"]
     assert [c.value for c in ws[2]] == ["1D15", "Kha Bảo Ngọc", "02/03/2020", "không"]
     assert [c.value for c in ws[3]] == ["1D15", "Võ Hoàng Bảo Ngọc", "05/06/2020", "có"]
+    _assert_plain(ws)
 
     rows = read_cdhs(p)
     by = {r.ho_ten: r for r in rows}
@@ -267,3 +268,26 @@ def test_read_list_with_full_date_header_and_co_khong(tmp_path):
         ("1D16", "Lý Gia Hưng B", "24/04/2020", True),
         ("1D16", "Kiều Thanh Vy", "15/05/2020", False),
     ]
+
+
+def _assert_plain(ws):
+    """Kiểu đơn giản: Times New Roman, chữ đen, viền đen, không tô nền, không cố định dòng, không lọc."""
+    assert ws.freeze_panes is None and ws.auto_filter.ref is None
+    for row in ws.iter_rows(max_row=min(ws.max_row, 6)):
+        for c in row:
+            assert c.font.name == "Times New Roman" and c.font.color.rgb == "FF000000"
+            assert c.border.left.style == "thin" and c.border.bottom.color.rgb == "FF000000"
+            assert c.fill.fill_type is None
+
+
+def test_data_file_is_plain_style(tmp_path, roster):
+    from app.excel.database import AppData
+
+    d = AppData(tmp_path / "DuLieu.xlsx", roster)
+    d.set_log(dt.date(2026, 10, 29), "1D15", True, 31, ["Tuấn Anh"])
+    d.save()
+    wb = openpyxl.load_workbook(tmp_path / "DuLieu.xlsx")
+    for name in ("HocSinh", "Lop", "NhatKy", "CaiDat"):
+        _assert_plain(wb[name])
+    again = AppData.load(tmp_path / "DuLieu.xlsx")
+    assert len(again.roster.students) == len(roster.students)

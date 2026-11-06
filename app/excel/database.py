@@ -7,12 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 from ..core.models import ClassInfo, Roster, Student
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, norm_class, parse_date
 from .files import safe_save
+from .style import plain_sheet
 
 HS_COLS = [
     ("id", "Mã", 9),
@@ -122,23 +121,26 @@ class AppData:
                     v = fmt_date(v)
                 row.append(v)
             ws.append(row)
-        ws.auto_filter.ref = f"A1:{get_column_letter(len(HS_COLS))}{max(1, ws.max_row)}"
+        plain_sheet(ws, [w for _, _, w in HS_COLS], center_cols=(1, 2, 4, 5, 7, 8, 9, 10, 11))
 
         wl = wb.create_sheet("Lop")
         _header(wl, [(t, w) for _, t, w in LOP_COLS])
         for code in sorted(self.roster.classes, key=class_sort_key):
             c = self.roster.classes[code]
             wl.append([c.code, c.khoi, c.ma_ngan, c.gvcn])
+        plain_sheet(wl, [w for _, _, w in LOP_COLS], center_cols=(1, 2, 3))
 
         wk = wb.create_sheet("NhatKy")
         _header(wk, LOG_COLS)
         for key in sorted(self.log, key=lambda k: (parse_date(k[0]) or dt.date.min, class_sort_key(k[1]))):
             wk.append(self.log[key])
+        plain_sheet(wk, [w for _, w in LOG_COLS], center_cols=(1, 2, 3, 4, 5))
 
         wc = wb.create_sheet("CaiDat")
         _header(wc, [("Khóa", 14), ("Giá trị", 80)])
         for k, v in self.settings.items():
             wc.append([k, v])
+        plain_sheet(wc, [14, 80])
 
         safe_save(wb, self.path, backup_dir)
 
@@ -152,14 +154,6 @@ class AppData:
 
 def _header(ws, cols: list[tuple[str, int]]) -> None:
     ws.append([t for t, _ in cols])
-    fill = PatternFill("solid", fgColor="FFDDEBF7")
-    for i, (_, w) in enumerate(cols, 1):
-        cell = ws.cell(1, i)
-        cell.font = Font(bold=True)
-        cell.fill = fill
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        ws.column_dimensions[get_column_letter(i)].width = w
-    ws.freeze_panes = "A2"
 
 
 def short_codes(codes: list[str]) -> dict[str, str]:
