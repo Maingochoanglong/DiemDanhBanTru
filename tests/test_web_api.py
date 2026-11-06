@@ -19,6 +19,7 @@ def api(tmp_path, monkeypatch, roster):
     AppData(tmp_path / "DuLieu_BanTru.xlsx", roster).save()
     ws = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
     ws.set_book(book)
+    ws.autosave_delay = 3600  # test tự gọi autosave_flush() thay cho luồng chạy nền
     a = Api(ws)
     assert "state" in a.open_day("2026-10-29")
     return a
@@ -136,3 +137,73 @@ def test_save_blocked_when_names_unclear(api):
     assert d["pending"][0]["query"] == "Xyz Không Có"
     r = api.resolve("1D15", d["pending"][0]["idx"], "skip")
     assert r["detail"]["pending"] == [] and api.state()["unresolved"] == 0
+
+
+def test_temp_book_autosaves_and_is_removed_after_save(api, tmp_path):
+    ws = api._ws
+    temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
+    sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
+    api.set_absent("1D15", sid, True)
+    api.set_note("1D15", "ghi chú tạm")
+    ws.autosave_flush()
+    assert temp.exists() and ws.temp_saved_at and not ws.temp_error
+    wb = openpyxl.load_workbook(temp)
+    assert wb["TAMTHOI"].sheet_state == "hidden"
+    day_ws = wb[api.state()["sheet"]]
+    assert any("Tuấn Anh" in str(c.value) for row in day_ws.iter_rows() for c in row if c.value)
+    assert api.state()["temp_at"] == ws.temp_saved_at  # giao diện hiện giờ lưu tạm
+    # sổ tạm không bị nhận nhầm là sổ tháng
+    from app.excel import sobook
+
+    assert sobook.find_month_file(tmp_path, 10, 2026).name == "SO DIEM DANH T10.xlsx"
+    out = api.save()
+    while "conflicts" in out:
+        out = api.save("keep")
+    assert "ok" in out and not temp.exists()
+
+
+def test_restore_after_power_loss(api, tmp_path, monkeypatch):
+    sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
+    api.set_absent("1D15", sid, True)
+    api.mark_full("2D17")
+    api.set_note("2D17", "ghi chú tạm")
+    api._ws.autosave_flush()
+    temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
+    assert temp.exists()
+
+    # mở lại app (lần trước tắt đột ngột, chưa lưu vào sổ)
+    ws2 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
+    ws2.autosave_delay = 3600
+    a2 = Api(ws2)
+    r = a2.boot()
+    assert r["restore"]["day"] == "29/10/2026" and r["restore"]["file"] == temp.name
+    r = a2.restore_temp(True)
+    st = r["state"]
+    assert st["date"] == "2026-10-29" and st["dirty"]
+    row = next(x for x in st["rows"] if x.get("code") == "1D15")
+    assert row["vang"] == 1 and row["ten"] == "Tuấn Anh"
+    row = next(x for x in st["rows"] if x.get("code") == "2D17")
+    assert row["status"] == "ok" and row["note"] == "ghi chú tạm"
+    assert temp.exists()  # vẫn giữ cho tới khi lưu vào sổ
+
+    # mở lại lần nữa và chọn bỏ bản lưu tạm
+    ws3 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
+    a3 = Api(ws3)
+    assert a3.boot()["restore"]
+    a3.restore_temp(False)
+    assert not temp.exists() and "restore" not in Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
+
+
+def test_temp_removed_when_changes_discarded(api, tmp_path):
+    sid = sid_of(api, "1D16", "Kiều Thanh Vy")
+    api.set_absent("1D16", sid, True)
+    api._ws.autosave_flush()
+    temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
+    assert temp.exists()
+    api.step_day(1, True)  # đổi ngày, chọn Không lưu
+    assert not temp.exists()
+    api.set_absent("1D16", sid_of(api, "1D16", "Kiều Thanh Vy"), True)
+    api._ws.autosave_flush()
+    assert temp.exists()
+    api.discard_temp()  # thoát app, chọn Không lưu
+    assert not temp.exists()

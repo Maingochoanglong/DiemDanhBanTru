@@ -128,6 +128,11 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 ## 8. An toàn dữ liệu & lỗi thường gặp
 
 - Trước mỗi lần ghi, app **sao lưu** file cũ vào thư mục `SaoLuu` cạnh file (giữ 30 bản gần nhất).
+- **Sổ tạm (phòng mất điện)**: sau mỗi thao tác, app tự lưu một bản sao của sổ, tên là tên sổ thêm chữ `tamthoi`, nằm cạnh sổ chính (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
+  - Bấm **Lưu vào sổ** thì app ghi vào sổ chính và xóa sổ tạm.
+  - Nếu máy tắt đột ngột khi chưa lưu, lần mở app sau sẽ hỏi **Khôi phục**. Chọn Khôi phục để làm tiếp, rồi nhớ bấm Lưu vào sổ.
+  - Thoát app và chọn *Không lưu*, hoặc đổi ngày và chọn *Không lưu*, thì sổ tạm cũng bị xóa.
+  - Có thể mở sổ tạm bằng Excel để xem: sheet của ngày đang làm đã được điền sẵn.
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
 - **Không in trực tiếp được**: app báo vùng in và mở sổ bằng Excel để bạn in tay. App tự tính vùng in theo mẫu sổ:
   - tờ 1: A1 tới hết phần chữ ký (thường là A1:G46);
