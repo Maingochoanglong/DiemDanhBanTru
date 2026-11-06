@@ -248,3 +248,22 @@ def test_xls_file_with_wrong_extension_is_read(tmp_path):
     wrong = tmp_path / "ds_26_27.xlsx"
     wrong.write_bytes(p.read_bytes())
     assert [r.red for r in read_cdhs(wrong)] == [True, False, True]
+
+
+def test_read_list_with_full_date_header_and_co_khong(tmp_path):
+    """Dạng file giáo vụ đang dùng: Lớp | Họ tên | Ngày tháng năm sinh (ô ngày) | Bán trú (Có/Không)."""
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú"])
+    ws.append(["1D16", "Lý Gia Hưng A", dt.datetime(2020, 3, 13), "Có"])
+    ws.append(["1D16", "Lý Gia Hưng B", dt.datetime(2020, 4, 24), "Có"])
+    ws.append(["1D16", "Kiều Thanh Vy", dt.datetime(2020, 5, 15), "Không"])
+    ws.freeze_panes = "A2"
+    wb.save(p)
+    rows = read_cdhs(p)
+    assert [(r.lop, r.ho_ten, r.ngay_sinh, r.red) for r in rows] == [
+        ("1D16", "Lý Gia Hưng A", "13/03/2020", True),
+        ("1D16", "Lý Gia Hưng B", "24/04/2020", True),
+        ("1D16", "Kiều Thanh Vy", "15/05/2020", False),
+    ]
