@@ -362,7 +362,7 @@ def find_month_file(folder: str | Path, month: int, year: int | None = None) -> 
         return None
     cands = []
     for p in folder.glob("*.xlsx"):
-        if p.name.startswith(("~$", ".")):
+        if p.name.startswith(("~$", ".")) or p.stem.lower().endswith("tamthoi"):
             continue
         if re.search(rf"T0?{month}(?!\d)", p.stem, re.IGNORECASE):
             cands.append(p)

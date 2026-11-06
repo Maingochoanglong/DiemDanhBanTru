@@ -53,12 +53,39 @@ class Api:
         self._dlg = dialogs or NoDialogs()
         self._pending_import = None  # (changes, path) chờ giáo vụ duyệt
         self._pending_notes = None
+        self._temp = None  # sổ tạm tìm thấy lúc mở app (chờ hỏi khôi phục)
 
     # ================================================================== ngày
     def boot(self) -> dict:
         """Mở app: mở ngày học hôm nay (thứ 7/CN thì ngày học kế tiếp). Không hỏi chọn file."""
         today = dt.date.today()
-        return self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
+        res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
+        self._temp = self._ws.find_temp()
+        if self._temp is not None:
+            res["restore"] = {"day": fmt_date(self._temp.day), "at": self._temp.saved_at, "file": self._temp.path.name}
+        return res
+
+    def restore_temp(self, yes: bool) -> dict:
+        """Lần trước app tắt khi chưa lưu vào sổ: khôi phục từ sổ tạm, hoặc bỏ sổ tạm."""
+        info, self._temp = self._temp, None
+        if info is None:
+            return {"state": self.state()}
+        if not yes:
+            self._ws.discard_temp(info.path)
+            return {"state": self.state(), "flash": "Đã bỏ bản lưu tạm."}
+        try:
+            self._ws.restore_temp(info)
+        except NeedMonthBook:
+            return {"error": f"Không tìm thấy sổ {info.book.name} để khôi phục. Bản lưu tạm vẫn giữ ở:\n{info.path}",
+                    "state": self.state()}
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"Không khôi phục được:\n{e}\n\nBản lưu tạm vẫn giữ ở:\n{info.path}", "state": self.state()}
+        return {"state": self.state(), "flash": f"Đã khôi phục ngày {fmt_date(info.day)} — nhớ bấm Lưu vào sổ."}
+
+    def discard_temp(self) -> dict:
+        """Thoát app và chọn Không lưu: bỏ sổ tạm."""
+        self._ws.discard_temp()
+        return {"ok": ""}
 
     def open_day(self, iso: str, force: bool = False) -> dict:
         day = _day(iso)
@@ -114,12 +141,13 @@ class Api:
 
     def state(self) -> dict:
         ws, st = self._ws, self._ws.state
+        ws.autosave_request()  # có thay đổi mới thì ghi sổ tạm (chạy nền)
         bp = ws.book_path
         out = {
             "date": _iso(ws.day), "date_text": fmt_date(ws.day), "weekday": WEEKDAYS[ws.day.weekday()],
             "book": bp.name if bp else "", "book_stem": bp.stem if bp else "",
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
-            "dirty": ws.dirty, "data_dirty": ws.data_dirty, "hint": self.setup_hint(),
+            "dirty": ws.dirty, "data_dirty": ws.data_dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self.setup_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
         }
         if st is None:

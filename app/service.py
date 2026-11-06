@@ -5,6 +5,8 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -14,7 +16,7 @@ from .core.meals import MealLayout, MealSummary
 from .core.models import ClassInfo
 from .core.parser import ParsedMessage, parse_messages
 from .core.text import class_sort_key, fold
-from .excel import sobook
+from .excel import sobook, tamthoi
 from .excel.database import AppData, default_data_path, short_codes
 from .excel.files import is_locked
 from .excel.roster_import import apply_changes, diff_roster, read_cdhs
@@ -82,6 +84,18 @@ class Workspace:
         self.data_dirty = False  # danh sách HS / ghép lớp có thay đổi chưa lưu
         self.paste_skipped: dict[dt.date, int] = {}  # tin Zalo của ngày khác (lần dán gần nhất)
         self.unplaced: list[ParsedMessage] = []  # tin có tên vắng nhưng không tìm được lớp (chưa xử lý)
+        # sổ tạm: tự lưu sau mỗi thao tác (chạy nền), xóa khi đã lưu vào sổ chính
+        self.version = 0  # tăng mỗi lần ngày đang mở thay đổi
+        self.temp_saved_at = ""  # giờ lưu tạm gần nhất
+        self.temp_error = ""
+        self.autosave_delay = 0.6  # giây chờ sau thao tác cuối rồi mới ghi
+        self._as_version = 0
+        self._as_gen = 0  # tăng khi bỏ sổ tạm: việc ghi đang chờ của lần trước bị bỏ
+        self._as_job: tuple | None = None
+        self._as_lock = threading.Lock()  # giữ chỗ việc đang chờ
+        self._as_write = threading.Lock()  # giữ trong lúc ghi file
+        self._as_event = threading.Event()
+        self._as_thread: threading.Thread | None = None
 
     # ---------------------------------------------------------------- dữ liệu
     @property
@@ -183,6 +197,8 @@ class Workspace:
     # ---------------------------------------------------------------- ngày
     def load_day(self, day: dt.date) -> DayState:
         """Mở ngày: nếu sổ đã có sheet ngày đó thì đọc lại và kiểm tra; không thì lấy sheet trước làm mẫu."""
+        if self.dirty:  # bỏ thay đổi chưa lưu của ngày đang mở thì bỏ luôn sổ tạm
+            self.discard_temp()
         self.day = day
         self._undo.clear()
         self.dirty = False
@@ -243,12 +259,14 @@ class Workspace:
             self._undo.append(self.state.snapshot())
             del self._undo[:-50]
         self.dirty = True
+        self.version += 1
 
     def undo(self) -> bool:
         if not self._undo:
             return False
         self.state = self._undo.pop()
         self.dirty = True
+        self.version += 1
         return True
 
     def paste(self, text: str) -> list[PasteOutcome]:
@@ -426,21 +444,9 @@ class Workspace:
         assert self.state is not None
         if not self.book_path:
             raise FileNotFoundError("Chưa chọn sổ điểm danh tháng.")
-        wb = sobook.load_book(self.book_path)
-        sheets = sobook.day_sheets(wb)
-        ws = sheets.get(self.day.day)
-        if ws is None:
-            tpl = sobook.template_sheet(wb, self.day)
-            if tpl is None:
-                raise ValueError("Sổ không có sheet điểm danh nào để làm mẫu.")
-            ws = sobook.create_day_sheet(wb, self.day, tpl)
-        info = sobook.analyze(ws)
-        if info is None:
-            raise ValueError(f"Sheet {ws.title} không đúng mẫu điểm danh.")
-        summary = self.state.meals(info.meal)
-        sobook.write_day(info, self.state, summary)
-        sobook.select_only(wb, ws)
+        wb, ws = _render_day(self.book_path, self.state)
         sobook.save_book(wb, self.book_path)
+        self.discard_temp()
         self.sheet_name = ws.title
         self.state.exists_in_book = True
         for code in self.state.classes:
@@ -456,6 +462,88 @@ class Workspace:
             self.data_dirty = True
             self.warning = f"Sổ đã lưu, nhưng chưa ghi được file dữ liệu của app ({e}). Hãy đóng file đó nếu đang mở."
         return ws.title
+
+    # ---------------------------------------------------------------- sổ tạm (tự lưu)
+    def temp_path(self) -> Path | None:
+        return tamthoi.temp_path(self.book_path) if self.book_path else None
+
+    def autosave_request(self) -> None:
+        """Gọi sau mỗi thao tác: nếu ngày đang mở có thay đổi mới thì ghi sổ tạm (chạy nền)."""
+        if self.state is None or not self.book_path or not self.dirty or self.version == self._as_version:
+            return
+        self._as_version = self.version
+        with self._as_lock:
+            self._as_job = (self._as_gen, self.book_path, self.state.snapshot())
+        if self._as_thread is None or not self._as_thread.is_alive():
+            self._as_thread = threading.Thread(target=self._autosave_loop, name="tamthoi", daemon=True)
+            self._as_thread.start()
+        self._as_event.set()
+
+    def _autosave_loop(self) -> None:
+        while True:
+            self._as_event.wait()
+            time.sleep(self.autosave_delay)  # gom các thao tác liên tiếp thành một lần ghi
+            self._as_event.clear()
+            self.autosave_flush()
+
+    def autosave_flush(self) -> None:
+        """Ghi ngay việc lưu tạm đang chờ (nếu có)."""
+        with self._as_lock:
+            job, self._as_job = self._as_job, None
+        if job is None:
+            return
+        gen, book, state = job
+        with self._as_write:
+            if gen != self._as_gen:
+                return
+            try:
+                wb, _ = _render_day(book, state)
+                tamthoi.write_state_sheet(wb, state, book)
+                tamthoi.save(wb, tamthoi.temp_path(book))
+                self.temp_saved_at = time.strftime("%H:%M:%S")
+                self.temp_error = ""
+            except Exception as e:  # noqa: BLE001 - lưu tạm lỗi thì báo nhẹ, không chặn công việc
+                self.temp_error = f"Chưa lưu tạm được ({e})"
+
+    def discard_temp(self, path: Path | None = None) -> None:
+        """Bỏ sổ tạm (đã lưu vào sổ chính, hoặc người dùng chọn không lưu)."""
+        with self._as_lock:
+            self._as_gen += 1
+            self._as_job = None
+        with self._as_write:
+            for p in {path, self.temp_path()} - {None}:
+                try:
+                    p.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        self.temp_saved_at = ""
+        self.temp_error = ""
+
+    def find_temp(self) -> tamthoi.TempInfo | None:
+        """Sổ tạm còn lại từ lần trước (app bị tắt khi chưa lưu vào sổ)."""
+        cands: list[Path] = []
+        if self.settings.get("so_file"):
+            cands.append(tamthoi.temp_path(self.settings["so_file"]))
+        folder = self.settings.get("so_folder")
+        if folder and Path(folder).is_dir():
+            cands += sorted(Path(folder).glob(f"* {tamthoi.TAG}.xls*"))
+        for p in cands:
+            if p.exists():
+                info = tamthoi.read(p)
+                if info is not None:
+                    return info
+        return None
+
+    def restore_temp(self, info: tamthoi.TempInfo) -> None:
+        """Mở lại ngày trong sổ tạm và đưa các thao tác đã làm vào."""
+        if info.book.exists():
+            self.settings["so_file"] = str(info.book)
+            self.settings["so_folder"] = str(info.book.parent)
+        self.dirty = False
+        self.load_day(info.day)
+        tamthoi.apply(info, self.state)
+        self.dirty = True
+        self.version += 1
 
     def print_areas(self) -> list[str]:
         info = None
@@ -568,6 +656,23 @@ class Workspace:
                 else:
                     problems.append(f"{group}: '{q}' {'trùng nhiều em' if r.status == matcher.AMBIGUOUS else 'không tìm thấy'}")
         return n, problems
+
+
+def _render_day(book: Path, state: DayState):
+    """Đọc sổ và ghi ngày `state` vào sheet của ngày đó (tạo sheet từ mẫu nếu chưa có). Chưa lưu file."""
+    wb = sobook.load_book(book)
+    ws = sobook.day_sheets(wb).get(state.date.day)
+    if ws is None:
+        tpl = sobook.template_sheet(wb, state.date)
+        if tpl is None:
+            raise ValueError("Sổ không có sheet điểm danh nào để làm mẫu.")
+        ws = sobook.create_day_sheet(wb, state.date, tpl)
+    info = sobook.analyze(ws)
+    if info is None:
+        raise ValueError(f"Sheet {ws.title} không đúng mẫu điểm danh.")
+    sobook.write_day(info, state, state.meals(info.meal))
+    sobook.select_only(wb, ws)
+    return wb, ws
 
 
 def _relative_dates(text: str, seen: dt.date) -> str:

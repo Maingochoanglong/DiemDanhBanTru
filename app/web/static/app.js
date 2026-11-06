@@ -152,7 +152,12 @@ function renderDiemDanh() {
 
   const ss = $("#saveState");
   if (st.unresolved) { ss.className = "state err"; ss.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> Còn ${st.unresolved} tên chưa rõ — xử lý xong mới lưu được`; }
-  else if (st.dirty) { ss.className = "state dirty"; ss.innerHTML = `<i class="bi bi-pencil"></i> Có thay đổi chưa lưu vào sổ`; }
+  else if (st.dirty) {
+    ss.className = "state dirty";
+    const tmp = st.temp_error ? ` — <span class="text-danger">${esc(st.temp_error)}</span>`
+      : (st.temp_at ? ` (đã lưu tạm lúc ${esc(st.temp_at)})` : "");
+    ss.innerHTML = `<i class="bi bi-pencil"></i> Có thay đổi chưa lưu vào sổ${tmp}`;
+  }
   else { ss.className = "state"; ss.textContent = st.exists ? "Đã có trong sổ" : (st.book ? "Ngày này chưa có trong sổ" : ""); }
 }
 
@@ -660,12 +665,22 @@ function wire() {
 }
 
 // Gọi từ Python khi bấm nút đóng cửa sổ mà còn thay đổi chưa lưu
+// lần trước app tắt khi chưa lưu vào sổ (mất điện…): hỏi khôi phục từ sổ tạm
+async function askRestore(t) {
+  const k = await ask("Khôi phục dữ liệu chưa lưu?",
+    `Lần trước app bị tắt khi ngày <b>${esc(t.day)}</b> còn thay đổi chưa lưu vào sổ.<br>
+     App đã tự lưu tạm lúc ${esc(t.at)} trong file <i>${esc(t.file)}</i>.<br><br>Khôi phục để làm tiếp?`,
+    [{ key: "yes", label: "Khôi phục" }, { key: "no", label: "Bỏ bản lưu tạm", cls: "btn-outline-danger" }],
+    { icon: "bi-life-preserver" });
+  if (k === "yes" || k === "no") handle(await api("restore_temp", k === "yes"));
+}
+
 async function askClose() {
   const c = await api("close_check");
   if (c.dirty) {
     const k = await ask("Chưa lưu", `Ngày ${esc(c.day)} có thay đổi chưa lưu vào sổ.`,
       [{ key: "save", label: "Lưu rồi thoát" }, { key: "discard", label: "Không lưu", cls: "btn-outline-danger" }, { key: "stay", label: "Ở lại", cls: "btn-outline-secondary" }]);
-    if (k === "save") { if (!(await doSave())) return; } else if (k !== "discard") return;
+    if (k === "save") { if (!(await doSave())) return; } else if (k === "discard") await api("discard_temp"); else return;
   }
   if (c.data_dirty) {
     const k = await ask("Chưa lưu", "Danh sách học sinh / ghép lớp có thay đổi chưa lưu.",
@@ -678,6 +693,7 @@ async function askClose() {
 document.addEventListener("DOMContentLoaded", async () => {
   wire();
   await apiReady();
-  handle(await api("boot"));
+  const r = handle(await api("boot"));
   renderSettings();
+  if (r && r.restore) askRestore(r.restore);
 });
