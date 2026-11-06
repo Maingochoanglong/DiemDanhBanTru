@@ -352,8 +352,8 @@ class MainWindow:
             self.flash("Đã hoàn tác.")
 
     def _ctrl_z(self, e) -> None:
-        if isinstance(e.widget, (tk.Text, ttk.Entry, tk.Entry)) and not getattr(e.widget, "_app_undo", False):
-            return  # để ô chữ tự hoàn tác (riêng ô tìm học sinh: Ctrl+Z = hoàn tác điểm danh)
+        if isinstance(e.widget, (tk.Text, ttk.Entry, tk.Entry)):
+            return  # để ô chữ tự hoàn tác
         self.undo()
 
     def show_save_error(self, e: Exception, path) -> None:

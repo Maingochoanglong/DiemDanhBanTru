@@ -2,7 +2,7 @@
 
 App giúp giáo vụ làm sổ điểm danh bán trú hằng ngày:
 
-- tìm nhanh học sinh vắng theo tên (ô tìm chữ to, không cần gõ dấu);
+- bấm vào lớp để tích em vắng (tên chữ to, có ô tìm tên không cần gõ dấu);
 - ghi tên đúng quy tắc;
 - tự đếm số vắng;
 - tự tính bảng suất ăn (kể cả các em ăn ghép);
@@ -43,13 +43,12 @@ Dữ liệu riêng của app (danh sách HS, ghép lớp, cài đặt) lưu ở 
 
 App có 3 tab: **Điểm danh** (dùng hằng ngày), **Suất ăn**, **Học sinh** (trong đó có 3 tab con ít dùng: **Danh sách học sinh**, **Lịch thêm/cắt**, **Ghép lớp**). Cài đặt mở bằng nút **Cài đặt** ở góc trên bên phải.
 
-Màn hình **Điểm danh** gồm 2 vùng tách riêng:
+Màn hình **Điểm danh** gồm:
 
-| Vùng | Dùng để |
+| Phần | Dùng để |
 |---|---|
-| **Tìm học sinh vắng** (ô tìm chữ to, trên cùng) | GV báo em nào vắng thì **gõ tên em đó**, không cần gõ dấu: `long`, `hai long`, `h long` đều ra *Nguyễn Hải Long*. Gõ kèm lớp để lọc: `1D15 long`; chỉ gõ `1D15` thì ra cả lớp. Kết quả hiện chữ to: **Vắng · Họ và tên · Lớp · Ngày sinh**. **Bấm vào tên để đánh vắng** (dòng chuyển đỏ, ghi ☑ VẮNG), bấm lần nữa để bỏ vắng. Bấm xong, chữ trong ô tìm được bôi đen: gõ tên kế tiếp là thay luôn. Em **không ăn bán trú** hiện chữ xám, không đánh vắng được. Phím: **Enter** (chỉ 1 em khớp thì đánh vắng luôn), **mũi tên xuống** để chọn bằng bàn phím, **Esc** để xóa ô và quay về bảng điểm danh. |
-| **Bảng điểm danh** | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng có icon và màu: **vòng tròn xám** = chưa báo, **tích xanh** = đủ, **chấm cam** = có vắng, **tam giác đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt. Chữ dài bị cắt: rê chuột vào ô để xem đủ. Dòng trên bảng có **Tổng suất = hiện diện** kèm dấu tích xanh (đỏ khi lệch, bấm vào để xem tab Suất ăn). Khi đang gõ tên, vùng này tạm hiện kết quả tìm. |
-| **Cửa sổ lớp** (bấm đúp vào 1 lớp, hoặc chọn lớp rồi bấm **Mở lớp đã chọn**) | Danh sách em ăn bán trú của lớp, chữ to, **tích = vắng**. Ô **Tìm tên** to ở góc phải (con trỏ đặt sẵn ở đó, gõ ngay được). Có nút *Lớp này đủ*, ô ghi chú cột H. Bấm **Xong** để đóng. |
+| **Bảng điểm danh** | Giống tờ sổ: Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú, có dòng cộng từng khối và **TỔNG CỘNG**. Mỗi dòng có icon và màu: **vòng tròn xám** = chưa báo, **tích xanh** = đủ, **chấm cam** = có vắng, **tam giác đỏ** = cần xem. Cột Ghi chú: **[Lịch]** = sĩ số đổi theo lịch thêm/cắt. Chữ dài bị cắt: rê chuột vào ô để xem đủ. Dòng trên bảng có **Tổng suất = hiện diện** kèm dấu tích xanh (đỏ khi lệch, bấm vào để xem tab Suất ăn). |
+| **Cửa sổ lớp** (**bấm vào 1 lớp** trong bảng) | Hiện danh sách em ăn bán trú của lớp, **chữ to**, đọc dọc A→Z. **Tích = vắng.** Ô **Tìm tên** to ở góc phải, con trỏ đặt sẵn ở đó: gõ tên không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); còn đúng 1 em khớp thì bấm **Enter** là tích luôn, rồi gõ tên tiếp. **Esc** xóa ô tìm (bấm lần nữa để đóng). Có nút *Lớp này đủ*, ô ghi chú cột H. Bấm **Xong** để đóng. |
 
 Tab **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ các em ghép vắng. Dòng trên cùng phải là **Tổng suất = hiện diện** kèm dấu tích xanh. Bấm vào 1 nhóm để xem tên em ghép vắng.
 
@@ -141,8 +140,8 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 
 | Phím | Việc |
 |---|---|
-| Enter (trong ô tìm) | Chỉ 1 em khớp thì đánh vắng luôn; nhiều em thì xuống danh sách để chọn |
-| Esc (trong ô tìm) | Xóa ô tìm, quay về bảng điểm danh |
+| Enter (ô tìm trong cửa sổ lớp) | Chỉ còn 1 em khớp thì tích / bỏ tích em đó |
+| Esc (ô tìm trong cửa sổ lớp) | Xóa ô tìm; bấm lần nữa để đóng cửa sổ lớp |
 | Ctrl+S | Lưu vào sổ |
 | Ctrl+P | In 2 tờ |
 | Ctrl+Z | Hoàn tác thao tác vừa làm |
