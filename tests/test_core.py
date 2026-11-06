@@ -31,6 +31,11 @@ def test_display_names_rules(roster):
     assert names["Kiều Thanh Vy15/05/2020"] == "Thanh Vy"
 
 
+def test_short_name_keeps_written_ab_letter():
+    assert short_name("Lý Gia Hưng A") == "Gia Hưng A"
+    assert short_name("Lâm Quốc Tuấn Anh") == "Tuấn Anh"
+
+
 def test_display_names_mixed_group():
     out = compute_display_names([
         ("a", "Lã Minh Khang", "01/01/2018"),

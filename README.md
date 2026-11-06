@@ -17,13 +17,15 @@ File được GitHub Actions (`.github/workflows/build-windows.yml`) dựng trê
 
 ## Chạy từ mã nguồn (cho người phát triển)
 
-Cần Python 3.10 trở lên, có Tkinter.
+Cần Python 3.10 trở lên. Giao diện là trang web (HTML + Bootstrap 5) mở trong cửa sổ app nhờ pywebview (trên Windows dùng Microsoft Edge WebView2).
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt
-python run_app.py            # mở app
+python run_app.py            # mở app (cửa sổ pywebview)
+python run_app.py --browser  # mở bằng trình duyệt (máy không có WebView2)
+python -m app.web.devserver  # máy chủ thử: mở http://127.0.0.1:8765/index.html để xem/chụp giao diện
 python -m pytest             # chạy test
-pyinstaller --onefile --windowed --name DiemDanhBanTru run_app.py   # dựng .exe (trên Windows)
+pyinstaller --onefile --windowed --name DiemDanhBanTru --add-data "app/web/static;app/web/static" run_app.py   # dựng .exe (trên Windows)
 ```
 
 Cấu trúc mã:
@@ -33,7 +35,7 @@ Cấu trúc mã:
 | `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), đọc tin Zalo (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`), đọc ghi chú sổ (`notes.py`). |
 | `app/excel/` | Đọc file CDHS (chữ đỏ), file dữ liệu của app, sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu), sao lưu, in qua Excel. |
 | `app/service.py` | Điều phối các thao tác (mở ngày, dán tin, lưu, tạo sổ tháng mới). |
-| `app/ui/` | Giao diện Tkinter: tab Điểm danh, Ghép lớp, Học sinh, Cài đặt. |
+| `app/web/` | Giao diện web: `api.py` (cầu nối giao diện ↔ xử lý sổ), `static/` (HTML, JavaScript, Bootstrap 5 + Bootstrap Icons đóng kèm, chạy không cần mạng), `run.py` (mở cửa sổ pywebview), `devserver.py` (máy chủ thử). |
 | `tests/` | Test với dữ liệu giả (không chứa thông tin thật của học sinh). |
 
 > Không đưa file Excel thật (danh sách học sinh, sổ điểm danh) lên repo. `.gitignore` đã chặn `*.xls`, `*.xlsx`.

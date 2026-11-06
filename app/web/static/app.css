@@ -1,0 +1,97 @@
+/* Điểm danh bán trú — giao diện Bootstrap 5 */
+:root {
+  --side-w: 210px;
+  --bg: #f4f6f9;
+  --st-muted: #f1f3f5; --st-muted-b: #adb5bd;
+  --st-ok: #e8f5ec;    --st-ok-b: #198754;
+  --st-warn: #fff3e0;  --st-warn-b: #fd7e14;
+  --st-err: #fde8ea;   --st-err-b: #dc3545;
+}
+html, body { height: 100%; }
+body { background: var(--bg); font-size: 15px; overflow: hidden; }
+.app { height: 100vh; }
+
+/* thanh trái */
+.sidebar { width: var(--side-w); flex: none; background: #fff; border-right: 1px solid #e3e6ea; padding: 14px 12px;
+           display: flex; flex-direction: column; }
+.brand { font-weight: 700; font-size: 1.15rem; color: var(--bs-primary); line-height: 1.25; padding: 4px 8px 16px; }
+.sidebar .nav-link { color: #343a40; padding: .7rem .85rem; margin-bottom: 4px; border-radius: .5rem; font-size: 1rem; }
+.sidebar .nav-link i { width: 1.6rem; display: inline-block; font-size: 1.1rem; }
+.sidebar .nav-link:hover { background: #eef2f7; }
+.sidebar .nav-link.active { background: var(--bs-primary); color: #fff; }
+.sidebar .ver { margin-top: auto; color: #adb5bd; font-size: .8rem; padding: 0 8px; }
+
+main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
+.topbar #dayInput { width: 150px; font-weight: 700; font-size: 1.15rem; text-align: center; }
+.topbar .weekday { font-weight: 700; font-size: 1.2rem; }
+.topbar .book { color: #6c757d; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.page { display: none; min-height: 0; flex: 1; }
+.page.show { display: flex; flex-direction: column; gap: 10px; }
+.card { border-color: #e3e6ea; }
+
+/* bảng điểm danh giống sổ */
+.so-wrap { flex: 1; min-height: 0; overflow: auto; }
+.so { margin: 0; font-size: 1.02rem; }
+.so thead th { position: sticky; top: 0; z-index: 2; background: #f8f9fa; white-space: nowrap; font-size: .95rem; }
+.so td { padding: .42rem .6rem; vertical-align: middle; }
+.so tr.cls { cursor: pointer; }
+.so tr.cls td:first-child { border-left: 5px solid transparent; font-weight: 700; white-space: nowrap; }
+.so tr.cls:hover td { filter: brightness(.97); }
+.so .num { text-align: center; width: 72px; }
+.so .ten { min-width: 240px; }
+.so td.gv { white-space: nowrap; }
+.so .note { color: #495057; font-size: .93rem; }
+.so .note .cut { max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.so tr.st-muted td { background: var(--st-muted); color: #6c757d; }
+.so tr.st-muted td:first-child { border-left-color: var(--st-muted-b); }
+.so tr.st-ok td { background: var(--st-ok); }
+.so tr.st-ok td:first-child { border-left-color: var(--st-ok-b); }
+.so tr.st-warn td { background: var(--st-warn); }
+.so tr.st-warn td:first-child { border-left-color: var(--st-warn-b); }
+.so tr.st-err td { background: var(--st-err); }
+.so tr.st-err td:first-child { border-left-color: var(--st-err-b); }
+.so tr.st-err .note { color: #b02a37; font-weight: 600; }
+.so tr.khoi td { background: #e7eef8; font-weight: 700; }
+.so tr.tong td { background: #cfdcf0; font-weight: 800; font-size: 1.08rem; }
+.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.dot.muted { border: 2px solid var(--st-muted-b); }
+.dot.ok { background: var(--st-ok-b); }
+.dot.warn { background: var(--st-warn-b); }
+.dot.err { background: var(--st-err-b); }
+.legend .badge { font-weight: 500; font-size: .85rem; padding: .45em .7em; border: 1px solid #dee2e6; }
+
+.summary .todo { cursor: pointer; }
+.actionbar { display: flex; align-items: center; gap: 10px; }
+.actionbar .btn { padding: .55rem 1.1rem; font-weight: 600; }
+.actionbar .state { color: #6c757d; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actionbar .state.dirty { color: #b35c00; }
+.actionbar .state.err { color: #b02a37; font-weight: 600; cursor: pointer; }
+
+/* bảng chọn tên của 1 lớp */
+#mdClass .modal-dialog { max-width: min(1180px, 96vw); }
+#mdClass .modal-body { min-height: 62vh; }
+.names { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.names .nm { text-align: left; font-size: 1.12rem; padding: .62rem .9rem; border: 1px solid #ced4da; background: #fff;
+             border-radius: .55rem; display: flex; align-items: center; gap: .5rem; min-height: 50px; }
+.names .nm:hover { border-color: var(--bs-primary); background: #f3f8ff; }
+.names .nm .ck { font-size: 1.3rem; color: #adb5bd; }
+.names .nm .tg { margin-left: auto; font-size: .78rem; color: #6c757d; }
+.names .nm.on { background: #dc3545; border-color: #dc3545; color: #fff; font-weight: 700; }
+.names .nm.on .ck, .names .nm.on .tg { color: #fff; }
+.search-lg { font-size: 1.2rem; padding: .6rem 1rem; }
+
+.table-tight td, .table-tight th { padding: .4rem .55rem; }
+.list-pick { max-height: 36vh; overflow: auto; }
+.sticky-head thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; }
+
+#toasts { position: fixed; right: 16px; bottom: 16px; z-index: 2000; }
+
+/* màn nhỏ (laptop phóng chữ 125%) */
+@media (max-width: 1200px) {
+  :root { --side-w: 172px; }
+  body { font-size: 14px; }
+  .topbar .book { display: none; }
+  .so .ten { min-width: 160px; }
+  .so .note .cut { max-width: 200px; }
+}

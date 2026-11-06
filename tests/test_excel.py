@@ -217,25 +217,25 @@ def test_old_data_file_with_removed_columns_still_loads(tmp_path):
     assert (s.ban_tru, s.an_ghep, s.cat_thu6, s.cat_tu, s.ghi_chu) == (True, "1.2", True, dt.date(2026, 11, 1), "gc")
 
 
-def test_export_then_import_x_and_ghep(tmp_path, roster):
+def test_export_simple_then_import(tmp_path, roster):
     from app.excel.roster_export import export_roster
 
     roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc 1D19
-    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # tháng 11 cắt -> danh sách tháng 11 để trống
+    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # tháng 11 cắt -> danh sách tháng 11 ghi "không"
     p = tmp_path / "ds.xlsx"
-    n = export_roster(roster, p, dt.date(2026, 11, 2), highlight={roster.students[0].id},
-                      changes=[["1D15", "Kha Bảo Ngọc", "Cắt bán trú từ 01/11/2026", "Tháng 11 cắt …"]])
+    n = export_roster(roster, p, dt.date(2026, 11, 2))
     assert n == sum(1 for s in roster.students if s.is_boarding(dt.date(2026, 11, 2)))
     wb = openpyxl.load_workbook(p)
-    assert wb.sheetnames == ["DanhSach", "Thay đổi", "Ghi chú"]
-    ws = wb["DanhSach"]
-    assert [c.value for c in ws[1]] == ["Tên lớp học", "Họ tên", "Ngày sinh", "Ăn bán trú", "Ghép lớp"]
-    assert [c.value for c in ws[2]] == ["Lớp 1D15", "Kha Bảo Ngọc", "02/03/2020", None, None]
-    assert ws["A2"].fill.fgColor.rgb == "FFFFF2CC"  # dòng có thay đổi tô vàng
+    assert wb.sheetnames == ["Danh sách"]
+    ws = wb["Danh sách"]
+    assert ws.freeze_panes is None and ws.auto_filter.ref is None  # đơn giản: không cố định dòng, không lọc
+    assert [c.value for c in ws[1]] == ["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú"]
+    assert [c.value for c in ws[2]] == ["1D15", "Kha Bảo Ngọc", "02/03/2020", "không"]
+    assert [c.value for c in ws[3]] == ["1D15", "Võ Hoàng Bảo Ngọc", "05/06/2020", "có"]
 
     rows = read_cdhs(p)
     by = {r.ho_ten: r for r in rows}
-    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep == "1.1"
+    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep is None  # file không có cột ghép: giữ ghép cũ
     assert not by["Kha Bảo Ngọc"].red and not by["Mạc Trần Quỳnh Anh"].red
     # nhập lại vào danh sách đang có: em đã có lịch cắt thì không bị đổi; ghép không đổi
     changes = diff_roster(roster, rows)
@@ -248,3 +248,22 @@ def test_xls_file_with_wrong_extension_is_read(tmp_path):
     wrong = tmp_path / "ds_26_27.xlsx"
     wrong.write_bytes(p.read_bytes())
     assert [r.red for r in read_cdhs(wrong)] == [True, False, True]
+
+
+def test_read_list_with_full_date_header_and_co_khong(tmp_path):
+    """Dạng file giáo vụ đang dùng: Lớp | Họ tên | Ngày tháng năm sinh (ô ngày) | Bán trú (Có/Không)."""
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú"])
+    ws.append(["1D16", "Lý Gia Hưng A", dt.datetime(2020, 3, 13), "Có"])
+    ws.append(["1D16", "Lý Gia Hưng B", dt.datetime(2020, 4, 24), "Có"])
+    ws.append(["1D16", "Kiều Thanh Vy", dt.datetime(2020, 5, 15), "Không"])
+    ws.freeze_panes = "A2"
+    wb.save(p)
+    rows = read_cdhs(p)
+    assert [(r.lop, r.ho_ten, r.ngay_sinh, r.red) for r in rows] == [
+        ("1D16", "Lý Gia Hưng A", "13/03/2020", True),
+        ("1D16", "Lý Gia Hưng B", "24/04/2020", True),
+        ("1D16", "Kiều Thanh Vy", "15/05/2020", False),
+    ]

@@ -44,7 +44,8 @@ def _find_columns(header: list[str]) -> dict[str, int] | None:
             cols["lop"] = i
         elif f in ("ho ten", "ho va ten", "ho ten hoc sinh", "ho va ten hoc sinh") and "ten" not in cols:
             cols["ten"] = i
-        elif f.startswith("ngay sinh") and "ns" not in cols:
+        elif (f.startswith("ngay sinh") or (f.startswith("ngay") and f.endswith("sinh"))) and "ns" not in cols:
+            # "Ngày sinh", "Ngày tháng năm sinh"
             cols["ns"] = i
         elif f.startswith("phan loai") and "pl" not in cols:
             cols["pl"] = i
