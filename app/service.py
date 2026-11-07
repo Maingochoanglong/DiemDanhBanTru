@@ -350,20 +350,21 @@ class Workspace:
         if full:
             st.mark_full(code)
             return {"full": True, "ok": [], "not_bt": [], "unclear": [], "other": other}
-        ok, unclear = [], []
+        ok, unclear, not_bt = [], [], []
         for q in names:
             r = matcher.match_name(self.roster, code, q, st.date)
             if r.status == matcher.OK and r.student:
                 st.set_absent(code, r.student.id, True)
                 ok.append(self.roster.display_name(r.student))
             elif r.status == matcher.NOT_BT:
+                not_bt.append(q)
                 if q not in c.not_bt:
                     c.not_bt.append(q)
             elif not any(p[0] == code and fold(p[1].query) == fold(q) for p in st.pending):
                 st.pending.append((code, r))
                 unclear.append(q)
         c.reported = True
-        return {"full": False, "ok": ok, "not_bt": list(c.not_bt), "unclear": unclear, "other": other}
+        return {"full": False, "ok": ok, "not_bt": not_bt, "unclear": unclear, "other": other}
 
     def assign_unplaced(self, msg: ParsedMessage, code: str) -> list[matcher.MatchResult]:
         """Giáo vụ chọn lớp cho tin không rõ lớp: ghi tin vào lớp đó."""

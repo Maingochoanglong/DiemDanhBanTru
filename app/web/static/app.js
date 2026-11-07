@@ -199,7 +199,12 @@ function renderClass() {
 
 function filterNames() {
   const q = $("#clsSearch").value;
-  $$("#clsNames .nm").forEach(b => { b.style.display = matches(q, b.dataset.s) ? "" : "none"; });
+  let n = 0;
+  $$("#clsNames .nm").forEach(b => { const ok = matches(q, b.dataset.s); b.style.display = ok ? "" : "none"; n += ok; });
+  const none = $("#clsNoMatch");
+  none.style.display = q.trim() && !n ? "" : "none";
+  none.innerHTML = `<i class="bi bi-search me-2"></i>Không có em nào trong lớp khớp “${esc(q.trim())}”.<br>
+    <span class="fs-6">Gõ không cần dấu (vd. <i>gia huy</i>). Muốn chọn nhiều em: dán cả tin GV báo, tên cách nhau dấu phẩy.</span>`;
 }
 
 async function pasteNames(text) {
@@ -210,11 +215,14 @@ async function pasteNames(text) {
   $("#clsSearch").value = "";
   renderClass();
   const p = r.report, parts = [];
-  if (p.full) parts.push(`Lớp ${curClass}: đủ.`);
-  if (p.ok.length) parts.push(`Đã chọn vắng ${p.ok.length} em: ${p.ok.join(", ")}.`);
-  if (p.unclear.length) parts.push(`Chưa rõ ${p.unclear.length} tên: ${p.unclear.join(", ")} — bấm nút đỏ để chọn em đúng.`);
-  if (p.not_bt.length) parts.push(`Không ăn bán trú (không tính): ${p.not_bt.join(", ")}.`);
-  toast(parts.join(" ") || "Không có tên mới.", p.unclear.length ? "warning" : "success");
+  if (p.full) parts.push(`Lớp ${curClass}: <b>đủ</b>.`);
+  if (p.ok.length) parts.push(`Đã chọn vắng <b>${p.ok.length} em</b>: ${esc(p.ok.join(", "))}.`);
+  if (p.unclear.length) parts.push(`Chưa rõ ${p.unclear.length} tên: <b>${esc(p.unclear.join(", "))}</b> — bấm nút đỏ để chọn em đúng.`);
+  if (p.not_bt.length) parts.push(`Không ăn bán trú (không tính): ${esc(p.not_bt.join(", "))}.`);
+  const box = document.createElement("div");
+  box.className = `alert ${p.unclear.length ? "alert-warning" : "alert-success"} py-2 mb-2 fs-6`;
+  box.innerHTML = `<i class="bi bi-clipboard-check me-2"></i>${parts.join(" ") || "Không có tên mới."}`;
+  $("#clsAlerts").prepend(box);
 }
 
 async function toggleName(btn) {

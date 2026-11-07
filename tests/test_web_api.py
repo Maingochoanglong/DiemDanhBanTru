@@ -265,3 +265,8 @@ def test_paste_names_into_class_search(api):
     # tin của lớp khác
     assert "không phải lớp 1D15" in api.paste_class("1D15", "Lớp 1D16 vắng Thanh Vy")["error"]
     assert api.paste_class("1D15", "  ")["error"].startswith("Không đọc được")
+
+
+def test_paste_reports_only_this_paste_not_bt(api):
+    assert api.paste_class("1D15", "vắng Quỳnh Anh, Minh Khôi")["report"]["not_bt"] == ["Quỳnh Anh"]  # em không ăn BT
+    assert api.paste_class("1D15", "vắng Tuấn Anh, Minh Khôi")["report"]["not_bt"] == []
