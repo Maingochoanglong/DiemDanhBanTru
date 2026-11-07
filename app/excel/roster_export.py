@@ -1,4 +1,4 @@
-"""Xuất danh sách học sinh dạng đơn giản: Lớp | Họ và tên | Ngày sinh | Ăn bán trú (có/không).
+"""Xuất danh sách học sinh dạng đơn giản: Lớp | Họ và tên | Ngày sinh | Ăn bán trú (có/không) | Tên gọi khác.
 
 Một sheet, chữ Times New Roman đen, viền đen, không tô nền, không cố định dòng, không lọc. File xuất ra nhập lại được vào app (Cài đặt → Nhập danh sách).
 """
@@ -15,7 +15,7 @@ from ..core.text import class_sort_key
 from .files import safe_save
 from .style import plain_sheet
 
-HEADERS = [("Lớp", 8), ("Họ và tên", 32), ("Ngày sinh", 13), ("Ăn bán trú", 12)]
+HEADERS = [("Lớp", 8), ("Họ và tên", 32), ("Ngày sinh", 13), ("Ăn bán trú", 12), ("Tên gọi khác", 16)]
 
 
 def export_roster(roster: Roster, path: str | Path, as_of: dt.date, backup: bool = True) -> int:
@@ -31,7 +31,7 @@ def export_roster(roster: Roster, path: str | Path, as_of: dt.date, backup: bool
     for s in students:
         eats = s.is_boarding(as_of)
         n += eats
-        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "có" if eats else "không"])
+        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "có" if eats else "không", s.ten_ghi_so or None])
     plain_sheet(ws, [w for _, w in HEADERS], center_cols=(1, 3, 4))
     if backup:
         safe_save(wb, path)

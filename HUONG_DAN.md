@@ -25,7 +25,7 @@ Máy cần Windows 10/11. In trực tiếp cần Microsoft Excel. Không cần c
 Mở app lần đầu, app **không hỏi chọn file**. Màn chính hiện dòng nhắc màu vàng; bạn tự làm khi sẵn sàng. Bấm **Cài đặt** ở thanh bên trái:
 
 1. **Nhập danh sách học sinh…**: chọn file Excel danh sách. Dùng được 2 dạng:
-   - **file đơn giản**: các cột *Lớp · Họ tên · Ngày sinh (hoặc Ngày tháng năm sinh) · Bán trú*, cột Bán trú ghi **Có** / **Không**. Em trùng cả họ tên thì ghi sẵn chữ A/B cuối tên (vd. *Lý Gia Hưng A*);
+   - **file đơn giản**: các cột *Lớp · Họ tên · Ngày sinh (hoặc Ngày tháng năm sinh) · Bán trú*, cột Bán trú ghi **Có** / **Không**. Có thể thêm cột **Tên gọi khác**: tên GV hay báo khác tên thật, vd. em có tên nước ngoài thường gọi là *Mi Mi*; nhiều tên thì cách nhau dấu phẩy, tên đầu là tên ghi vào sổ. Em trùng cả họ tên thì ghi sẵn chữ A/B cuối tên (vd. *Lý Gia Hưng A*);
    - file CDHS của trường, trong đó **em tô chữ đỏ là có ăn bán trú**.
 
    App liệt kê các thay đổi để bạn duyệt rồi bấm **Áp dụng**.
@@ -58,7 +58,7 @@ Trang **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ
 
 ### Kiểm tra tên trong sổ
 
-Mở một ngày **đã có trong sổ**, app đối chiếu mọi ô tên vắng (kể cả gõ tay trong Excel). Tên không khớp danh sách hiện dòng đỏ phía trên bảng (bấm vào để mở lớp đó) và thành nút đỏ trong bảng chọn tên: bấm vào để **chọn em đúng**, **giữ nguyên chữ đã ghi**, hoặc **bỏ qua tên này**.
+Mở một ngày **đã có trong sổ**, app đối chiếu mọi ô tên vắng (kể cả gõ tay trong Excel). Tên không khớp danh sách hiện dòng đỏ phía trên bảng (bấm vào để mở lớp đó) và thành nút đỏ trong bảng chọn tên: bấm vào để **chọn em đúng**, **giữ nguyên chữ đã ghi**, hoặc **bỏ qua tên này**. Không có em nào tên gần giống thì app cho chọn trong cả lớp. Để tích ô *Nhớ … là tên gọi khác của em này* thì lần sau GV báo tên đó app tự nhận ra, và tên đó được lưu vào cột *Tên gọi khác*.
 
 App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/thừa tên vắng thì dòng lớp tô đỏ và ghi lý do ở cột Ghi chú (vd. "Thiếu 1 tên (GV báo vắng 3 em, mới ghi 2)").
 
@@ -108,14 +108,14 @@ Nếu nhập danh sách từ file có cột **Ghép lớp**, app tự gán nhóm
 Trang **Học sinh** dùng để:
 
 - tìm em, lọc theo lớp;
-- **Thêm học sinh**, hoặc **bấm vào một dòng** để sửa các thông tin: ăn bán trú, *cắt bán trú từ ngày*, *bắt đầu ăn từ ngày*, *cắt thứ 6*, *ăn ghép tại*, *tên ghi sổ* (nếu muốn ghi khác tên tự đặt);
+- **Thêm học sinh**, hoặc **bấm vào một dòng** để sửa các thông tin: ăn bán trú, *cắt bán trú từ ngày*, *bắt đầu ăn từ ngày*, *cắt thứ 6*, *ăn ghép tại*, *tên gọi khác* (tên GV hay báo; tên đầu được ghi vào sổ);
 - bấm **Lưu thay đổi** sau khi sửa.
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
 - **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không)*, hoặc file CDHS tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
 - **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
-- **Xuất danh sách…**: ghi ra file đơn giản 4 cột *Lớp · Họ và tên · Ngày sinh · Ăn bán trú (có/không)*, tính theo ngày bạn chọn (vd. ngày đầu tháng sau). File này gửi cho người khác xem, sửa bằng Excel, hoặc nhập lại vào app.
+- **Xuất danh sách…**: ghi ra file đơn giản 5 cột *Lớp · Họ và tên · Ngày sinh · Ăn bán trú (có/không) · Tên gọi khác*, tính theo ngày bạn chọn (vd. ngày đầu tháng sau). File này gửi cho người khác xem, sửa bằng Excel, hoặc nhập lại vào app.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 

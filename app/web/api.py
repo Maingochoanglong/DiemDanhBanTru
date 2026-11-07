@@ -14,7 +14,7 @@ from ..core import matcher
 from ..core import schedule as sch
 from ..core.models import Student
 from ..core.search import matches
-from ..core.text import class_sort_key, clean_spaces, fmt_date, norm_class, parse_date
+from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, norm_class, parse_date, title_words
 from ..excel import printing
 from ..excel.files import FileLockedError
 from ..excel.roster_import import RosterFormatError, flag_mismatches
@@ -215,7 +215,8 @@ class Api:
             if s.an_ghep:
                 tags.append(f"ăn {s.an_ghep}")
             names.append({"id": s.id, "name": roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
-                          "absent": st.is_absent(code, s.id), "tags": tags, "friday": s.cat_thu6})
+                          "alias": s.ten_ghi_so, "absent": st.is_absent(code, s.id), "tags": tags,
+                          "friday": s.cat_thu6})
         pending = []
         for i, (p_code, res) in enumerate(st.pending):
             if p_code != code:
@@ -269,21 +270,37 @@ class Api:
         self._ws.state.cd(code).extra.clear()
         return self._after(code)
 
-    def resolve(self, code: str, idx: int, action: str, sid: str | None = None) -> dict:
-        """Tên chưa rõ trong sổ: chọn em đúng (pick), giữ nguyên chữ đã ghi (raw) hoặc bỏ qua (skip)."""
+    def resolve(self, code: str, idx: int, action: str, sid: str | None = None, remember: bool = False) -> dict:
+        """Tên chưa rõ trong sổ: chọn em đúng (pick), giữ nguyên chữ đã ghi (raw) hoặc bỏ qua (skip).
+
+        remember: nhớ tên này là tên gọi khác của em được chọn (lần sau GV báo tên đó app tự nhận ra)."""
         st = self._ws.state
         if not (0 <= idx < len(st.pending)) or st.pending[idx][0] != code:
             return self._after(code)
         res = st.pending[idx][1]
         self._ws.push_undo()
         if action == "pick" and sid:
-            st.resolve_pending(code, res, self._ws.roster.by_id(sid))
+            student = self._ws.roster.by_id(sid)
+            st.resolve_pending(code, res, student)
+            if remember and student is not None:
+                self._learn_alias(student, res.query)
         elif action == "raw":
             st.resolve_pending(code, res, None, keep_raw=True)
         else:
             st.resolve_pending(code, res, None)
         st.cd(code).reported = True
         return self._after(code)
+
+    def _learn_alias(self, student: Student, name: str) -> None:
+        name = title_words(clean_spaces(name))
+        if not name or fold(name) in {fold(a) for a in student.aliases()} or fold(name) == fold(student.ho_ten):
+            return
+        student.ten_ghi_so = ", ".join([*student.aliases(), name])
+        self._ws.roster.invalidate()
+        try:
+            self._ws.save_data()
+        except Exception:  # noqa: BLE001 - file dữ liệu đang mở: lưu sau
+            self._ws.data_dirty = True
 
     def undo(self) -> dict:
         ok = self._ws.undo()

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 
 from .names import compute_display_names
-from .text import class_sort_key, fold
+from .text import class_sort_key, clean_spaces, fold
 
 
 @dataclass
@@ -16,13 +17,17 @@ class Student:
     ho_ten: str
     ngay_sinh: str = ""  # dd/mm/yyyy
     ban_tru: bool = False
-    ten_ghi_so: str = ""  # sửa tay; để trống thì dùng tên tự sinh
+    ten_ghi_so: str = ""  # tên gọi khác (vd. "Mi Mi"), cách nhau dấu phẩy; tên đầu ghi vào sổ. Trống = tên tự sinh
     lop_bt: str = ""  # lớp tính bán trú khi khác lớp học
     an_ghep: str = ""  # mã nhóm ăn ghép, vd. 1.2
     cat_thu6: bool = False
     bt_tu: dt.date | None = None  # bắt đầu ăn bán trú từ ngày
     cat_tu: dt.date | None = None  # cắt bán trú từ ngày (ngày này không ăn)
     ghi_chu: str = ""
+
+    def aliases(self) -> list[str]:
+        """Các tên gọi khác (GV hay báo bằng tên này)."""
+        return [clean_spaces(x) for x in re.split(r"[,;]", self.ten_ghi_so) if clean_spaces(x)]
 
     @property
     def lop_tinh(self) -> str:
@@ -94,7 +99,7 @@ class Roster:
 
     def display_name(self, s: Student) -> str:
         if s.ten_ghi_so:
-            return s.ten_ghi_so
+            return s.aliases()[0] if s.aliases() else s.ten_ghi_so
         if self._display is None:
             self._display = self._compute_display()
         return self._display.get(s.id, s.ho_ten)

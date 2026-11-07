@@ -19,7 +19,7 @@ HS_COLS = [
     ("ho_ten", "Họ tên", 28),
     ("ngay_sinh", "Ngày sinh", 12),
     ("ban_tru", "Bán trú (x)", 11),
-    ("ten_ghi_so", "Tên ghi sổ (sửa tay)", 20),
+    ("ten_ghi_so", "Tên gọi khác", 20),
     ("lop_bt", "Lớp tính BT", 11),
     ("an_ghep", "Ăn ghép tại", 11),
     ("cat_thu6", "Cắt thứ 6 (x)", 12),
@@ -64,6 +64,7 @@ class AppData:
             ws = wb["HocSinh"]
             # đọc theo tên cột (file cũ có thể thừa/thiếu cột, vd. cột "Vắng dài hạn" đã bỏ)
             by_title = {fold(t): f for f, t, _ in HS_COLS}
+            by_title[fold("Tên ghi sổ (sửa tay)")] = "ten_ghi_so"  # tên cột của file cũ
             header = [by_title.get(fold(str(c.value or ""))) for c in ws[1]]
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if not row or not any(row):

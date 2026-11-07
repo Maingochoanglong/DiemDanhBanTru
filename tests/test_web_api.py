@@ -207,3 +207,21 @@ def test_temp_removed_when_changes_discarded(api, tmp_path):
     assert temp.exists()
     api.discard_temp()  # thoát app, chọn Không lưu
     assert not temp.exists()
+
+
+def test_pick_unknown_name_and_remember_as_other_name(api):
+    """Tên trong sổ không khớp ai (vd. tên gọi ở nhà): chọn em trong lớp + nhớ; lần sau tự nhận ra."""
+    from app.core import matcher
+
+    st = api._ws.state
+    res = matcher.match_name(api._ws.roster, "1D15", "Bé Bông")
+    assert res.status == matcher.NOT_FOUND
+    st.pending.append(("1D15", res))
+    sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
+    d = api.class_detail("1D15")
+    r = api.resolve("1D15", d["pending"][0]["idx"], "pick", sid, True)
+    assert r["detail"]["pending"] == [] and next(n for n in r["detail"]["names"] if n["id"] == sid)["absent"]
+    s = api._ws.roster.by_id(sid)
+    assert s.aliases() == ["Bé Bông"] and not api._ws.data_dirty  # đã lưu vào file dữ liệu
+    assert matcher.match_name(api._ws.roster, "1D15", "be bong").student is s
+    assert next(n for n in r["detail"]["names"] if n["id"] == sid)["name"] == "Bé Bông"

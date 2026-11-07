@@ -128,9 +128,13 @@ def match_name(roster: Roster, cls: str, query: str, day: dt.date | None = None)
     boarding = roster.boarding(cls, day)
     # 1) Đúng tên ghi sổ (vd. "Gia Hưng A", "Đặng Bảo Ngọc")
     fq = fold(query)
-    exact = [s for s in boarding if fold(roster.display_name(s)) == fq]
+    exact = [s for s in boarding if fold(roster.display_name(s)) == fq or fq in {fold(a) for a in s.aliases()}]
     if len(exact) == 1:
         return MatchResult(query, OK, exact[0], exact)
+    if not exact:  # tên gọi khác của em đang không ăn bán trú
+        other = [s for s in roster.in_class(cls) if fq in {fold(a) for a in s.aliases()}]
+        if other:
+            return MatchResult(query, NOT_BT, other[0], other)
 
     found = _find(roster.in_class(cls), query)
     boarding_ids = {s.id for s in boarding}

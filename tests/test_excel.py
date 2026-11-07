@@ -5,6 +5,7 @@ import pytest
 from openpyxl.styles import Font
 
 from app.core.day import DayState
+from app.core.models import Student
 from app.excel import sobook
 from app.excel.database import AppData, short_codes
 from app.excel.files import FileLockedError, lock_file, safe_save
@@ -246,6 +247,7 @@ def test_export_simple_then_import(tmp_path, roster):
 
     roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc 1D19
     roster.students[0].cat_tu = dt.date(2026, 11, 1)  # tháng 11 cắt -> danh sách tháng 11 ghi "không"
+    roster.students[1].ten_ghi_so = "Bé Na"  # tên gọi khác
     p = tmp_path / "ds.xlsx"
     n = export_roster(roster, p, dt.date(2026, 11, 2))
     assert n == sum(1 for s in roster.students if s.is_boarding(dt.date(2026, 11, 2)))
@@ -253,9 +255,9 @@ def test_export_simple_then_import(tmp_path, roster):
     assert wb.sheetnames == ["Danh sách"]
     ws = wb["Danh sách"]
     assert ws.freeze_panes is None and ws.auto_filter.ref is None  # đơn giản: không cố định dòng, không lọc
-    assert [c.value for c in ws[1]] == ["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú"]
-    assert [c.value for c in ws[2]] == ["1D15", "Kha Bảo Ngọc", "02/03/2020", "không"]
-    assert [c.value for c in ws[3]] == ["1D15", "Võ Hoàng Bảo Ngọc", "05/06/2020", "có"]
+    assert [c.value for c in ws[1]] == ["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"]
+    assert [c.value for c in ws[2]] == ["1D15", "Kha Bảo Ngọc", "02/03/2020", "không", None]
+    assert [c.value for c in ws[3]] == ["1D15", "Võ Hoàng Bảo Ngọc", "05/06/2020", "có", "Bé Na"]
     _assert_plain(ws)
 
     rows = read_cdhs(p)
@@ -292,6 +294,36 @@ def test_read_list_with_full_date_header_and_co_khong(tmp_path):
         ("1D16", "Lý Gia Hưng B", "24/04/2020", True),
         ("1D16", "Kiều Thanh Vy", "15/05/2020", False),
     ]
+
+
+def test_other_name_column_import_and_match(tmp_path, roster):
+    """Cột "Tên gọi khác": GV báo "Mi Mi" thì app nhận ra em có tên nước ngoài (tên bịa); sổ ghi "Mi Mi"."""
+    from app.core import matcher
+
+    roster.students.append(Student("HS900", "1D16", "Smith Emily", "01/02/2020", True))
+    roster.invalidate()
+    assert matcher.match_name(roster, "1D16", "Mi Mi").status == matcher.NOT_FOUND
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"])
+    ws.append(["1D16", "Smith Emily", "01/02/2020", "có", "Mi Mi, Emmy"])
+    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])  # ô trống: giữ tên gọi đang có
+    wb.save(p)
+    rows = read_cdhs(p)
+    assert [r.ten_goi for r in rows] == ["Mi Mi, Emmy", ""]
+    changes = [c for c in diff_roster(roster, rows) if c.kind == "ten_goi"]
+    assert [c.text for c in changes] == ['Smith Emily (1D16): tên gọi khác "Mi Mi, Emmy"']
+    apply_changes(roster, changes)
+    sa = roster.by_id("HS900")
+    assert sa.aliases() == ["Mi Mi", "Emmy"] and roster.display_name(sa) == "Mi Mi"
+    for q in ("Mi Mi", "emmy", "MI MI"):
+        r = matcher.match_name(roster, "1D16", q)
+        assert r.status == matcher.OK and r.student is sa, q
+    # lưu / mở lại file dữ liệu
+    AppData(tmp_path / "DuLieu.xlsx", roster).save()
+    again = AppData.load(tmp_path / "DuLieu.xlsx").roster.by_id("HS900")
+    assert again.ten_ghi_so == "Mi Mi, Emmy"
 
 
 def _assert_plain(ws):
