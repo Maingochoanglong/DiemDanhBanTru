@@ -317,24 +317,6 @@ class Api:
         msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Bản cũ đã sao lưu trong thư mục SaoLuu."
         return {"ok": msg, "state": self.state()}
 
-    def print_check(self) -> dict:
-        """Trước khi in: còn tên chưa rõ thì chặn; còn lớp chưa báo / chưa lưu thì hỏi."""
-        ws, st = self._ws, self._ws.state
-        if st is None or not ws.book_path:
-            return {"error": "Chưa có sổ điểm danh cho tháng này. Vào Cài đặt → Chọn sổ."}
-        need_save = ws.dirty or not st.exists_in_book
-        if need_save and ws.unresolved_count():
-            return self.save()
-        return {"need_save": need_save, "unreported": st.unreported()}
-
-    def print_day(self) -> dict:
-        areas = self._ws.print_areas()
-        try:
-            printing.print_areas(self._ws.book_path, self._ws.sheet_name, areas)
-        except printing.PrintError as e:
-            return {"print_error": f"{e}\n\nCó thể mở sổ bằng Excel để in tay (vùng in: {' và '.join(areas)})."}
-        return {"ok": "Đã gửi lệnh in 2 tờ."}
-
     def open_book(self) -> dict:
         if self._ws.book_path:
             printing.open_file(self._ws.book_path)

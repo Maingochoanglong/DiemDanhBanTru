@@ -62,13 +62,12 @@ Mở một ngày **đã có trong sổ**, app đối chiếu mọi ô tên vắn
 
 App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/thừa tên vắng thì dòng lớp tô đỏ và ghi lý do ở cột Ghi chú (vd. "Thiếu 1 tên (GV báo vắng 3 em, mới ghi 2)").
 
-### Lưu và in
+### Lưu vào sổ
 
 1. Bấm **Lưu vào sổ** (Ctrl+S). Nếu chưa có sheet ngày hôm nay, app sao chép sheet hôm trước rồi điền số liệu.
-   - Còn **tên chưa rõ** thì app **chưa cho lưu và in**; bấm **Xử lý ngay** để app mở lớp cần xử lý.
+   - Còn **tên chưa rõ** thì app **chưa cho lưu**; bấm **Xử lý ngay** để app mở lớp cần xử lý.
    - Sĩ số theo danh sách khác sĩ số trong sổ: app hỏi **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
-2. Bấm **In 2 tờ** (Ctrl+P): tờ 1 là bảng điểm danh, tờ 2 là bảng suất ăn.
-   - Còn **lớp chưa báo**: app nhắc trước khi in, các lớp đó đang được **tính đủ**. Bấm **Vẫn in** (hoặc **Lưu rồi in**), hoặc **Ở lại** để chờ GV báo.
+2. In: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ (tờ 1 bảng điểm danh, tờ 2 bảng suất ăn).
 
 Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
 
@@ -148,5 +147,4 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 | Enter (ô tìm trong bảng chọn tên) | Chỉ còn 1 em khớp thì chọn / bỏ chọn em đó |
 | Esc | Đóng bảng chọn tên / hộp đang mở |
 | Ctrl+S | Lưu vào sổ |
-| Ctrl+P | In 2 tờ |
 | Ctrl+Z | Hoàn tác thao tác vừa làm |
