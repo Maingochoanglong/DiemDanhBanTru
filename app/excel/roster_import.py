@@ -2,11 +2,13 @@
 
 Hai dạng file:
 - file CDHS của trường: em tô chữ đỏ là ăn bán trú;
-- file danh sách bán trú gọn: cột "Ăn bán trú" đánh X, kèm cột "Ghép lớp" (vd. 1.2).
+- file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2)
+  và cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ).
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +24,7 @@ class RosterRow:
     red: bool  # ăn bán trú (chữ đỏ hoặc X)
     phan_loai: str = ""
     ghep: str | None = None  # None = file không có cột "Ghép lớp"
+    ten_goi: str | None = None  # None = file không có cột "Tên gọi khác"
 
     @property
     def key(self) -> tuple[str, str]:
@@ -54,6 +57,8 @@ def _find_columns(header: list[str]) -> dict[str, int] | None:
             cols["bt"] = i
         elif "ghep" in f and "ghep" not in cols:
             cols["ghep"] = i
+        elif ("ten goi" in f or "biet danh" in f or f.startswith("ten ghi so")) and "goi" not in cols:
+            cols["goi"] = i
     if "lop" in cols and "ten" in cols:
         return cols
     return None
@@ -107,7 +112,8 @@ def _read_xls(path: Path) -> list[RosterRow]:
                 if "bt" in cols:
                     red = _is_x(sh.cell_value(r, cols["bt"]))
                 ghep = _fmt_ghep(sh.cell_value(r, cols["ghep"])) if "ghep" in cols else None
-                rows.append(RosterRow(lop, name, dob, red, pl, ghep))
+                goi = clean_spaces(str(sh.cell_value(r, cols["goi"]))) if "goi" in cols else None
+                rows.append(RosterRow(lop, name, dob, red, pl, ghep, goi))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -154,7 +160,8 @@ def _read_xlsx(path: Path) -> list[RosterRow]:
                 pl = clean_spaces(str(ws.cell(r, cols["pl"] + 1).value or "")) if "pl" in cols else ""
                 red = _is_x(ws.cell(r, cols["bt"] + 1).value) if "bt" in cols else _openpyxl_red(name_cell)
                 ghep = _fmt_ghep(ws.cell(r, cols["ghep"] + 1).value) if "ghep" in cols else None
-                rows.append(RosterRow(lop, name, dob, red, pl, ghep))
+                goi = clean_spaces(str(ws.cell(r, cols["goi"] + 1).value or "")) if "goi" in cols else None
+                rows.append(RosterRow(lop, name, dob, red, pl, ghep, goi))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -184,20 +191,36 @@ def flag_mismatches(rows: list[RosterRow]) -> list[RosterRow]:
 # ---------------- so sánh với danh sách đang có ----------------
 @dataclass
 class Change:
-    kind: str  # new | removed | class | boarding | ghep
+    kind: str  # new | removed | rename | class | boarding | ghep | ten_goi
     text: str
     row: RosterRow | None = None
     student: Student | None = None
     apply: bool = True
 
 
+def _base_key(name: str, dob: str) -> tuple[str, str]:
+    """Họ tên bỏ chữ A/B ở cuối (file cũ ghi "Lý Gia Hưng A", file mới ghi A/B ở cột Tên gọi khác)."""
+    return fold(re.sub(r"\s+[A-Z]$", "", clean_spaces(name))), dob
+
+
 def diff_roster(roster: Roster, rows: list[RosterRow]) -> list[Change]:
     existing = {s.key(): s for s in roster.students}
+    by_base: dict[tuple[str, str], list[Student]] = {}
+    for st in roster.students:
+        by_base.setdefault(_base_key(st.ho_ten, st.ngay_sinh), []).append(st)
+    row_keys = {r.key for r in rows}
     seen = set()
     changes: list[Change] = []
     for row in rows:
         s = existing.get(row.key)
         seen.add(row.key)
+        if s is None:  # cùng em, chỉ khác chữ A/B ở cuối họ tên
+            same = [x for x in by_base.get(_base_key(row.ho_ten, row.ngay_sinh), [])
+                    if x.key() not in row_keys and x.key() not in seen]
+            if len(same) == 1:
+                s = same[0]
+                seen.add(s.key())
+                changes.append(Change("rename", f"Sửa họ tên: {s.ho_ten} → {row.ho_ten} ({row.lop})", row, s))
         if s is None:
             bt = "ăn BT" if row.red else "không ăn BT"
             changes.append(Change("new", f"Thêm HS mới: {row.ho_ten} ({row.lop}, {bt})", row))
@@ -210,6 +233,9 @@ def diff_roster(roster: Roster, rows: list[RosterRow]) -> list[Change]:
         if row.ghep is not None and row.ghep != s.an_ghep:
             what = f"ăn ghép {row.ghep}" if row.ghep else "bỏ ăn ghép"
             changes.append(Change("ghep", f"{s.ho_ten} ({row.lop}) {what}", row, s))
+        if row.ten_goi is not None and row.ten_goi != s.ten_ghi_so:  # tên gọi khác lấy theo file Excel
+            what = f'tên gọi khác "{row.ten_goi}"' if row.ten_goi else "bỏ tên gọi khác"
+            changes.append(Change("ten_goi", f"{s.ho_ten} ({row.lop}): {what}", row, s))
     for key, s in existing.items():
         if key not in seen:
             changes.append(Change("removed", f"Không còn trong danh sách: {s.ho_ten} ({s.lop})", None, s, apply=False))
@@ -223,14 +249,19 @@ def apply_changes(roster: Roster, changes: list[Change]) -> int:
             continue
         if c.kind == "new" and c.row:
             roster.students.append(
-                Student(roster.next_id(), c.row.lop, c.row.ho_ten, c.row.ngay_sinh, c.row.red, an_ghep=c.row.ghep or "")
+                Student(roster.next_id(), c.row.lop, c.row.ho_ten, c.row.ngay_sinh, c.row.red,
+                        ten_ghi_so=c.row.ten_goi or "", an_ghep=c.row.ghep or "")
             )
+        elif c.kind == "rename" and c.student and c.row:
+            c.student.ho_ten = c.row.ho_ten
         elif c.kind == "class" and c.student and c.row:
             c.student.lop = c.row.lop
         elif c.kind == "boarding" and c.student and c.row:
             c.student.ban_tru = c.row.red
         elif c.kind == "ghep" and c.student and c.row:
             c.student.an_ghep = c.row.ghep or ""
+        elif c.kind == "ten_goi" and c.student and c.row:
+            c.student.ten_ghi_so = c.row.ten_goi or ""
         elif c.kind == "removed" and c.student:
             roster.students.remove(c.student)
         n += 1

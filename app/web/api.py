@@ -215,7 +215,8 @@ class Api:
             if s.an_ghep:
                 tags.append(f"ăn {s.an_ghep}")
             names.append({"id": s.id, "name": roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
-                          "absent": st.is_absent(code, s.id), "tags": tags, "friday": s.cat_thu6})
+                          "alias": s.ten_ghi_so, "absent": st.is_absent(code, s.id), "tags": tags,
+                          "friday": s.cat_thu6})
         pending = []
         for i, (p_code, res) in enumerate(st.pending):
             if p_code != code:
@@ -288,14 +289,6 @@ class Api:
     def undo(self) -> dict:
         ok = self._ws.undo()
         return {"state": self.state(), "flash": "Đã hoàn tác." if ok else "Không còn gì để hoàn tác."}
-
-    def unreported_text(self) -> str:
-        st = self._ws.state
-        lines = []
-        for code in st.unreported():
-            info = self._ws.roster.classes.get(code)
-            lines.append(f"{code}{' - ' + info.gvcn if info and info.gvcn else ''}")
-        return "\n".join(lines)
 
     # ================================================================== lưu / in
     def save(self, choice: str | None = None) -> dict:
@@ -430,7 +423,8 @@ class Api:
         s.lop, s.ho_ten = lop, name
         s.ngay_sinh = fmt_date(parse_date(data.get("ngay_sinh", ""))) or clean_spaces(data.get("ngay_sinh", ""))
         s.ban_tru, s.cat_thu6 = bool(data.get("ban_tru")), bool(data.get("cat_thu6"))
-        s.ten_ghi_so = clean_spaces(data.get("ten_ghi_so", ""))
+        if "ten_ghi_so" in data:
+            s.ten_ghi_so = clean_spaces(data["ten_ghi_so"])
         s.lop_bt = "" if lop_bt == lop else lop_bt
         s.an_ghep = clean_spaces(data.get("an_ghep", "")).replace(",", ".")
         s.ghi_chu = clean_spaces(data.get("ghi_chu", ""))
