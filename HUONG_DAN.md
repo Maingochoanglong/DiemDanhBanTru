@@ -48,7 +48,7 @@ Trang **Điểm danh**:
 | Phần | Dùng để |
 |---|---|
 | **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
-| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); còn đúng 1 em khớp thì **Enter** là chọn luôn. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
+| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); còn đúng 1 em khớp thì **Enter** là chọn luôn. **Dán tin GV báo** vào ô này (vd. `Gia Huy, Bảo Anh, Minh Khôi` hoặc cả tin `34/39 vắng …`, `đủ`) thì app chọn vắng luôn các em đó; tên chưa rõ thành nút đỏ để chọn em đúng; em đã chọn trước vẫn giữ. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
 
 Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền phía sau tối đi.
 

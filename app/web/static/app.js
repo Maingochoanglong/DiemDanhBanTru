@@ -202,6 +202,21 @@ function filterNames() {
   $$("#clsNames .nm").forEach(b => { b.style.display = matches(q, b.dataset.s) ? "" : "none"; });
 }
 
+async function pasteNames(text) {
+  const r = await api("paste_class", curClass, text);
+  if (r.error) return info("Chưa đọc được", r.error);
+  applyState(r.state);
+  D = r.detail;
+  $("#clsSearch").value = "";
+  renderClass();
+  const p = r.report, parts = [];
+  if (p.full) parts.push(`Lớp ${curClass}: đủ.`);
+  if (p.ok.length) parts.push(`Đã chọn vắng ${p.ok.length} em: ${p.ok.join(", ")}.`);
+  if (p.unclear.length) parts.push(`Chưa rõ ${p.unclear.length} tên: ${p.unclear.join(", ")} — bấm nút đỏ để chọn em đúng.`);
+  if (p.not_bt.length) parts.push(`Không ăn bán trú (không tính): ${p.not_bt.join(", ")}.`);
+  toast(parts.join(" ") || "Không có tên mới.", p.unclear.length ? "warning" : "success");
+}
+
 async function toggleName(btn) {
   const sid = btn.dataset.sid;
   const on = !btn.classList.contains("on");
@@ -542,8 +557,15 @@ function wire() {
     else if (k) scheduleDialog(k, D.code, [n.id]);
   };
   $("#clsSearch").oninput = filterNames;
+  // dán tin GV báo / nhiều tên cách nhau dấu phẩy: chọn vắng luôn các em đó
+  const isList = t => /[,;\n]|\d+\s*\/\s*\d+|^\s*(v[aắ]ng|đủ|du)(\s|$)/i.test(t);
+  $("#clsSearch").addEventListener("paste", e => {
+    const text = (e.clipboardData || window.clipboardData).getData("text");
+    if (isList(text)) { e.preventDefault(); pasteNames(text); }
+  });
   $("#clsSearch").onkeydown = e => {
     if (e.key === "Enter") {
+      if (isList($("#clsSearch").value)) return pasteNames($("#clsSearch").value);
       const shown = $$("#clsNames .nm").filter(b => b.style.display !== "none");
       if (shown.length === 1) { toggleName(shown[0]); $("#clsSearch").select(); }
     }
