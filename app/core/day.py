@@ -239,7 +239,7 @@ class DayState:
                     summary.warnings.append(
                         f"Lớp ghép {code} chưa có danh sách ghép đầy đủ: có {n_abs} em vắng "
                         f"({', '.join(self.absent_names(code))}) nhưng mới đánh {m_sum} vắng ghép. "
-                        "Bấm đúp vào hàng nhóm để nhập, hoặc gán nhóm ghép cho từng em ở trang Ghép lớp."
+                        "Bấm đúp vào hàng nhóm để nhập, hoặc ghi nhóm cho từng em ở cột Ăn ghép trong file Excel danh sách rồi nhập lại."
                         if n_abs else
                         f"Lớp ghép {code} không có em vắng nhưng đang đánh {m_sum} vắng ghép."
                     )

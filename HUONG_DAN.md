@@ -65,6 +65,7 @@ App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/th
 ### Lưu vào sổ
 
 1. Bấm **Lưu vào sổ** (Ctrl+S). Nếu chưa có sheet ngày hôm nay, app sao chép sheet hôm trước rồi điền số liệu.
+   - Còn **lớp chưa báo**: app nhắc tên các lớp đó (lưu thì các lớp này được tính **đủ**). Bấm **Vẫn lưu** hoặc **Ở lại** để chờ GV báo.
    - Còn **tên chưa rõ** thì app **chưa cho lưu**; bấm **Xử lý ngay** để app mở lớp cần xử lý.
    - Sĩ số theo danh sách khác sĩ số trong sổ: app hỏi **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 2. In: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ (tờ 1 bảng điểm danh, tờ 2 bảng suất ăn).
@@ -100,7 +101,7 @@ Trang **Ghép lớp** liệt kê các em ăn bán trú của lớp ghép (lớp 
 
 Khi đã gán đủ cả lớp, mỗi lần em ghép vắng, app tự điền ô **vắng** đúng hàng trong bảng suất ăn. Khi chưa gán đủ, app giữ số em ghép như sổ cũ; bạn **bấm vào hàng nhóm** (có hình bút chì) trong trang Suất ăn để nhập số em ghép vắng.
 
-Nếu nhập danh sách từ file có cột **Ghép lớp**, app tự gán nhóm ghép theo cột đó.
+Cách gọn nhất: ghi nhóm ghép của từng em (vd. *1.3*) ở cột **Ăn ghép** trong file Excel danh sách rồi nhập lại; app tự gán theo cột đó. Ô để trống = em không ăn ghép.
 
 ## 6. Học sinh
 
@@ -111,7 +112,8 @@ Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem e
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
-- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- Sửa file Excel danh sách xong, lần mở app sau app tự thấy file đã sửa và hỏi **Nhập lại** (hoặc *Để sau*).
 - **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
