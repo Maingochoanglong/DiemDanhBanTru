@@ -87,14 +87,12 @@
         <input class="form-control" id="hsQ" placeholder="Tìm tên (không cần dấu)" style="max-width:280px">
         <div class="form-check ms-2"><input class="form-check-input" type="checkbox" id="hsBt" checked><label class="form-check-label" for="hsBt">Chỉ em ăn bán trú</label></div>
         <span class="text-muted ms-2" id="hsCount"></span>
-        <button class="btn btn-outline-primary ms-auto" id="hsAdd"><i class="bi bi-person-plus"></i> Thêm học sinh</button>
-        <button class="btn btn-primary" id="hsSave"><i class="bi bi-save"></i> Lưu thay đổi</button>
       </div></div>
       <div class="card shadow-sm flex-grow-1" style="min-height:0"><div class="so-wrap h-100">
         <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
           <th>Lớp</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn BT</th><th>Tên ghi sổ</th><th>Ăn ghép</th><th>Đặc biệt</th><th>Ghi chú</th></tr></thead>
           <tbody id="hsBody"></tbody></table></div></div>
-      <div class="text-muted small">Bấm vào một dòng để sửa. Sửa xong bấm <b>Lưu thay đổi</b>.</div>
+      <div class="text-muted small">Trang này chỉ để tra cứu. Muốn thêm, sửa học sinh: sửa file Excel danh sách rồi vào <b>Cài đặt → Nhập danh sách học sinh</b>. Lịch cắt / thêm bán trú đặt ở trang <b>Lịch thêm/cắt</b>.</div>
     </section>
 
     <!-- ===== Lịch thêm/cắt ===== -->
@@ -139,7 +137,6 @@
         <div class="d-flex gap-2 flex-wrap">
           <button class="btn btn-primary" id="cdImport"><i class="bi bi-file-earmark-arrow-down"></i> Nhập danh sách học sinh…</button>
           <button class="btn btn-outline-primary" id="cdNotes"><i class="bi bi-journal-text"></i> Đọc ghi chú trong sổ…</button>
-          <button class="btn btn-outline-primary" id="cdExport"><i class="bi bi-file-earmark-arrow-up"></i> Xuất danh sách…</button>
         </div>
       </div></div>
       <div class="text-muted small px-1">

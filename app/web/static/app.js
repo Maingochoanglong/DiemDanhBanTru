@@ -347,39 +347,9 @@ async function renderStudents() {
     sel.value = cur;
   }
   $("#hsCount").textContent = `${HS.rows.length} em`;
-  $("#hsBody").innerHTML = HS.rows.map(s => `<tr data-sid="${esc(s.id)}" role="button" class="${s.now ? "" : "text-muted"}">
+  $("#hsBody").innerHTML = HS.rows.map(s => `<tr class="${s.now ? "" : "text-muted"}">
     <td>${esc(s.lop)}</td><td class="fw-semibold">${esc(s.ten)}</td><td>${esc(s.ns)}</td><td class="text-center">${s.bt ? `<i class="bi bi-check-lg text-success"></i>` : ""}</td>
     <td>${esc(s.ghiso)}</td><td>${esc(s.ghep)}</td><td>${esc(s.db)}</td><td>${esc(s.gc)}</td></tr>`).join("");
-  $("#hsSave").classList.toggle("btn-warning", !!HS.data_dirty);
-}
-
-const SF = [["lop", "Lớp đang học (vd. 1D15)", "text"], ["ho_ten", "Họ tên", "text"], ["ngay_sinh", "Ngày sinh (dd/mm/yyyy)", "text"],
-  ["ban_tru", "Ăn bán trú", "check"], ["lop_bt", "Lớp tính bán trú (nếu khác lớp học)", "text"],
-  ["an_ghep", "Ăn ghép tại nhóm (vd. 1.2)", "text"], ["cat_thu6", "Cắt thứ 6 hàng tuần (thứ 6 tự tính vắng)", "check"],
-  ["bt_tu", "Bắt đầu ăn bán trú từ ngày", "text"], ["cat_tu", "Cắt bán trú từ ngày", "text"], ["ghi_chu", "Ghi chú", "text"]];
-
-async function editStudent(sid) {
-  const s = sid ? await api("student", sid) : { id: "", lop: $("#hsClass").value, ban_tru: true };
-  const ok = await form(sid ? `Sửa: ${s.ho_ten}` : "Thêm học sinh", b => {
-    b.innerHTML = `<div class="row g-2">` + SF.map(([f, label, kind]) => kind === "check"
-      ? `<div class="col-12"><div class="form-check fs-6"><input class="form-check-input" type="checkbox" id="f_${f}" ${s[f] ? "checked" : ""}><label class="form-check-label" for="f_${f}">${label}</label></div></div>`
-      : `<div class="col-md-6"><label class="form-label mb-0 small" for="f_${f}">${label}</label><input class="form-control" id="f_${f}" value="${esc(s[f] || "")}"></div>`).join("") + `</div>`
-      + (sid ? `<button class="btn btn-outline-danger mt-3" id="f_del"><i class="bi bi-trash"></i> Xóa học sinh này</button>` : "");
-    if (sid) $("#f_del", b).onclick = async () => {
-      bootstrap.Modal.getInstance($("#mdForm")).hide();
-      const k = await ask("Xóa học sinh", `Xóa <b>${esc(s.ho_ten)}</b> (${esc(s.lop)}) khỏi danh sách?<br>Nếu em chỉ thôi ăn bán trú, nên sửa "Cắt bán trú từ ngày" thay vì xóa.`,
-        [{ key: "keep", label: "Không xóa" }, { key: "del", label: "Xóa", cls: "btn-danger" }]);
-      if (k === "del") { handle(await api("delete_student", sid)); renderStudents(); }
-    };
-  }, "Lưu", async b => {
-    const data = { id: s.id };
-    SF.forEach(([f, , kind]) => { const el = $("#f_" + f, b); data[f] = kind === "check" ? el.checked : el.value; });
-    const r = await api("save_student", data);
-    if (r.error) return r.error;
-    applyState(r.state);
-    return true;
-  });
-  if (ok) { renderStudents(); toast("Đã sửa danh sách. Nhớ bấm Lưu thay đổi.", "secondary"); }
 }
 
 // ------------------------------------------------------------------ Lịch thêm / cắt
@@ -505,19 +475,6 @@ async function noteSuggestions() {
   if (ok) handle(await api("apply_notes", sel));
 }
 
-async function exportList() {
-  let day = S ? S.date_text : "";
-  const ok = await form("Xuất danh sách học sinh", b => {
-    b.innerHTML = `<label class="form-label">Ghi "có" cho các em ăn bán trú vào ngày (dd/mm/yyyy):</label><input class="form-control form-control-lg" id="xday" value="${esc(day)}">
-      <p class="text-muted small mt-2">File gồm 4 cột: Lớp · Họ và tên · Ngày sinh · Ăn bán trú (có/không).</p>`;
-  }, "Chọn nơi lưu…", async b => { day = $("#xday", b).value; return true; }, { size: "" });
-  if (!ok) return;
-  const r = await api("export_list", day);
-  if (r.cancel) return;
-  if (r.error) return info("Chưa xuất được", r.error);
-  toast(r.ok);
-}
-
 // ------------------------------------------------------------------ chuyển trang
 function showPage(p) {
   $$("#nav .nav-link").forEach(a => a.classList.toggle("active", a.dataset.page === p));
@@ -599,9 +556,6 @@ function wire() {
   $("#hsClass").onchange = renderStudents;
   $("#hsQ").oninput = renderStudents;
   $("#hsBt").onchange = renderStudents;
-  $("#hsAdd").onclick = () => editStudent(null);
-  $("#hsBody").onclick = e => { const tr = e.target.closest("tr[data-sid]"); if (tr) editStudent(tr.dataset.sid); };
-  $("#hsSave").onclick = async () => { const r = handle(await api("save_data")); if (r.ok) { toast(r.ok); renderStudents(); } };
 
   // Lịch
   $$("[data-sched]").forEach(b => b.onclick = () => scheduleDialog(b.dataset.sched));
@@ -644,7 +598,6 @@ function wire() {
   $("#cdBook").onclick = async () => { const r = await api("choose_book"); if (!r.cancel) { handle(r); renderSettings(); } };
   $("#cdImport").onclick = importList;
   $("#cdNotes").onclick = noteSuggestions;
-  $("#cdExport").onclick = exportList;
 }
 
 // Gọi từ Python khi bấm nút đóng cửa sổ mà còn thay đổi chưa lưu

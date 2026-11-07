@@ -104,17 +104,15 @@ Nếu nhập danh sách từ file có cột **Ghép lớp**, app tự gán nhóm
 
 ## 6. Học sinh
 
-Trang **Học sinh** dùng để:
+Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, tên ghi sổ, ăn ghép, lịch cắt/thêm.
 
-- tìm em, lọc theo lớp;
-- **Thêm học sinh**, hoặc **bấm vào một dòng** để sửa các thông tin: ăn bán trú, *cắt bán trú từ ngày*, *bắt đầu ăn từ ngày*, *cắt thứ 6*, *ăn ghép tại*. Tên gọi khác chỉ sửa trong file Excel danh sách (cột *Tên gọi khác*) rồi nhập lại;
-- bấm **Lưu thay đổi** sau khi sửa.
+- Muốn **thêm, sửa, xóa học sinh** (kể cả tên gọi khác): sửa trong **file Excel danh sách** rồi vào Cài đặt → **Nhập danh sách học sinh…**.
+- Lịch **cắt bán trú từ ngày**, **ăn từ ngày**, **cắt thứ 6**: đặt ở trang **Lịch thêm/cắt** hoặc menu *Thêm/cắt bán trú* trong bảng tên của lớp.
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
-- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không)*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
 - **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
-- **Xuất danh sách…**: ghi ra file đơn giản 5 cột *Lớp · Họ và tên · Ngày sinh · Ăn bán trú (có/không) · Tên gọi khác*, tính theo ngày bạn chọn (vd. ngày đầu tháng sau). File này gửi cho người khác xem, sửa bằng Excel, hoặc nhập lại vào app.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 
