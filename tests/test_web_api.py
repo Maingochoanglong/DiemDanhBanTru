@@ -243,30 +243,3 @@ def test_boot_tells_when_list_file_was_edited(api, tmp_path):
     os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))  # giáo vụ sửa file Excel
     r = Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
     assert r["list_changed"] == {"file": "ds.xlsx", "path": str(p)}
-
-
-def test_paste_names_into_class_search(api):
-    """Dán tin GV báo vào ô tìm của lớp: chọn vắng các em; tên lạ thành nút đỏ; thêm vào, không xóa em đã chọn."""
-    first = sid_of(api, "1D16", "Kiều Thanh Vy")
-    api.set_absent("1D16", first, True)
-    r = api.paste_class("1D16", "34/39 vắng Minh Thư, Xyz Abc")
-    rep = r["report"]
-    assert rep["unclear"] == ["Xyz Abc"] and rep["ok"] == ["Minh Thư"] and not rep["full"]
-    d = r["detail"]
-    assert next(n for n in d["names"] if n["id"] == first)["absent"]  # em chọn trước vẫn giữ
-    assert [p["query"] for p in d["pending"]] == ["Xyz Abc"]
-    row = next(x for x in r["state"]["rows"] if x.get("code") == "1D16")
-    assert row["reported"]
-    # dán danh sách tên cách nhau dấu phẩy
-    r = api.paste_class("1D15", "Tuấn Anh, Minh Khôi")
-    assert r["report"]["ok"] == ["Tuấn Anh", "Minh Khôi"] and r["report"]["unclear"] == []
-    # "đủ"
-    assert api.paste_class("2D17", "đủ")["report"]["full"]
-    # tin của lớp khác
-    assert "không phải lớp 1D15" in api.paste_class("1D15", "Lớp 1D16 vắng Thanh Vy")["error"]
-    assert api.paste_class("1D15", "  ")["error"].startswith("Không đọc được")
-
-
-def test_paste_reports_only_this_paste_not_bt(api):
-    assert api.paste_class("1D15", "vắng Quỳnh Anh, Minh Khôi")["report"]["not_bt"] == ["Quỳnh Anh"]  # em không ăn BT
-    assert api.paste_class("1D15", "vắng Tuấn Anh, Minh Khôi")["report"]["not_bt"] == []

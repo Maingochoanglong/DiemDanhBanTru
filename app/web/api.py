@@ -256,17 +256,6 @@ class Api:
             st.set_absent(code, sid, bool(absent))
         return self._after(code)
 
-    def paste_class(self, code: str, text: str) -> dict:
-        """Dán tin GV báo vắng vào ô tìm của lớp (vd. "Gia Huy, Bảo Anh" hoặc cả tin "34/39 vắng …")."""
-        rep = self._ws.paste_class(code, text)
-        if rep is None:
-            return {"error": "Không đọc được tên nào trong đoạn vừa dán."}
-        if "full" not in rep:
-            return {"error": f"Tin này ghi lớp {', '.join(rep['other'])}, không phải lớp {code}. Hãy mở đúng lớp rồi dán."}
-        out = self._after(code)
-        out["report"] = rep
-        return out
-
     def mark_full(self, code: str) -> dict:
         self._ws.push_undo()
         self._ws.state.mark_full(code)

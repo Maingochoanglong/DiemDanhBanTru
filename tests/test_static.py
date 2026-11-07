@@ -10,8 +10,8 @@ def _declared(name: str) -> bool:
     return bool(re.search(rf"(function|const|let|var)\s+{name}\b", JS))
 
 
-def test_paste_and_search_helpers_are_declared():
-    for name in ("isList", "pasteNames", "clsNote", "filterNames", "toggleName", "renderClass", "openClass"):
+def test_search_helpers_are_declared():
+    for name in ("filterNames", "toggleName", "renderClass", "openClass"):
         assert _declared(name), f"app.js dùng {name} nhưng chưa khai báo"
 
 

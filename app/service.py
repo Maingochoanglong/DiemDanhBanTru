@@ -328,44 +328,6 @@ class Workspace:
                           if po.message.cls is None and po.message.is_report and po.message.raw not in seen]
         return out
 
-    def paste_class(self, code: str, text: str) -> dict | None:
-        """Dán tin GV báo (hoặc danh sách tên cách nhau dấu phẩy) vào ô tìm của một lớp.
-
-        Thêm các em trong tin vào danh sách vắng của lớp (không bỏ em đã chọn trước). Tên chưa rõ
-        thành nút đỏ để chọn em đúng. Trả về None nếu không đọc được tên nào."""
-        assert self.state is not None
-        st = self.state
-        msgs = [m for m in parse_messages(text, set(st.classes)) if m.is_report]
-        other = sorted({m.cls for m in msgs if m.cls and m.cls != code})
-        msgs = [m for m in msgs if not m.cls or m.cls == code]
-        names = [n for m in msgs for n in m.names]
-        full = bool(msgs) and not names and any(m.full for m in msgs)
-        if not names and not full:
-            return {"other": other} if other else None
-        self.push_undo()
-        c = st.cd(code)
-        for m in msgs:
-            if m.total is not None:
-                c.teacher_present, c.teacher_total = m.present, m.total
-        if full:
-            st.mark_full(code)
-            return {"full": True, "ok": [], "not_bt": [], "unclear": [], "other": other}
-        ok, unclear, not_bt = [], [], []
-        for q in names:
-            r = matcher.match_name(self.roster, code, q, st.date)
-            if r.status == matcher.OK and r.student:
-                st.set_absent(code, r.student.id, True)
-                ok.append(self.roster.display_name(r.student))
-            elif r.status == matcher.NOT_BT:
-                not_bt.append(q)
-                if q not in c.not_bt:
-                    c.not_bt.append(q)
-            elif not any(p[0] == code and fold(p[1].query) == fold(q) for p in st.pending):
-                st.pending.append((code, r))
-                unclear.append(q)
-        c.reported = True
-        return {"full": False, "ok": ok, "not_bt": not_bt, "unclear": unclear, "other": other}
-
     def assign_unplaced(self, msg: ParsedMessage, code: str) -> list[matcher.MatchResult]:
         """Giáo vụ chọn lớp cho tin không rõ lớp: ghi tin vào lớp đó."""
         assert self.state is not None
