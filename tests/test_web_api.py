@@ -216,3 +216,30 @@ def test_pick_unknown_name_from_whole_class(api):
     r = api.resolve("1D15", d["pending"][0]["idx"], "pick", sid)
     assert r["detail"]["pending"] == [] and next(n for n in r["detail"]["names"] if n["id"] == sid)["absent"]
     assert api._ws.roster.by_id(sid).ten_ghi_so == ""
+
+
+def test_state_lists_unreported_classes(api):
+    st = api.state()
+    assert "1D15" in st["unreported"] and len(st["unreported"]) == st["totals"]["n"] - st["totals"]["rep"]
+    api.mark_full("1D15")
+    assert "1D15" not in api.state()["unreported"]
+
+
+def test_boot_tells_when_list_file_was_edited(api, tmp_path):
+    import os
+
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Ăn ghép"])
+    ws.append(["1D19", "Châu Bảo Ngọc", "01/02/2020", "Có", "1.2"])
+    wb.save(p)
+    prev = api.import_list(str(p))
+    texts = [c["text"] for c in prev["changes"]]
+    assert any("Châu Bảo Ngọc" in t and "ăn ghép 1.2" in t for t in texts)  # đọc cột "Ăn ghép"
+    api.apply_import([c["i"] for c in prev["changes"] if "ăn ghép" in c["text"]])
+    assert "list_changed" not in Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
+    st = p.stat()
+    os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))  # giáo vụ sửa file Excel
+    r = Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
+    assert r["list_changed"] == {"file": "ds.xlsx", "path": str(p)}

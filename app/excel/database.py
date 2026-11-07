@@ -36,6 +36,7 @@ DEFAULT_SETTINGS = {
     "so_folder": "",
     "so_file": "",
     "cdhs_file": "",
+    "cdhs_mtime": "",  # thời điểm sửa file danh sách lúc nhập (để biết file đã được sửa lại)
     "vung_in_1": "",  # để trống = tự tính (A1 tới hết phần chữ ký)
     "vung_in_2": "",
 }

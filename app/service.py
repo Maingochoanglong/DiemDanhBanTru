@@ -129,9 +129,24 @@ class Workspace:
     def apply_import(self, changes, cdhs_path: str | Path) -> int:
         n = apply_changes(self.roster, changes)
         self.settings["cdhs_file"] = str(cdhs_path)
+        try:
+            self.settings["cdhs_mtime"] = str(Path(cdhs_path).stat().st_mtime_ns)
+        except OSError:
+            self.settings["cdhs_mtime"] = ""
         self._ensure_classes()
         self.save_data()
         return n
+
+    def list_changed(self) -> Path | None:
+        """File Excel danh sách đã nhập lần trước nay đã được sửa (cần nhập lại)."""
+        path, seen = self.settings.get("cdhs_file"), self.settings.get("cdhs_mtime")
+        if not path or not seen:
+            return None
+        p = Path(path)
+        try:
+            return p if str(p.stat().st_mtime_ns) != seen else None
+        except OSError:
+            return None
 
     def _ensure_classes(self, gvcn: dict[str, str] | None = None) -> None:
         codes = sorted({s.lop_tinh for s in self.roster.students if s.ban_tru} | set(self.roster.classes), key=class_sort_key)

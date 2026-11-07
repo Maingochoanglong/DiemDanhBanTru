@@ -62,6 +62,9 @@ class Api:
         self._temp = self._ws.find_temp()
         if self._temp is not None:
             res["restore"] = {"day": fmt_date(self._temp.day), "at": self._temp.saved_at, "file": self._temp.path.name}
+        changed = self._ws.list_changed()
+        if changed is not None:
+            res["list_changed"] = {"file": changed.name, "path": str(changed)}
         return res
 
     def restore_temp(self, yes: bool) -> dict:
@@ -148,6 +151,7 @@ class Api:
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
             "dirty": ws.dirty, "data_dirty": ws.data_dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self.setup_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
+            "unreported": [],
         }
         if st is None:
             return out
@@ -182,6 +186,7 @@ class Api:
             out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced}
         n_pending = len(st.pending)
         out["unresolved"] = ws.unresolved_count()
+        out["unreported"] = st.unreported()
         if n_pending:
             first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
             out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first, "level": "err"})

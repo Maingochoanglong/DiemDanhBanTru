@@ -274,6 +274,12 @@ async function gotoDay(fn) {
 }
 
 async function doSave() {
+  if (S && S.unreported && S.unreported.length) {  // lời nhắc trước đây nằm ở nút In
+    const k = await ask("Còn lớp chưa báo", `<p>Còn <b>${S.unreported.length} lớp chưa báo</b>: ${esc(S.unreported.join(", "))}.</p>
+      <p>Lưu bây giờ thì các lớp này được tính <b>đủ</b> (không em nào vắng).</p>`,
+      [{ key: "go", label: "Vẫn lưu" }, { key: "stay", label: "Ở lại", cls: "btn-outline-secondary" }], { icon: "bi-exclamation-circle" });
+    if (k !== "go") return false;
+  }
   let r = await api("save");
   let choice = null;
   if (r.blocked) {
@@ -448,8 +454,8 @@ async function renderSettings() {
   $("#cdFiles").innerHTML = row("so_file", "Sổ điểm danh tháng đang dùng") + row("cdhs_file", "File danh sách học sinh đã nhập") + row("data", "File dữ liệu của app");
 }
 
-async function importList() {
-  const p = await api("import_list");
+async function importList(path) {
+  const p = await api("import_list", path || null);
   if (p.cancel) return;
   if (p.error) return info("Không đọc được file", p.error);
   let sel = p.changes.filter(c => c.apply).map(c => c.i);
@@ -596,7 +602,7 @@ function wire() {
 
   // Cài đặt
   $("#cdBook").onclick = async () => { const r = await api("choose_book"); if (!r.cancel) { handle(r); renderSettings(); } };
-  $("#cdImport").onclick = importList;
+  $("#cdImport").onclick = () => importList();
   $("#cdNotes").onclick = noteSuggestions;
 }
 
@@ -631,5 +637,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await apiReady();
   const r = handle(await api("boot"));
   renderSettings();
-  if (r && r.restore) askRestore(r.restore);
+  if (r && r.restore) await askRestore(r.restore);
+  if (r && r.list_changed) {  // file Excel danh sách đã được sửa sau lần nhập trước
+    const k = await ask("File danh sách đã sửa", `File <b>${esc(r.list_changed.file)}</b> đã được sửa sau lần nhập trước.<br>Nhập lại để cập nhật danh sách trong app?`,
+      [{ key: "go", label: "Nhập lại" }, { key: "later", label: "Để sau", cls: "btn-outline-secondary" }], { icon: "bi-file-earmark-excel" });
+    if (k === "go") importList(r.list_changed.path);
+  }
 });
