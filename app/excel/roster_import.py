@@ -199,7 +199,7 @@ class Change:
 
 
 def _base_key(name: str, dob: str) -> tuple[str, str]:
-    """Họ tên bỏ chữ A/B ở cuối (file cũ ghi "Nguyễn Gia Hưng A", file mới ghi A/B ở cột Tên gọi khác)."""
+    """Họ tên bỏ chữ A/B ở cuối (file cũ ghi "Lý Gia Hưng A", file mới ghi A/B ở cột Tên gọi khác)."""
     return fold(re.sub(r"\s+[A-Z]$", "", clean_spaces(name))), dob
 
 

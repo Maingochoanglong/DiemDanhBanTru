@@ -48,7 +48,7 @@ def _split_query(q: str) -> tuple[list[str], list[str], str | None]:
 
 
 def _name_words(full: str) -> list[str]:
-    """Các chữ của họ tên, bỏ chữ A/B ghi sẵn ở cuối (danh sách cũ: "Nguyễn Gia Hưng A")."""
+    """Các chữ của họ tên, bỏ chữ A/B ghi sẵn ở cuối (danh sách cũ: "Lý Gia Hưng A")."""
     w = words(full)
     if len(w) >= 3 and len(w[-1]) == 1 and w[-1].isalpha() and w[-1].isupper():
         w = w[:-1]
