@@ -306,14 +306,6 @@ class Api:
         ok = self._ws.undo()
         return {"state": self.state(), "flash": "Đã hoàn tác." if ok else "Không còn gì để hoàn tác."}
 
-    def unreported_text(self) -> str:
-        st = self._ws.state
-        lines = []
-        for code in st.unreported():
-            info = self._ws.roster.classes.get(code)
-            lines.append(f"{code}{' - ' + info.gvcn if info and info.gvcn else ''}")
-        return "\n".join(lines)
-
     # ================================================================== lưu / in
     def save(self, choice: str | None = None) -> dict:
         """Lưu vào sổ. Có thể trả về: blocked (còn tên chưa rõ), conflicts (hỏi sĩ số), locked, error, ok."""

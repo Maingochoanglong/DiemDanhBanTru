@@ -70,7 +70,7 @@ App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/th
 2. Bấm **In 2 tờ** (Ctrl+P): tờ 1 là bảng điểm danh, tờ 2 là bảng suất ăn.
    - Còn **lớp chưa báo**: app nhắc trước khi in, các lớp đó đang được **tính đủ**. Bấm **Vẫn in** (hoặc **Lưu rồi in**), hoặc **Ở lại** để chờ GV báo.
 
-Nút **Copy lớp chưa báo** chép danh sách lớp (kèm tên GVCN) chưa báo để dán vào Zalo nhắc GV. **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
+Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
 
 ## 4. Lịch thêm / cắt bán trú, nghỉ thứ 6
 

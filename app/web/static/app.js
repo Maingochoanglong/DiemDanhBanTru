@@ -577,12 +577,6 @@ function wire() {
   $("#btnPrint").onclick = doPrint;
   $("#btnUndo").onclick = async () => { handle(await api("undo")); };
   $("#saveState").onclick = async () => { if (S && S.unresolved) { const t = S.todo.find(x => x.code); if (t) openClass(t.code); } };
-  $("#btnCopy").onclick = async () => {
-    const text = await api("unreported_text");
-    if (!text) return toast("Tất cả các lớp đã báo.");
-    try { await navigator.clipboard.writeText(text); toast("Đã chép danh sách lớp chưa báo — dán vào Zalo để nhắc."); }
-    catch { info("Lớp chưa báo", text); }
-  };
   document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); doSave(); }
     if (e.ctrlKey && e.key.toLowerCase() === "p") { e.preventDefault(); doPrint(); }
