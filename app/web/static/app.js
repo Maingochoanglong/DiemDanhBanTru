@@ -168,7 +168,6 @@ async function openClass(code) {
   const d = await api("class_detail", code);
   if (d.error) return info("Có lỗi", d.error);
   D = d;
-  clearTimeout(autoTimer);
   $("#clsSearch").value = "";
   renderClass();
   bootstrap.Modal.getOrCreateInstance($("#mdClass")).show();
@@ -231,29 +230,6 @@ function clsNote(html, kind = "success", icon = "bi-check-circle") {
   $("#clsAlerts").prepend(box);
 }
 
-// Gõ tên: còn đúng 1 em khớp thì tự chọn vắng (không cần Enter), xóa ô để gõ tên tiếp
-const isList = t => /[,;\n]|\d+\s*\/\s*\d+|^\s*(v[aắ]ng|đủ|du)(\s|$)/i.test(t);
-let autoTimer = null;
-async function pickTyped() {
-  clearTimeout(autoTimer);
-  const q = $("#clsSearch").value;
-  if (q.trim().length < 2 || isList(q) || !$("#mdClass").classList.contains("show")) return;
-  const shown = $$("#clsNames .nm").filter(b => b.style.display !== "none");
-  if (shown.length !== 1) return;
-  const b = shown[0], name = b.querySelector("span").textContent;
-  if (b.classList.contains("on")) {
-    $("#clsSearch").value = ""; filterNames();
-    return clsNote(`<b>${esc(name)}</b> đã được chọn vắng rồi.`, "secondary", "bi-info-circle");
-  }
-  const code = curClass;
-  const r = await api("set_absent", code, b.dataset.sid, true);
-  if (code !== curClass) return;
-  applyState(r.state);
-  D = r.detail;
-  $("#clsSearch").value = "";
-  renderClass();
-  clsNote(`Đã chọn vắng: <b>${esc(name)}</b> — chọn nhầm thì bấm lại vào ô tên đó.`);
-}
 
 async function toggleName(btn) {
   const sid = btn.dataset.sid;
@@ -594,22 +570,13 @@ function wire() {
     if (k === "unfri") { handle(await api("undo_friday", n.id)); D = await api("class_detail", D.code); renderClass(); }
     else if (k) scheduleDialog(k, D.code, [n.id]);
   };
-  $("#clsSearch").oninput = () => {
-    filterNames();
-    clearTimeout(autoTimer);
-    autoTimer = setTimeout(pickTyped, 700);  // ngừng gõ 0,7 giây mà còn đúng 1 em thì tự chọn
-  };
+  $("#clsSearch").oninput = filterNames;  // ô tìm chỉ để lọc tên; chọn vắng = bấm vào ô tên
   // dán tin GV báo / nhiều tên cách nhau dấu phẩy: chọn vắng luôn các em đó
   $("#clsSearch").addEventListener("paste", e => {
     const text = (e.clipboardData || window.clipboardData).getData("text");
     if (isList(text)) { e.preventDefault(); pasteNames(text); }
   });
-  $("#clsSearch").onkeydown = e => {
-    if (e.key === "Enter") {
-      if (isList($("#clsSearch").value)) return pasteNames($("#clsSearch").value);
-      pickTyped();
-    }
-  };
+  $("#clsSearch").onkeydown = e => { if (e.key === "Enter") e.preventDefault(); };  // Enter không chọn ai
   $("#clsFull").onclick = async () => { const r = await api("mark_full", curClass); applyState(r.state); D = r.detail; renderClass(); };
   $("#clsNote").onchange = async e => { const r = await api("set_note", curClass, e.target.value); applyState(r.state); };
   $("#clsAlerts").onclick = async e => {
