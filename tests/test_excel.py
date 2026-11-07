@@ -242,29 +242,21 @@ def test_old_data_file_with_removed_columns_still_loads(tmp_path):
     assert (s.ban_tru, s.an_ghep, s.cat_thu6, s.cat_tu, s.ghi_chu) == (True, "1.2", True, dt.date(2026, 11, 1), "gc")
 
 
-def test_export_simple_then_import(tmp_path, roster):
-    from app.excel.roster_export import export_roster
-
+def test_simple_list_reimport_keeps_cuts_and_ghep(tmp_path, roster):
+    """Nhập lại file danh sách đơn giản: em đã có lịch cắt thì không bị đổi; file không có cột ghép thì giữ ghép cũ."""
     roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc 1D19
-    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # tháng 11 cắt -> danh sách tháng 11 ghi "không"
-    roster.students[1].ten_ghi_so = "Bé Na"  # tên gọi khác
+    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # Kha Bảo Ngọc: tháng 11 cắt
     p = tmp_path / "ds.xlsx"
-    n = export_roster(roster, p, dt.date(2026, 11, 2))
-    assert n == sum(1 for s in roster.students if s.is_boarding(dt.date(2026, 11, 2)))
-    wb = openpyxl.load_workbook(p)
-    assert wb.sheetnames == ["Danh sách"]
-    ws = wb["Danh sách"]
-    assert ws.freeze_panes is None and ws.auto_filter.ref is None  # đơn giản: không cố định dòng, không lọc
-    assert [c.value for c in ws[1]] == ["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"]
-    assert [c.value for c in ws[2]] == ["1D15", "Kha Bảo Ngọc", "02/03/2020", "không", None]
-    assert [c.value for c in ws[3]] == ["1D15", "Võ Hoàng Bảo Ngọc", "05/06/2020", "có", "Bé Na"]
-    _assert_plain(ws)
-
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú"])
+    for s in roster.students:
+        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "có" if s.is_boarding(dt.date(2026, 11, 2)) else "không"])
+    wb.save(p)
     rows = read_cdhs(p)
     by = {r.ho_ten: r for r in rows}
-    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep is None  # file không có cột ghép: giữ ghép cũ
+    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep is None
     assert not by["Kha Bảo Ngọc"].red and not by["Mạc Trần Quỳnh Anh"].red
-    # nhập lại vào danh sách đang có: em đã có lịch cắt thì không bị đổi; ghép không đổi
     changes = diff_roster(roster, rows)
     assert not [c for c in changes if c.kind in ("boarding", "ghep", "new")]
 

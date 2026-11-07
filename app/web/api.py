@@ -12,9 +12,8 @@ from pathlib import Path
 from .. import __version__
 from ..core import matcher
 from ..core import schedule as sch
-from ..core.models import Student
 from ..core.search import matches
-from ..core.text import class_sort_key, clean_spaces, fmt_date, norm_class, parse_date
+from ..core.text import class_sort_key, clean_spaces, fmt_date, parse_date
 from ..excel import printing
 from ..excel.files import FileLockedError
 from ..excel.roster_import import RosterFormatError, flag_mismatches
@@ -375,56 +374,6 @@ class Api:
                          "db": "; ".join(special), "gc": s.ghi_chu, "now": s.is_boarding(day)})
         return {"rows": rows, "classes": roster.class_codes(), "data_dirty": self._ws.data_dirty}
 
-    def student(self, sid: str) -> dict:
-        s = self._ws.roster.by_id(sid)
-        if s is None:
-            return {"error": "Không tìm thấy học sinh."}
-        return {"id": s.id, "lop": s.lop, "ho_ten": s.ho_ten, "ngay_sinh": s.ngay_sinh, "ban_tru": s.ban_tru,
-                "ten_ghi_so": s.ten_ghi_so, "lop_bt": s.lop_bt, "an_ghep": s.an_ghep, "cat_thu6": s.cat_thu6,
-                "bt_tu": fmt_date(s.bt_tu) if s.bt_tu else "", "cat_tu": fmt_date(s.cat_tu) if s.cat_tu else "",
-                "ghi_chu": s.ghi_chu}
-
-    def save_student(self, data: dict) -> dict:
-        lop = norm_class(data.get("lop", ""))
-        name = clean_spaces(data.get("ho_ten", ""))
-        if not lop or not name:
-            return {"error": "Cần nhập lớp (vd. 1D15) và họ tên."}
-        dates = {}
-        for f in ("bt_tu", "cat_tu"):
-            raw = clean_spaces(data.get(f, ""))
-            d = parse_date(raw)
-            if raw and not d:
-                return {"error": f"Ngày '{raw}' không đúng dạng dd/mm/yyyy."}
-            dates[f] = d
-        roster = self._ws.roster
-        s = roster.by_id(data.get("id") or "")
-        if s is None:
-            s = Student(roster.next_id(), lop, name)
-            roster.students.append(s)
-        lop_bt = norm_class(data.get("lop_bt", "")) if clean_spaces(data.get("lop_bt", "")) else ""
-        s.lop, s.ho_ten = lop, name
-        s.ngay_sinh = fmt_date(parse_date(data.get("ngay_sinh", ""))) or clean_spaces(data.get("ngay_sinh", ""))
-        s.ban_tru, s.cat_thu6 = bool(data.get("ban_tru")), bool(data.get("cat_thu6"))
-        if "ten_ghi_so" in data:
-            s.ten_ghi_so = clean_spaces(data["ten_ghi_so"])
-        s.lop_bt = "" if lop_bt == lop else lop_bt
-        s.an_ghep = clean_spaces(data.get("an_ghep", "")).replace(",", ".")
-        s.ghi_chu = clean_spaces(data.get("ghi_chu", ""))
-        for f, d in dates.items():
-            setattr(s, f, d)
-        return self._roster_changed()
-
-    def delete_student(self, sid: str) -> dict:
-        s = self._ws.roster.by_id(sid)
-        if s is not None:
-            self._ws.roster.students.remove(s)
-        return self._roster_changed()
-
-    def _roster_changed(self) -> dict:
-        self._ws.roster.invalidate()
-        self._ws.data_dirty = True
-        return {"ok": True, "state": self.state()}
-
     def save_data(self) -> dict:
         try:
             self._ws.save_data()
@@ -612,21 +561,6 @@ class Api:
         res = self.open_day(_iso(self._ws.day), True) if not self._ws.dirty else {"state": self.state()}
         res["flash"] = f"Đã cập nhật {n} học sinh theo ghi chú trong sổ."
         return res
-
-    def export_list(self, day_text: str, path: str | None = None) -> dict:
-        from ..excel.roster_export import export_roster
-
-        day = parse_date(day_text) or _day(day_text)
-        if not day:
-            return {"error": "Hãy nhập ngày dạng dd/mm/yyyy."}
-        path = path or self._dlg.save_file("Lưu danh sách học sinh ăn bán trú", "DANH_SACH_BAN_TRU.xlsx")
-        if not path:
-            return {"cancel": True}
-        try:
-            n = export_roster(self._ws.roster, path, day)
-        except FileLockedError:
-            return {"error": "File đang mở trong Excel. Hãy đóng rồi xuất lại."}
-        return {"ok": f"Đã xuất danh sách ({n} em ăn bán trú ngày {fmt_date(day)}) ra {path}"}
 
     def open_path(self, kind: str) -> dict:
         st = self._ws.settings

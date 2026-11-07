@@ -86,16 +86,10 @@ def test_new_month_asks_to_create_book(api):
     assert r["state"]["book"] == "SO DIEM DANH T11.xlsx" and r["flash"].startswith("Đã tạo sổ mới")
 
 
-def test_students_edit_and_schedule(api):
+def test_students_lookup_and_schedule(api):
     rows = api.students("long", "", True)["rows"]
     assert [r["ten"] for r in rows] == ["Khổng Hải Long"]
-    sid = rows[0]["id"]
-    data = api.student(sid)
-    data["cat_tu"] = "abc"
-    assert api.save_student(data)["error"].startswith("Ngày 'abc'")
-    data["cat_tu"] = "01/11/2026"
-    assert api.save_student(data)["ok"]
-    assert "cắt từ 01/11/2026" in api.students("long", "", True)["rows"][0]["db"]
+    assert not hasattr(api, "save_student") and not hasattr(api, "export_list")  # danh sách sửa trong Excel
     # lịch cắt thứ 6 cho 1 em
     opt = api.schedule_options("thu6", "2D17", "")
     target = next(s for s in opt["students"] if s["ten"] == "Viên Duy Mạnh")
@@ -222,10 +216,3 @@ def test_pick_unknown_name_from_whole_class(api):
     r = api.resolve("1D15", d["pending"][0]["idx"], "pick", sid)
     assert r["detail"]["pending"] == [] and next(n for n in r["detail"]["names"] if n["id"] == sid)["absent"]
     assert api._ws.roster.by_id(sid).ten_ghi_so == ""
-    # sửa học sinh trong app không làm mất tên gọi khác đã nhập từ file
-    api._ws.roster.by_id(sid).ten_ghi_so = "Bé Bông"
-    data = api.student(sid)
-    data.pop("ten_ghi_so")
-    data["ghi_chu"] = "thử"
-    assert api.save_student(data)["ok"]
-    assert api._ws.roster.by_id(sid).ten_ghi_so == "Bé Bông"
