@@ -197,14 +197,27 @@ function renderClass() {
   filterNames();
 }
 
-function filterNames() {
-  const q = $("#clsSearch").value;
+// tách ô tìm thành các tên: dấu phẩy, chấm phẩy, xuống dòng hoặc chữ "và"; bỏ dấu câu thừa
+const searchTerms = q => q.split(/[,;\n]|\s+v[aà]\s+/i)
+  .map(t => t.replace(/[^\p{L}\p{N}\s]/gu, " ").trim()).filter(Boolean);
+
+function filterNames() {  // chỉ lọc, không chọn: hiện các em khớp một trong các tên đã gõ / dán
+  const terms = searchTerms($("#clsSearch").value), found = new Set();
   let n = 0;
-  $$("#clsNames .nm").forEach(b => { const ok = matches(q, b.dataset.s); b.style.display = ok ? "" : "none"; n += ok; });
-  const none = $("#clsNoMatch");
-  none.style.display = q.trim() && !n ? "" : "none";
-  none.innerHTML = `<i class="bi bi-search me-2"></i>Không có em nào trong lớp khớp “${esc(q.trim())}”.<br>
-    <span class="fs-6">Gõ không cần dấu, vd. <i>gia huy</i>. Lớp chỉ hiện các em ăn bán trú.</span>`;
+  $$("#clsNames .nm").forEach(b => {
+    const hit = terms.filter(t => matches(t, b.dataset.s));
+    hit.forEach(t => found.add(t));
+    const ok = !terms.length || hit.length > 0;
+    b.style.display = ok ? "" : "none";
+    n += ok;
+  });
+  const miss = terms.filter(t => !found.has(t)), none = $("#clsNoMatch");
+  none.style.display = terms.length && miss.length ? "" : "none";
+  none.innerHTML = n
+    ? `<i class="bi bi-exclamation-circle me-2"></i>Không thấy trong lớp: <b>${esc(miss.join(", "))}</b>
+       <span class="fs-6">(lớp chỉ hiện các em ăn bán trú)</span>`
+    : `<i class="bi bi-search me-2"></i>Không có em nào trong lớp khớp “${esc(miss.join(", "))}”.<br>
+       <span class="fs-6">Gõ không cần dấu, vd. <i>gia huy</i>; nhiều tên cách nhau dấu phẩy. Lớp chỉ hiện các em ăn bán trú.</span>`;
 }
 
 async function toggleName(btn) {
@@ -547,6 +560,15 @@ function wire() {
     else if (k) scheduleDialog(k, D.code, [n.id]);
   };
   $("#clsSearch").oninput = filterNames;  // ô tìm chỉ để lọc tên; chọn vắng = bấm vào ô tên
+  // dán tên nhiều dòng: ô một dòng sẽ dính các dòng lại, nên đổi xuống dòng thành dấu phẩy
+  $("#clsSearch").addEventListener("paste", e => {
+    const t = (e.clipboardData || window.clipboardData).getData("text");
+    if (!/[\r\n]/.test(t)) return;
+    e.preventDefault();
+    const el = e.target;
+    el.setRangeText(t.trim().replace(/\s*[\r\n]+\s*/g, ", "), el.selectionStart, el.selectionEnd, "end");
+    filterNames();
+  });
   $("#clsSearch").onkeydown = e => { if (e.key === "Enter") e.preventDefault(); };  // Enter không chọn ai
   $("#clsFull").onclick = async () => { const r = await api("mark_full", curClass); applyState(r.state); D = r.detail; renderClass(); };
   $("#clsNote").onchange = async e => { const r = await api("set_note", curClass, e.target.value); applyState(r.state); };

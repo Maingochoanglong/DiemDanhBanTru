@@ -48,7 +48,7 @@ Trang **Điểm danh**:
 | Phần | Dùng để |
 |---|---|
 | **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
-| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
+| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn; tên nào không có trong lớp được báo *Không thấy trong lớp* (lớp chỉ hiện các em ăn bán trú). Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
 
 Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền phía sau tối đi.
 
@@ -144,7 +144,6 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 
 | Phím | Việc |
 |---|---|
-| Enter (ô tìm trong bảng chọn tên) | Chỉ còn 1 em khớp thì chọn / bỏ chọn em đó |
 | Esc | Đóng bảng chọn tên / hộp đang mở |
 | Ctrl+S | Lưu vào sổ |
 | Ctrl+Z | Hoàn tác thao tác vừa làm |
