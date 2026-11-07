@@ -222,6 +222,9 @@ async function pasteNames(text) {
   clsNote(parts.join(" ") || "Không có tên mới.", p.unclear.length ? "warning" : "success", "bi-clipboard-check");
 }
 
+// đoạn dán là tin GV báo / nhiều tên (có dấu phẩy, xuống dòng, "34/39", "vắng", "đủ")
+const isList = t => /[,;\n]|\d+\s*\/\s*\d+|^\s*(v[aắ]ng|đủ|du)(\s|$)/i.test(t);
+
 function clsNote(html, kind = "success", icon = "bi-check-circle") {
   $$("#clsAlerts .cls-note").forEach(x => x.remove());
   const box = document.createElement("div");
