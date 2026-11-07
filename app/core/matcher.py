@@ -47,6 +47,14 @@ def _split_query(q: str) -> tuple[list[str], list[str], str | None]:
     return initials, [lower(x) for x in w], letter
 
 
+def _name_words(full: str) -> list[str]:
+    """Các chữ của họ tên, bỏ chữ A/B ghi sẵn ở cuối (danh sách cũ: "Nguyễn Gia Hưng A")."""
+    w = words(full)
+    if len(w) >= 3 and len(w[-1]) == 1 and w[-1].isalpha() and w[-1].isupper():
+        w = w[:-1]
+    return w
+
+
 def _is_subsequence(part: list[str], whole: list[str]) -> bool:
     it = iter(whole)
     return all(any(p == w for w in it) for p in part)
@@ -61,7 +69,7 @@ def _match_level(s: Student, initials: list[str], core: list[str]) -> float:
     Chữ viết tắt ("K. Bảo Ngọc") khớp từ ngay trước tên thì giữ mức; chỉ khớp họ (bỏ qua tên đệm,
     "Kha Văn Bảo Ngọc") thì thấp hơn mọi mức trên, để em khớp sát tên được ưu tiên.
     """
-    st = [lower(x) for x in words(s.ho_ten)]
+    st = [lower(x) for x in _name_words(s.ho_ten)]
     n = len(core)
     if not n or n > len(st):
         return 0
@@ -110,10 +118,13 @@ def _find(students: list[Student], q: str) -> list[Student]:
     best = max(lvl for lvl, _ in scored)
     found = [s for lvl, s in scored if lvl == best]
     if letter and len(found) > 1:
-        # Chữ cái cuối: A = em sinh trước trong nhóm trùng họ tên
+        # Chữ cái cuối: theo tên gọi khác ghi trong file ("Gia Hưng A"), không có thì A = em sinh trước
+        by_alias = [s for s in found if any(fold(a).endswith(" " + letter.lower()) for a in s.aliases())]
+        if len(by_alias) == 1:
+            return by_alias
         same: dict[str, list[Student]] = {}
         for s in found:
-            same.setdefault(lower(s.ho_ten), []).append(s)
+            same.setdefault(lower(" ".join(_name_words(s.ho_ten))), []).append(s)
         dup = [g for g in same.values() if len(g) > 1]
         if len(dup) == 1:
             g = sorted(dup[0], key=lambda s: (parse_date(s.ngay_sinh) or dt.date.max, s.id))

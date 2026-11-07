@@ -330,6 +330,48 @@ def test_other_name_column_import_and_match(tmp_path, roster):
     assert again.ten_ghi_so == "Mi Mi, Emmy"
 
 
+def test_same_full_name_letters_move_to_other_name_column(tmp_path):
+    """Em trùng cả họ tên: file mới ghi họ tên thật, chữ A/B ở cột Tên gọi khác (tên bịa).
+
+    App nhận ra đó là em cũ ("Lý Gia Hưng A" -> "Lý Gia Hưng"), không thêm em mới / bỏ em cũ."""
+    from app.core import matcher
+    from app.core.models import Roster
+
+    roster = Roster()
+    roster.students += [Student("HS1", "1D16", "Lý Gia Hưng A", "13/03/2020", True),
+                        Student("HS2", "1D16", "Lý Gia Hưng B", "24/04/2020", True),
+                        Student("HS3", "1D16", "Kiều Thanh Vy", "15/05/2020", True)]
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"])
+    ws.append(["1D16", "Lý Gia Hưng", "24/04/2020", "có", "Gia Hưng B"])
+    ws.append(["1D16", "Lý Gia Hưng", "13/03/2020", "có", "Gia Hưng A"])
+    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])
+    wb.save(p)
+    changes = diff_roster(roster, read_cdhs(p))
+    assert sorted(c.kind for c in changes) == ["rename", "rename", "ten_goi", "ten_goi"]
+    apply_changes(roster, changes)
+    a, b = roster.by_id("HS1"), roster.by_id("HS2")
+    assert a.ho_ten == b.ho_ten == "Lý Gia Hưng"
+    assert (roster.display_name(a), roster.display_name(b)) == ("Gia Hưng A", "Gia Hưng B")
+    for q, who in (("Gia Hưng A", a), ("Hưng A", a), ("Gia Hưng B", b), ("hưng B", b)):
+        r = matcher.match_name(roster, "1D16", q)
+        assert r.status == matcher.OK and r.student is who, q
+    assert matcher.match_name(roster, "1D16", "Gia Hưng").status == matcher.AMBIGUOUS
+
+
+def test_old_list_names_with_letter_still_match():
+    from app.core import matcher
+    from app.core.models import Roster
+
+    roster = Roster()
+    roster.students += [Student("HS1", "5D19", "Đinh Quốc Bảo A", "26/02/2016", True),
+                        Student("HS2", "5D19", "Đinh Quốc Bảo B", "21/05/2016", True)]
+    assert matcher.match_name(roster, "5D19", "Bảo B").student.id == "HS2"
+    assert matcher.match_name(roster, "5D19", "Quốc Bảo").status == matcher.AMBIGUOUS
+
+
 def _assert_plain(ws):
     """Kiểu đơn giản: Times New Roman, chữ đen, viền đen, không tô nền, không cố định dòng, không lọc."""
     assert ws.freeze_panes is None and ws.auto_filter.ref is None
