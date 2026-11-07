@@ -224,22 +224,20 @@ async function resolvePending(idx) {
       <input class="form-check-input me-2" type="radio" name="cand" value="${esc(c.id)}" ${i === 0 ? "checked" : ""}>
       <b>${esc(c.name)}</b> — ${esc(c.full)} — sinh ${esc(c.dob)}</label>`).join("") + `</div>`;
   } else if (D.names.length) {
-    // không có em nào tên gần giống: cho chọn trong cả lớp (vd. "Mi Mi" là tên gọi của em tên nước ngoài)
-    html += `<label class="form-label">Nếu đây là tên gọi khác của một em trong lớp, chọn em đó:</label>
+    // không có em nào tên gần giống: cho chọn trong cả lớp (tên gọi khác thì thêm vào cột "Tên gọi khác" của file danh sách)
+    html += `<label class="form-label">Nếu đây là tên gọi khác của một em trong lớp, chọn em đó
+      <span class="text-muted">(muốn app tự nhận ra lần sau: ghi tên này vào cột <b>Tên gọi khác</b> trong file Excel danh sách rồi nhập lại)</span>:</label>
       <select class="form-select form-select-lg" id="candSel"><option value="">— chọn em —</option>` +
       D.names.map(n => `<option value="${esc(n.id)}">${esc(n.full)}${n.name !== n.full ? " (" + esc(n.name) + ")" : ""}</option>`).join("") +
       `</select>`;
   }
-  html += `<div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="candRemember" ${p.cands.length ? "" : "checked"}>
-    <label class="form-check-label" for="candRemember">Nhớ <b>"${esc(p.query)}"</b> là tên gọi khác của em này (lần sau tự nhận ra)</label></div>`;
   const btns = [{ key: "pick", label: "Chọn em này", cls: "btn-primary" },
     { key: "raw", label: "Giữ nguyên chữ đã ghi", cls: "btn-outline-primary" }, { key: "skip", label: "Bỏ qua tên này", cls: "btn-outline-secondary" }];
-  let sid = null, remember = false;
+  let sid = null;
   const md = $("#mdAsk");
   const grab = () => {
-    const c = $("input[name=cand]:checked", md), sel = $("#candSel", md), rm = $("#candRemember", md);
+    const c = $("input[name=cand]:checked", md), sel = $("#candSel", md);
     sid = c ? c.value : (sel && sel.value ? sel.value : null);
-    remember = !!(rm && rm.checked);
   };
   md.addEventListener("click", grab);
   md.addEventListener("change", grab);
@@ -248,7 +246,7 @@ async function resolvePending(idx) {
   md.removeEventListener("change", grab);
   if (!key) return;
   if (key === "pick" && !sid) { await info("Chưa chọn em", "Hãy chọn em đúng trong danh sách, hoặc bấm Giữ nguyên chữ đã ghi."); return resolvePending(idx); }
-  const r = await api("resolve", D.code, idx, key, sid, remember);
+  const r = await api("resolve", D.code, idx, key, sid);
   applyState(r.state);
   D = r.detail;
   renderClass();
@@ -378,7 +376,7 @@ async function renderStudents() {
 }
 
 const SF = [["lop", "Lớp đang học (vd. 1D15)", "text"], ["ho_ten", "Họ tên", "text"], ["ngay_sinh", "Ngày sinh (dd/mm/yyyy)", "text"],
-  ["ban_tru", "Ăn bán trú", "check"], ["ten_ghi_so", "Tên gọi khác (vd. Mi Mi; tên đầu ghi vào sổ, trống = tự đặt)", "text"], ["lop_bt", "Lớp tính bán trú (nếu khác lớp học)", "text"],
+  ["ban_tru", "Ăn bán trú", "check"], ["lop_bt", "Lớp tính bán trú (nếu khác lớp học)", "text"],
   ["an_ghep", "Ăn ghép tại nhóm (vd. 1.2)", "text"], ["cat_thu6", "Cắt thứ 6 hàng tuần (thứ 6 tự tính vắng)", "check"],
   ["bt_tu", "Bắt đầu ăn bán trú từ ngày", "text"], ["cat_tu", "Cắt bán trú từ ngày", "text"], ["ghi_chu", "Ghi chú", "text"]];
 

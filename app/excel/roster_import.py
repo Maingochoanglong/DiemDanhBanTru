@@ -216,8 +216,9 @@ def diff_roster(roster: Roster, rows: list[RosterRow]) -> list[Change]:
         if row.ghep is not None and row.ghep != s.an_ghep:
             what = f"ăn ghép {row.ghep}" if row.ghep else "bỏ ăn ghép"
             changes.append(Change("ghep", f"{s.ho_ten} ({row.lop}) {what}", row, s))
-        if row.ten_goi and row.ten_goi != s.ten_ghi_so:  # ô trống thì giữ tên gọi đang có
-            changes.append(Change("ten_goi", f"{s.ho_ten} ({row.lop}): tên gọi khác \"{row.ten_goi}\"", row, s))
+        if row.ten_goi is not None and row.ten_goi != s.ten_ghi_so:  # tên gọi khác lấy theo file Excel
+            what = f'tên gọi khác "{row.ten_goi}"' if row.ten_goi else "bỏ tên gọi khác"
+            changes.append(Change("ten_goi", f"{s.ho_ten} ({row.lop}): {what}", row, s))
     for key, s in existing.items():
         if key not in seen:
             changes.append(Change("removed", f"Không còn trong danh sách: {s.ho_ten} ({s.lop})", None, s, apply=False))

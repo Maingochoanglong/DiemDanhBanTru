@@ -308,13 +308,17 @@ def test_other_name_column_import_and_match(tmp_path, roster):
     ws = wb.active
     ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"])
     ws.append(["1D16", "Smith Emily", "01/02/2020", "có", "Mi Mi, Emmy"])
-    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])  # ô trống: giữ tên gọi đang có
+    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])  # ô trống: file Excel là gốc -> bỏ tên gọi cũ
     wb.save(p)
+    vy = next(s for s in roster.students if s.ho_ten == "Kiều Thanh Vy")
+    vy.ten_ghi_so = "Vy Vy"
     rows = read_cdhs(p)
     assert [r.ten_goi for r in rows] == ["Mi Mi, Emmy", ""]
     changes = [c for c in diff_roster(roster, rows) if c.kind == "ten_goi"]
-    assert [c.text for c in changes] == ['Smith Emily (1D16): tên gọi khác "Mi Mi, Emmy"']
+    assert [c.text for c in changes] == ['Smith Emily (1D16): tên gọi khác "Mi Mi, Emmy"',
+                                         "Kiều Thanh Vy (1D16): bỏ tên gọi khác"]
     apply_changes(roster, changes)
+    assert vy.ten_ghi_so == ""
     sa = roster.by_id("HS900")
     assert sa.aliases() == ["Mi Mi", "Emmy"] and roster.display_name(sa) == "Mi Mi"
     for q in ("Mi Mi", "emmy", "MI MI"):
