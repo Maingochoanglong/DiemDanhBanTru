@@ -79,6 +79,13 @@ main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
 .names .nm .tg { margin-left: auto; font-size: .78rem; color: #6c757d; }
 .names .nm.on { background: #dc3545; border-color: #dc3545; color: #fff; font-weight: 700; }
 .names .nm.on .ck, .names .nm.on .tg { color: #fff; }
+/* tên gõ / dán không có trong bảng: vàng = nên xem lại (gõ sai, chưa có trong danh sách); xám = không ăn bán trú */
+.names .nm.miss { border: 1.5px dashed #e0a800; background: #fff8e1; color: #5c4400; cursor: default; line-height: 1.15;
+                  padding-top: .35rem; padding-bottom: .35rem; }
+.names .nm.miss .ck { color: #e0a800; }
+.names .nm.miss.known { border-color: #adb5bd; background: #f8f9fa; color: #495057; }
+.names .nm.miss.known .ck { color: #adb5bd; }
+.names .nm.miss .why { font-size: .75rem; color: #6c757d; white-space: nowrap; }
 .search-lg { font-size: 1.2rem; padding: .6rem 1rem; }
 
 .table-tight td, .table-tight th { padding: .4rem .55rem; }

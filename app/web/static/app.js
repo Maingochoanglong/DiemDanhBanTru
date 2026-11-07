@@ -201,9 +201,18 @@ function renderClass() {
 const searchTerms = q => q.split(/[,;\n]|\s+v[aà]\s+/i)
   .map(t => t.replace(/[^\p{L}\p{N}\s]/gu, " ").trim()).filter(Boolean);
 
+// tên gõ / dán không có trong bảng: ô viền đứt nằm luôn trong lưới tên, ghi lý do
+function missTile(t) {
+  const o = (D.others || []).find(x => matches(t, x.s));
+  return `<div class="nm miss ${o ? "known" : ""}" title="Không tính vào bán trú của lớp">
+    <i class="bi ${o ? "bi-person-slash" : "bi-question-circle"} ck"></i>
+    <span><span class="d-block">${esc(t)}</span><small class="why">${esc(o ? o.why : "Không có trong danh sách")}</small></span></div>`;
+}
+
 function filterNames() {  // chỉ lọc, không chọn: hiện các em khớp một trong các tên đã gõ / dán
   const terms = searchTerms($("#clsSearch").value), found = new Set();
   let n = 0;
+  $$("#clsNames .nm.miss").forEach(x => x.remove());
   $$("#clsNames .nm").forEach(b => {
     const hit = terms.filter(t => matches(t, b.dataset.s));
     hit.forEach(t => found.add(t));
@@ -211,13 +220,12 @@ function filterNames() {  // chỉ lọc, không chọn: hiện các em khớp m
     b.style.display = ok ? "" : "none";
     n += ok;
   });
-  const miss = terms.filter(t => !found.has(t)), none = $("#clsNoMatch");
-  none.style.display = terms.length && miss.length ? "" : "none";
-  none.innerHTML = n
-    ? `<i class="bi bi-exclamation-circle me-2"></i>Không thấy trong lớp: <b>${esc(miss.join(", "))}</b>
-       <span class="fs-6">(lớp chỉ hiện các em ăn bán trú)</span>`
-    : `<i class="bi bi-search me-2"></i>Không có em nào trong lớp khớp “${esc(miss.join(", "))}”.<br>
-       <span class="fs-6">Gõ không cần dấu, vd. <i>gia huy</i>; nhiều tên cách nhau dấu phẩy. Lớp chỉ hiện các em ăn bán trú.</span>`;
+  const miss = terms.filter(t => !found.has(t));
+  $("#clsNames").insertAdjacentHTML("beforeend", miss.map(missTile).join(""));
+  const none = $("#clsNoMatch");  // không khớp em nào và có tên lạ: nhắc cách gõ
+  const lost = miss.filter(t => !(D.others || []).some(x => matches(t, x.s)));
+  none.style.display = !n && lost.length ? "" : "none";
+  none.innerHTML = `<i class="bi bi-lightbulb me-1"></i>Gõ không cần dấu, vd. <i>gia huy</i>; nhiều tên cách nhau dấu phẩy.`;
 }
 
 async function toggleName(btn) {

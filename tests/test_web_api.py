@@ -243,3 +243,10 @@ def test_boot_tells_when_list_file_was_edited(api, tmp_path):
     os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))  # giáo vụ sửa file Excel
     r = Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
     assert r["list_changed"] == {"file": "ds.xlsx", "path": str(p)}
+
+
+def test_class_detail_lists_non_boarding_students_with_reason(api):
+    d = api.class_detail("1D15")
+    assert all(n["full"] != "Mạc Trần Quỳnh Anh" for n in d["names"])
+    o = next(x for x in d["others"] if "Mạc Trần Quỳnh Anh" in x["s"])
+    assert o["why"] == "Không ăn bán trú"
