@@ -221,6 +221,22 @@ class Api:
             names.append({"id": s.id, "name": roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
                           "alias": s.ten_ghi_so, "absent": st.is_absent(code, s.id), "tags": tags,
                           "friday": s.cat_thu6})
+        board_ids = {s.id for s in roster.boarding(code, st.date)}
+        others = []  # em của lớp không có trong bảng chọn hôm nay: để báo lý do khi gõ / dán tên các em này
+        for s in roster.in_class(code):
+            if s.id in board_ids:
+                continue
+            if s.lop_tinh != code and s.is_boarding(st.date):
+                why = f"Tính bán trú ở lớp {s.lop_tinh}"
+            elif not s.ban_tru:
+                why = "Không ăn bán trú"
+            elif s.bt_tu and st.date < s.bt_tu:
+                why = f"Ăn bán trú từ {s.bt_tu:%d/%m}"
+            elif s.cat_tu and st.date >= s.cat_tu:
+                why = f"Đã cắt bán trú từ {s.cat_tu:%d/%m}"
+            else:
+                why = "Không ăn bán trú hôm nay"
+            others.append({"s": f"{s.ho_ten} {roster.display_name(s)} {s.ten_ghi_so or ''}", "why": why})
         pending = []
         for i, (p_code, res) in enumerate(st.pending):
             if p_code != code:
@@ -240,7 +256,7 @@ class Api:
             "code": code, "ma": info.ma_ngan if info else "", "gvcn": info.gvcn if info else "",
             "si": st.si_so(code), "vang": st.absent_count(code), "hd": st.present(code),
             "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "extra": list(c.extra),
-            "names": names, "pending": pending, "upcoming": upcoming,
+            "names": names, "others": others, "pending": pending, "upcoming": upcoming,
         }
 
     def _after(self, code: str | None = None) -> dict:
