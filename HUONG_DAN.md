@@ -26,7 +26,7 @@ Mở app lần đầu, app **không hỏi chọn file**. Màn chính hiện dòn
 
 1. **Nhập danh sách học sinh…**: chọn file Excel danh sách. Dùng được 2 dạng:
    - **file đơn giản**: các cột *Lớp · Họ tên · Ngày sinh (hoặc Ngày tháng năm sinh) · Bán trú*, cột Bán trú ghi **Có** / **Không**. Có thể thêm cột **Tên gọi khác** (chỉ sửa trong file Excel này, app đọc khi nhập danh sách; ô trống = không có tên gọi khác): tên GV hay báo khác tên thật, vd. em có tên nước ngoài thường gọi là *Mi Mi*; nhiều tên thì cách nhau dấu phẩy, tên đầu là tên ghi vào sổ. Cột Họ tên chỉ ghi họ và tên thật. Em **trùng cả họ và tên** trong cùng lớp thì ghi chữ A/B ở cột Tên gọi khác (vd. *Gia Hưng A*, *Gia Hưng B*); để trống thì app tự đặt A/B theo ngày sinh (em sinh trước là A). Em **trùng tên nhưng khác họ** thì app hiện cả họ lẫn tên (vd. *Lò Gia Hân*, *Vi Gia Hân*);
-   - file CDHS của trường, trong đó **em tô chữ đỏ là có ăn bán trú**.
+   - file danh sách học sinh toàn trường, trong đó **em tô chữ đỏ là có ăn bán trú**.
 
    App liệt kê các thay đổi để bạn duyệt rồi bấm **Áp dụng**.
 2. **Chọn sổ điểm danh…**: chọn sổ của tháng hiện tại (ví dụ `PH3.SỔ ĐIỂM DANH T11.xlsx`).
@@ -113,7 +113,7 @@ Trang **Học sinh** dùng để:
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
-- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không)*, hoặc file CDHS tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không)*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
 - **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
 - **Xuất danh sách…**: ghi ra file đơn giản 5 cột *Lớp · Họ và tên · Ngày sinh · Ăn bán trú (có/không) · Tên gọi khác*, tính theo ngày bạn chọn (vd. ngày đầu tháng sau). File này gửi cho người khác xem, sửa bằng Excel, hoặc nhập lại vào app.
 
