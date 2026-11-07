@@ -301,28 +301,6 @@ async function doSave() {
   return true;
 }
 
-async function doPrint() {
-  const c = await api("print_check");
-  if (c.error) return info("Chưa in được", c.error);
-  if (c.blocked) return doSave();
-  const parts = [];
-  if (c.unreported.length) parts.push(`<p>Còn <b>${c.unreported.length} lớp chưa báo</b>, đang tính đủ (không em nào vắng):<br>${esc(c.unreported.join(", "))}</p>`);
-  if (c.need_save) parts.push(`<p>Cần lưu ngày này vào sổ trước khi in.</p>`);
-  if (parts.length) {
-    const k = await ask(c.unreported.length ? "Còn lớp chưa báo" : "Lưu trước khi in", parts.join(""),
-      [{ key: "go", label: c.need_save ? "Lưu rồi in" : "Vẫn in" }, { key: "stay", label: "Ở lại", cls: "btn-outline-secondary" }]);
-    if (k !== "go") return;
-    if (c.need_save && !(await doSave())) return;
-  }
-  toast("Đang gửi lệnh tới Excel…", "secondary");
-  const r = await api("print_day");
-  if (r.print_error) {
-    const k = await ask("Không in trực tiếp được", `<div style="white-space:pre-line">${esc(r.print_error)}</div>`,
-      [{ key: "open", label: "Mở sổ bằng Excel" }, { key: "close", label: "Đóng", cls: "btn-outline-secondary" }]);
-    if (k === "open") api("open_book");
-  } else toast(r.ok);
-}
-
 // ------------------------------------------------------------------ Suất ăn
 async function renderMeals() {
   const m = await api("meals");
@@ -572,12 +550,10 @@ function wire() {
   $("#dayPick").onchange = e => { if (e.target.value && S && e.target.value !== S.date) gotoDay(f => api("open_day", e.target.value, f)); };
   $("#openBook").onclick = async () => { const r = await api("open_book"); if (r.error) info("Chưa có sổ", r.error); };
   $("#btnSave").onclick = doSave;
-  $("#btnPrint").onclick = doPrint;
   $("#btnUndo").onclick = async () => { handle(await api("undo")); };
   $("#saveState").onclick = async () => { if (S && S.unresolved) { const t = S.todo.find(x => x.code); if (t) openClass(t.code); } };
   document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); doSave(); }
-    if (e.ctrlKey && e.key.toLowerCase() === "p") { e.preventDefault(); doPrint(); }
     if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.target.matches("input,textarea")) { e.preventDefault(); $("#btnUndo").click(); }
   });
   // Esc khi có hộp nhỏ mở trên cửa sổ lớp: chỉ đóng hộp nhỏ, giữ cửa sổ lớp

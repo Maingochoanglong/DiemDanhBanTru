@@ -1,7 +1,7 @@
 """Đọc danh sách học sinh (.xls hoặc .xlsx).
 
 Hai dạng file:
-- file CDHS của trường: em tô chữ đỏ là ăn bán trú;
+- file danh sách học sinh toàn trường: em tô chữ đỏ là ăn bán trú;
 - file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2)
   và cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ).
 """
@@ -53,7 +53,7 @@ def _find_columns(header: list[str]) -> dict[str, int] | None:
         elif f.startswith("phan loai") and "pl" not in cols:
             cols["pl"] = i
         elif (f.startswith(("an ban tru", "ban tru")) or f in ("bt", "an bt")) and "bt" not in cols:
-            # cột đánh X; không nhận nhầm cột "Loại bán trú" (ghi "Thường") của file CDHS
+            # cột đánh X; không nhận nhầm cột "Loại bán trú" (ghi "Thường") của file danh sách học sinh toàn trường
             cols["bt"] = i
         elif "ghep" in f and "ghep" not in cols:
             cols["ghep"] = i
