@@ -114,6 +114,30 @@ def test_create_write_and_read_back(book, roster):
     assert (book.parent / "SaoLuu").is_dir()  # đã sao lưu bản cũ
 
 
+def test_new_day_sheet_black_names_and_keeps_count_formula(book, roster):
+    """Sổ có cột Vắng là công thức đếm tên, và tên hôm trước tô đỏ: sheet ngày mới giữ công thức, tên chữ đen."""
+    count = '=IF(TRIM(G{r})="",0,LEN(TRIM(G{r}))-LEN(SUBSTITUTE(TRIM(G{r}),",",""))+1)'
+    wb = sobook.load_book(book)
+    tpl = wb["28"]
+    for r in (6, 7, 8):
+        tpl[f"E{r}"] = count.format(r=r)
+    tpl["G6"].font = Font(name="Times New Roman", color="FFFF0000")
+    sobook.save_book(wb, book)
+
+    wb = sobook.load_book(book)
+    ws = sobook.create_day_sheet(wb, dt.date(2026, 10, 29), wb["28"])
+    assert ws["G6"].font.color is None and ws["G6"].font.name == "Times New Roman"
+    assert wb["28"]["G6"].font.color.rgb == "FFFF0000"  # sheet cũ giữ nguyên
+    assert ws["E6"].value == count.format(r=6) and ws["E12"].value == 0  # lớp không có công thức: về 0
+    info = sobook.analyze(ws)
+    st = DayState.new(dt.date(2026, 10, 29), roster, list(info.class_rows))
+    st.set_absent("1D15", roster.students[3].id, True)
+    st.set_absent("4D19", next(s.id for s in roster.students if s.lop == "4D19"), True)
+    sobook.write_day(info, st, None)
+    assert ws["E6"].value == count.format(r=6) and ws["G6"].value == "Tuấn Anh"  # Excel tự đếm
+    assert ws["E12"].value == 1  # cột Vắng không có công thức: app ghi số
+
+
 def test_new_month_book(book, tmp_path):
     new = sobook.month_file_name(book, 11)
     assert new.name == "SO DIEM DANH T11.xlsx"
