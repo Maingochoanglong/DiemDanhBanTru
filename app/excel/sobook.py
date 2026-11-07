@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from copy import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -269,13 +270,24 @@ def create_day_sheet(wb, day: dt.date, template: Worksheet) -> Worksheet:
     info = analyze(new)
     if info:
         for code in info.class_rows:
-            info.cell(code, "ten").value = None
-            info.cell(code, "vang").value = 0
+            ten = info.cell(code, "ten")
+            ten.value = None
+            if ten.font is not None and ten.font.color is not None:  # bỏ chữ màu của sổ hôm trước: tên vắng chữ đen
+                f = copy(ten.font)
+                f.color = None
+                ten.font = f
+            vang = info.cell(code, "vang")
+            if not _is_formula(vang.value):  # cột Vắng là công thức đếm tên thì giữ nguyên
+                vang.value = 0
         for mr in info.meal.rows:
             if mr.m_cell:
                 new[mr.m_cell].value = None
         set_dates(info, day)
     return new
+
+
+def _is_formula(v) -> bool:
+    return isinstance(v, str) and v.startswith("=")
 
 
 def set_dates(info: SheetInfo, day: dt.date) -> None:
@@ -295,7 +307,9 @@ def write_day(info: SheetInfo, state: DayState, summary: MealSummary | None) -> 
             continue
         names = state.absent_names(code)
         info.cell(code, "siso").value = state.si_so(code)
-        info.cell(code, "vang").value = len(names)
+        vang = info.cell(code, "vang")
+        if not _is_formula(vang.value):  # sổ có công thức đếm tên ở cột Vắng thì để Excel tự đếm
+            vang.value = len(names)
         info.cell(code, "ten").value = ", ".join(names) if names else None
         note = state.cd(code).note
         info.cell(code, "ghichu").value = note or None
