@@ -4,6 +4,9 @@ Hai dạng file:
 - file danh sách học sinh toàn trường: em tô chữ đỏ là ăn bán trú;
 - file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2)
   và cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ).
+
+File gọn có thể có thêm sheet "Nhóm ăn": mỗi dòng là một dòng bảng suất ăn trong sổ
+(Tên dòng | Các lớp ăn chung | Mã ghép lẻ). App dựng bảng suất ăn của tờ ngày mới theo sheet này.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..core.meals import CODE_RE, MealGroup
 from ..core.models import Roster, Student
 from ..core.text import clean_spaces, fmt_date, fold, norm_class, parse_date
 
@@ -176,6 +180,135 @@ def read_cdhs(path: str | Path) -> list[RosterRow]:
     return _read_xlsx(path)
 
 
+# ---------------- sheet "Nhóm ăn" ----------------
+def _is_xls(path: Path) -> bool:
+    with open(path, "rb") as f:
+        return f.read(8).startswith(b"\xd0\xcf\x11\xe0")
+
+
+def read_meal_groups(path: str | Path) -> list[tuple[int, str, str, str]] | None:
+    """Sheet "Nhóm ăn" của file danh sách: (số dòng, tên dòng, các lớp, mã ghép lẻ). None = không có sheet này."""
+    path = Path(path)
+    if _is_xls(path):
+        return None
+    import openpyxl
+
+    wb = openpyxl.load_workbook(str(path), data_only=True)
+    ws = next((w for w in wb.worksheets if fold(w.title).replace(" ", "") == "nhoman"), None)
+    if ws is None:
+        return None
+    hr, cols = 1, {"label": 0, "classes": 1, "code": 2}
+    for r in range(1, min(5, ws.max_row) + 1):
+        vals = [fold(str(c.value or "")) for c in ws[r]]
+        if any("ten dong" in v for v in vals):
+            hr = r
+            for i, v in enumerate(vals[:6]):
+                if "ten dong" in v:
+                    cols["label"] = i
+                elif "lop" in v:
+                    cols["classes"] = i
+                elif v.startswith("ma") or "ghep le" in v:
+                    cols["code"] = i
+            break
+    out = []
+    for r in range(hr + 1, ws.max_row + 1):
+        label, classes = (clean_spaces(str(ws.cell(r, cols[k] + 1).value or "")) for k in ("label", "classes"))
+        code = _fmt_ghep(ws.cell(r, cols["code"] + 1).value)
+        out.append((r, label, classes, "" if code in ("", "None") else code))
+    while out and not any(out[-1][1:]):
+        out.pop()
+    return out
+
+
+def check_meal_groups(raw: list[tuple[int, str, str, str]], class_codes: list[str],
+                      kid_codes: dict[str, set[str]]) -> tuple[list[MealGroup], list[str], list[str]]:
+    """Kiểm tra bảng Nhóm ăn. class_codes: các lớp trong danh sách; kid_codes: lớp -> mã Ăn ghép của các em ăn BT.
+    Trả về (các dòng, lỗi, lưu ý). Có lỗi thì không dùng bảng này."""
+    from .database import short_codes
+
+    short = {v: k for k, v in short_codes(class_codes).items()}  # "1.2" -> "1D16"
+    groups: list[MealGroup] = []
+    errors: list[str] = []
+    where: dict[str, str] = {}
+    codes: dict[str, str] = {}
+    for r, label, cls_text, code in raw:
+        if not (label or cls_text or code):
+            groups.append(MealGroup(""))  # dòng trống: cách dòng trong bảng suất ăn
+            continue
+        name = f"dòng {r}" + (f" ({label})" if label else "")
+        classes = []
+        for tok in re.split(r"[,;+\s]+", cls_text):
+            if not tok:
+                continue
+            c = short.get(tok) or norm_class(tok)
+            if c not in class_codes:
+                errors.append(f"Nhóm ăn, {name}: danh sách không có lớp \"{tok}\".")
+            elif c in where:
+                errors.append(f"Nhóm ăn: lớp {c} nằm ở 2 dòng, {where[c]} và {name}.")
+            else:
+                where[c] = name
+                classes.append(c)
+        if code:
+            m = CODE_RE.search(label)
+            if not re.fullmatch(r"\d\.\d", code):
+                errors.append(f"Nhóm ăn, {name}: mã ghép lẻ \"{code}\" phải dạng số.số, vd. 1.2.")
+            elif code in codes:
+                errors.append(f"Nhóm ăn: mã ghép lẻ {code} ở 2 dòng, {codes[code]} và {name}.")
+            elif m and f"{m.group(1)}.{m.group(2)}" != code:
+                errors.append(f"Nhóm ăn, {name}: tên dòng phải bắt đầu bằng mã ghép lẻ {code} (vd. \"{code} ghép\").")
+            else:
+                codes[code] = name
+                label = label if m else f"{code} {label}".strip()
+        if not label:
+            errors.append(f"Nhóm ăn, {name}: chưa có tên dòng.")
+        elif not classes and not code:
+            errors.append(f"Nhóm ăn, {name}: chưa có lớp nào.")
+        groups.append(MealGroup(label, classes, code))
+    while groups and groups[-1].blank:
+        groups.pop()
+    warnings = []
+    for c in sorted(kid_codes):
+        kc = kid_codes[c]
+        if c in where and kc:
+            warnings.append(f"Lớp {c} đã ăn cả lớp ở {where[c]} nên cột Ăn ghép của các em lớp này không dùng.")
+        elif c not in where and kc - set(codes):
+            warnings.append(f"Lớp {c} có em ghi Ăn ghép {', '.join(sorted(kc - set(codes)))} "
+                            "nhưng bảng Nhóm ăn không có mã ghép lẻ này: các em đó tính ăn tại lớp.")
+    if not any(not g.blank for g in groups):
+        warnings.append("Sheet Nhóm ăn chưa có dòng nào nên app chưa dùng.")
+    return groups, errors, warnings
+
+
+def describe_meal_change(old: list[MealGroup] | None, new: list[MealGroup]) -> str | None:
+    """Câu báo thay đổi bảng Nhóm ăn trong hộp Nhập danh sách; None = không đổi."""
+    key = lambda gs: [(g.label, list(g.classes), g.code) for g in gs]  # noqa: E731
+    if old is not None and key(old) == key(new):
+        return None
+    head = "Bảng Nhóm ăn: từ tờ ngày mới, app dựng bảng suất ăn trong sổ theo bảng này"
+    if old is None:
+        return f"{head} ({sum(1 for g in new if not g.blank)} dòng)."
+
+    def desc(g: MealGroup) -> str:
+        return " + ".join([x for x in (", ".join(g.classes), f"em ghép {g.code}" if g.code else "") if x]) or "—"
+
+    old_by = {g.label: g for g in old if not g.blank}
+    new_by = {g.label: g for g in new if not g.blank}
+    gone = [label for label in old_by if label not in new_by]
+    parts = []
+    for g in new_by.values():
+        o = old_by.get(g.label)
+        renamed = next((x for x in gone if g.code and old_by[x].code == g.code), None)  # cùng mã ghép lẻ: đổi tên dòng
+        if renamed:
+            gone.remove(renamed)
+            parts.append(f"dòng \"{renamed}\" → \"{g.label}\": {desc(old_by[renamed])} → {desc(g)}")
+        elif o is None:
+            parts.append(f"thêm dòng \"{g.label}\" ({desc(g)})")
+        elif desc(o) != desc(g):
+            parts.append(f"dòng \"{g.label}\": {desc(o)} → {desc(g)}")
+    parts += [f"bỏ dòng \"{label}\"" for label in gone]
+    return f"{head}: " + ("; ".join(parts) if parts else "đổi thứ tự dòng") + "."
+
+
 def flag_mismatches(rows: list[RosterRow]) -> list[RosterRow]:
     """Em có màu chữ đỏ không khớp cột 'Phân loại HS'."""
     out = []
@@ -196,6 +329,7 @@ class Change:
     row: RosterRow | None = None
     student: Student | None = None
     apply: bool = True
+    data: object = None  # kind "nhom_an": bảng Nhóm ăn mới (list[MealGroup])
 
 
 def _base_key(name: str, dob: str) -> tuple[str, str]:

@@ -425,6 +425,7 @@ async function renderMeals() {
         x.groups.map(g => `<button class="btn btn-sm btn-outline-dark py-0" data-pick="${esc(x.sid)}" data-g="${esc(g)}">Nhóm ${esc(g)}</button>`).join("") + `</div>`).join("") + `</div>`;
   }
   for (const w of m.warnings) a += `<div class="alert alert-danger py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(w)}</div>`;
+  if (m.note) a += `<div class="alert alert-info py-2 mb-2"><i class="bi bi-info-circle-fill me-2"></i>${esc(m.note)}</div>`;
   $("#mealAlerts").innerHTML = a;
   const rows = m.lines.map(l => {
     const vang = l.absent.length ? ` <span class="text-danger">− vắng ${l.absent.length}: ${l.absent.map(x => x.picked
@@ -535,7 +536,6 @@ async function scheduleDialog(kind, code, ids = []) {
   }
 }
 
-// ------------------------------------------------------------------ Ghép lớp
 // ------------------------------------------------------------------ Cài đặt
 async function renderSettings() {
   const s = await api("settings");
@@ -558,7 +558,8 @@ async function renderSettings() {
     row("cdhs_file", "bi-file-earmark-spreadsheet", "Danh sách học sinh (Excel)",
       `<button class="btn btn-primary text-nowrap" data-cd="import"><i class="bi bi-file-earmark-arrow-down"></i> Nhập danh sách…</button>
        <button class="btn btn-outline-secondary text-nowrap" data-open="cdhs_file"><i class="bi bi-box-arrow-up-right"></i> Mở file</button>`,
-      "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép (file toàn trường tô đỏ cũng nhập được)") +
+      "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép (file toàn trường tô đỏ cũng nhập được)."
+      + (s.nhom_an ? ` Bảng suất ăn: dựng theo sheet <b>Nhóm ăn</b> (${s.nhom_an} dòng).` : ` Muốn app dựng bảng suất ăn: thêm sheet <b>Nhóm ăn</b>.`)) +
     row("data", "bi-database", "Dữ liệu của app", folder("data_folder"));
 }
 
@@ -570,6 +571,8 @@ async function importList(path) {
   const ok = await form("Nhập danh sách học sinh", b => {
     b.innerHTML = `<p class="fs-6">Đọc được <b>${p.n}</b> học sinh trong <b>${esc(p.file)}</b>, <b>${p.n_bt}</b> em ăn bán trú.</p>`
       + (p.mismatch.length ? `<div class="alert alert-warning py-2">Lưu ý: màu chữ khác cột "Phân loại HS" ở: ${esc(p.mismatch.join("; "))}.</div>` : "")
+      + (p.meal_errors.length ? `<div class="alert alert-danger py-2"><b>Sheet Nhóm ăn có lỗi nên app chưa dùng</b> (giữ bảng Nhóm ăn cũ). Sửa trong Excel rồi nhập lại:<ul class="mb-0">${p.meal_errors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>` : "")
+      + (p.meal_warnings.length ? `<div class="alert alert-warning py-2">${p.meal_warnings.map(e => `<div>${esc(e)}</div>`).join("")}</div>` : "")
       + (p.changes.length ? `<p class="text-muted mb-1">Bỏ tích dòng nào không muốn áp dụng:</p><div class="list-group list-pick">`
         + p.changes.map(c => `<label class="list-group-item ${c.removed ? "list-group-item-danger" : ""}"><input class="form-check-input me-2" type="checkbox" value="${c.i}" ${c.apply ? "checked" : ""}>${esc(c.text)}</label>`).join("") + `</div>`
         : `<div class="alert alert-success">Không có thay đổi nào so với danh sách hiện tại.</div>`);

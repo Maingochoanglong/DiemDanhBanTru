@@ -14,11 +14,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
 from ..core.day import DayState
-from ..core.meals import MealLayout, MealRow, MealSummary
+from ..core.meals import MealGroup, MealLayout, MealRow, MealSummary
 from ..core.text import clean_spaces, fmt_date, fold, norm_class
 from .files import safe_save
 
@@ -159,14 +159,34 @@ def analyze_meals(ws: Worksheet, info: SheetInfo) -> MealLayout:
                 m = re.match(r"=\s*\$?([A-Z]{1,3})\$?(\d+)\s*-\s*\$?([A-Z]{1,3})\$?(\d+)\s*$", str(sub or "").upper())
                 if m:
                     mr.o_cell, mr.m_cell = f"{m.group(1)}{m.group(2)}", f"{m.group(3)}{m.group(4)}"
+                    mr.l_cell = f"{col}{r}"
                     break
             layout.rows.append(mr)
             used_rows.append(cell.row)
         elif classes:
             layout.self_classes.extend(c for c in classes if c not in layout.self_classes)
+            layout.self_cell = layout.self_cell or cell.coordinate
             used_rows.append(cell.row)
     if not layout.rows:
         return MealLayout()
+    meal_letter = get_column_letter(meal_col)
+    sum_re = re.compile(rf"SUM\(\s*\$?{meal_letter}\$?\d+\s*:\s*\$?{meal_letter}\$?\d+\s*\)")
+    for cell, _, _ in formula_cells:
+        if cell.column != meal_col and sum_re.search(str(cell.value).upper()):
+            layout.sum_cell = cell.coordinate
+            used_rows.append(cell.row)
+            break
+    # ô tổng cộng (vd. G72 =G69+G70) cũng nằm trong vùng in
+    for cell, classes, others in formula_cells if layout.sum_cell else []:
+        refs = {f"{col}{r}" for col, r in others}
+        if cell.column != meal_col and not classes and layout.sum_cell in refs:
+            layout.total_cell = cell.coordinate
+            used_rows.append(cell.row)
+            rest = sorted(refs - {layout.sum_cell})
+            if layout.self_cell is None and len(rest) == 1:  # ô ăn tại lớp đang =0 (không lớp nào)
+                layout.self_cell = rest[0]
+                used_rows.append(int(re.search(r"\d+", rest[0]).group()))
+            break
     if any(r.code for r in layout.rows):
         layout.ghep_classes = [c for c in info.class_rows if c not in referenced]
     for mr in layout.rows:
@@ -184,6 +204,138 @@ def analyze_meals(ws: Worksheet, info: SheetInfo) -> MealLayout:
     if cmax:
         layout.area = f"{get_column_letter(cmin)}{r1}:{get_column_letter(cmax)}{r2}"
     return layout
+
+
+# ---------------------------------------------------------------- dựng lại bảng suất ăn
+class MealTableError(Exception):
+    """Không dựng lại được bảng suất ăn (sổ thiếu chỗ/ô cần thiết): giữ nguyên bảng cũ."""
+
+
+def _ghep_cols(old: MealLayout, meal_col: int) -> tuple[str, str, str]:
+    """Cột L (=O-M), M (số em ghép vắng), O (số em ghép): lấy theo dòng ghép có sẵn trong sổ."""
+    for r in old.rows:
+        if r.l_cell and r.m_cell and r.o_cell:
+            col = lambda a: re.match(r"[A-Z]+", a).group()  # noqa: E731
+            return col(r.l_cell), col(r.m_cell), col(r.o_cell)
+    return tuple(get_column_letter(meal_col + k) for k in (3, 4, 6))  # như sổ mẫu: I -> L, M, O
+
+
+def _strip_blanks(groups: list[MealGroup]) -> list[MealGroup]:
+    gs = list(groups)
+    while gs and gs[0].blank:
+        gs.pop(0)
+    while gs and gs[-1].blank:
+        gs.pop()
+    return gs
+
+
+def plan_meal_table(info: SheetInfo, groups: list[MealGroup], split: set[str], o_counts: dict[str, int]) -> MealLayout:
+    """Bảng suất ăn sẽ có nếu dựng theo bảng Nhóm ăn (chưa ghi gì vào sổ).
+
+    Bắt đầu ở dòng đầu bảng cũ; mỗi nhóm một dòng, dòng trống giữ cách dòng. Lớp không thuộc nhóm nào
+    và không chia em ghép lẻ (`split`) thì ăn tại lớp. `o_counts`: mã ghép lẻ -> số em ghép.
+    """
+    old = info.meal
+    if old.is_empty:
+        raise MealTableError("Sổ chưa có bảng suất ăn để làm mẫu.")
+    meal_col = column_index_from_string(re.match(r"[A-Z]+", old.rows[0].meal_cell).group())
+    letter = get_column_letter(meal_col)
+    lc, mc, oc = _ghep_cols(old, meal_col)
+    first = min(r.row for r in old.rows)
+    gs = _strip_blanks(groups)
+    rows: list[MealRow] = []
+    for i, g in enumerate(gs):
+        if g.blank:
+            continue
+        r = first + i
+        mr = MealRow(r, g.label, f"{letter}{r}", [c for c in g.classes if c in info.class_rows])
+        if g.code:
+            mr.o_cell, mr.m_cell, mr.l_cell = f"{oc}{r}", f"{mc}{r}", f"{lc}{r}"
+        rows.append(mr)
+    grouped = {c for g in gs for c in g.classes}
+    codes = [r.code for r in rows if r.code]
+    ghep = [c for c in info.class_rows if c in split and c not in grouped] if codes else []
+    layout = MealLayout(rows, [c for c in info.class_rows if c not in grouped and c not in ghep], ghep)
+    layout.o_values = {c: o_counts.get(c, 0) for c in codes}
+    layout.sum_cell, layout.self_cell, layout.total_cell = old.sum_cell, old.self_cell, old.total_cell
+    m = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", old.area or "")
+    if m:  # vùng in: như bảng cũ, kéo tới dòng cuối của bảng mới (và các ô tổng nằm dưới bảng, nếu có)
+        old_end, old_last = int(m.group(4)), max(x.row for x in old.rows)
+        tail = [old_end] if old_end > old_last else []
+        summary = [int(re.search(r"\d+", a).group()) for a in (old.sum_cell, old.self_cell, old.total_cell) if a]
+        layout.area = f"{m.group(1)}{m.group(2)}:{m.group(3)}{max([r.row for r in rows] + summary + tail)}"
+    return layout
+
+
+def write_meal_table(ws: Worksheet, info: SheetInfo, plan: MealLayout) -> None:
+    """Ghi bảng suất ăn `plan` (từ plan_meal_table) vào sheet, thay bảng cũ. Giữ kiểu chữ của sổ."""
+    old = info.meal
+    hien = get_column_letter(info.cols["hien"])
+    meal_col = column_index_from_string(re.match(r"[A-Z]+", old.rows[0].meal_cell).group())
+    letter, label_letter = get_column_letter(meal_col), get_column_letter(meal_col + 1)
+    lc, mc, oc = _ghep_cols(old, meal_col)
+    span = range(meal_col, max(meal_col + 1, column_index_from_string(oc)) + 1)
+    first, old_last = min(r.row for r in old.rows), max(r.row for r in old.rows)
+    new_rows = {r.row: r for r in plan.rows}
+    last = max(new_rows) if new_rows else first
+    if plan.self_classes and not old.self_cell:
+        raise MealTableError("Sổ không có ô cộng các lớp ăn tại lớp.")
+    for r in range(old_last + 1, last + 1):  # dòng thêm mới phải còn trống
+        for c in span:
+            if ws.cell(r, c).value not in (None, ""):
+                raise MealTableError(f"Bảng suất ăn cần thêm dòng nhưng ô {ws.cell(r, c).coordinate} đang có dữ liệu.")
+
+    ref_plain = next((r.row for r in old.rows if not r.o_cell), old.rows[0].row)
+    ref_ghep = next((r.row for r in old.rows if r.o_cell), ref_plain)
+    styles = {ref: [copy(ws.cell(ref, c)._style) for c in span] for ref in {ref_plain, ref_ghep}}
+    heights = {ref: ws.row_dimensions[ref].height for ref in styles}
+    gaps = [r for r in range(first, old_last) if r not in {x.row for x in old.rows}]
+    gap_h = ws.row_dimensions[gaps[0]].height if gaps else None
+    m_idx = column_index_from_string(mc)
+    old_m = {x.m_cell for x in old.rows if x.m_cell}
+    headers = [(r, ws.cell(r, m_idx).value) for r in range(first - 1, old_last + 1)
+               if isinstance(ws.cell(r, m_idx).value, str) and not _is_formula(ws.cell(r, m_idx).value)
+               and f"{mc}{r}" not in old_m]  # chữ "vắng" trên cột M
+
+    for x in old.rows:  # xóa bảng cũ (giữ định dạng)
+        for a in (x.meal_cell, f"{label_letter}{x.row}", x.o_cell, x.m_cell, x.l_cell):
+            if a:
+                ws[a].value = None
+    for r in range(first, last + 1):
+        mr = new_rows.get(r)
+        if mr is None:  # dòng trống cách nhóm
+            ws[f"{letter}{r}"].value = ws[f"{label_letter}{r}"].value = None
+            if gap_h:
+                ws.row_dimensions[r].height = gap_h
+            continue
+        ref = ref_ghep if mr.o_cell else ref_plain
+        for c, st in zip(span, styles[ref], strict=True):
+            ws.cell(r, c)._style = copy(st)
+        if heights[ref]:
+            ws.row_dimensions[r].height = heights[ref]
+        terms = [f"{hien}{info.class_rows[c]}" for c in mr.classes]
+        if mr.o_cell:
+            terms.append(mr.l_cell)
+            ws[mr.l_cell] = f"={oc}{r}-{mc}{r}"
+            ws[mr.o_cell] = plan.o_values.get(mr.code or "", 0)
+            ws[mr.m_cell] = None
+        ws[f"{letter}{r}"] = "=" + "+".join(terms) if terms else "=0"
+        ws[f"{label_letter}{r}"] = mr.label
+    ghep_rows = sorted(r.row for r in plan.rows if r.o_cell)
+    for r, text in headers:  # chữ "vắng": giữ chỗ cũ; bị dòng ghép đè thì dời lên trên dòng ghép đầu tiên
+        if not ghep_rows:
+            ws.cell(r, m_idx).value = None
+        elif r in ghep_rows:
+            up = ghep_rows[0] - 1
+            if up not in ghep_rows and ws.cell(up, m_idx).value in (None, ""):
+                ws.cell(up, m_idx).value = text
+        else:
+            ws.cell(r, m_idx).value = text
+    if old.sum_cell:
+        ws[old.sum_cell] = f"=SUM({letter}{first}:{letter}{last})"
+    if old.self_cell:
+        cells = [f"{hien}{info.class_rows[c]}" for c in plan.self_classes]
+        ws[old.self_cell] = "=" + "+".join(cells) if cells else "=0"
 
 
 # ---------------------------------------------------------------- đọc

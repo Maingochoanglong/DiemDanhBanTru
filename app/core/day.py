@@ -163,9 +163,16 @@ class DayState:
         return results
 
     # ---------- suất ăn ----------
+    def groups_for(self, layout: MealLayout, code: str) -> list[str]:
+        """Các nhóm em lớp ghép `code` có thể ăn: nhóm cùng khối, cộng nhóm khác khối mà cột Ăn ghép đã ghi."""
+        codes = layout.ghep_codes()
+        same = [c for c in codes if c.startswith(f"{code[0]}.")]
+        used = {s.an_ghep for s in self.roster.boarding(code, self.date)} & set(codes)
+        return same + sorted(used - set(same))
+
     def ghep_ready(self, layout: MealLayout, code: str) -> bool:
         """Lớp ghép đã gán nhóm ăn cho tất cả các em chưa (khi đó app tự tính)."""
-        codes = layout.ghep_codes(int(code[0]))
+        codes = self.groups_for(layout, code)
         boarding = self.roster.boarding(code, self.date)
         return bool(boarding) and all(s.an_ghep in codes for s in boarding)
 
@@ -180,7 +187,7 @@ class DayState:
         """mã nhóm -> tên em ghép vắng (đã biết em ăn nhóm nào)."""
         out: dict[str, list[str]] = {}
         for code in layout.ghep_classes:
-            groups = layout.ghep_codes(int(code[0]))
+            groups = self.groups_for(layout, code)
             for s in self.absent_students(code):
                 g = self._ghep_group(groups, s)
                 if g:
@@ -191,7 +198,7 @@ class DayState:
         """Em ghép vắng chưa biết ăn nhóm nào (danh sách chưa ghi nhóm, hôm nay chưa chọn): (lớp, em)."""
         out = []
         for code in layout.ghep_classes:
-            groups = layout.ghep_codes(int(code[0]))
+            groups = self.groups_for(layout, code)
             if groups:
                 out += [(code, s) for s in self.absent_students(code) if not self._ghep_group(groups, s)]
         return out
@@ -209,8 +216,8 @@ class DayState:
         by_khoi: dict[int, list[str]] = {}
         for code in layout.ghep_classes:
             by_khoi.setdefault(int(code[0]), []).append(code)
-        for khoi, codes in by_khoi.items():
-            groups = layout.ghep_codes(khoi)
+        for codes in by_khoi.values():
+            groups = list(dict.fromkeys(g for c in codes for g in self.groups_for(layout, c)))
             absent = [s for c in codes for s in self.absent_students(c)]
             unknown = [s for s in absent if not self._ghep_group(groups, s)]
             if not unknown:
@@ -227,7 +234,7 @@ class DayState:
         for code in layout.ghep_classes:
             if self.ghep_ready(layout, code):
                 boarding = self.roster.boarding(code, self.date)
-                for gc in layout.ghep_codes(int(code[0])):
+                for gc in self.groups_for(layout, code):
                     out[gc] = sum(1 for s in boarding if s.an_ghep == gc)
         return out
 
@@ -237,7 +244,7 @@ class DayState:
         summary = compute_meals(layout, present, self.ghep_absent(layout), o_vals)
         summary.ask = self.ghep_unknown(layout)
         for code in layout.ghep_classes:
-            codes = layout.ghep_codes(int(code[0]))
+            codes = self.groups_for(layout, code)
             if not codes:
                 continue
             o_sum = sum(o_vals.get(gc, 0) for gc in codes)

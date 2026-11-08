@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
 
+from ..core.meals import MealGroup
 from ..core.models import ClassInfo, Roster, Student
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, norm_class, parse_date
 from .files import safe_save
@@ -31,6 +33,7 @@ BOOL_FIELDS = {"ban_tru", "cat_thu6"}
 DATE_FIELDS = {"bt_tu", "cat_tu"}
 LOP_COLS = [("code", "Lớp", 8), ("khoi", "Khối", 7), ("ma_ngan", "Mã ngắn", 10), ("gvcn", "GVCN", 28)]
 LOG_COLS = [("Ngày", 12), ("Lớp", 7), ("Đã báo", 8), ("Sĩ số", 7), ("Vắng", 7), ("Tên vắng", 60)]
+MEAL_COLS = [("Tên dòng", 18), ("Các lớp ăn chung", 30), ("Mã ghép lẻ", 11)]
 
 DEFAULT_SETTINGS = {
     "so_folder": "",
@@ -52,6 +55,7 @@ class AppData:
     roster: Roster = field(default_factory=Roster)
     settings: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_SETTINGS))
     log: dict[tuple[str, str], list] = field(default_factory=dict)  # (ngày, lớp) -> hàng nhật ký
+    meal_groups: list[MealGroup] | None = None  # bảng Nhóm ăn (None = chưa nhập: giữ bảng suất ăn của sổ)
 
     # ---------- đọc ----------
     @classmethod
@@ -99,6 +103,14 @@ class AppData:
             for row in wb["CaiDat"].iter_rows(min_row=2, values_only=True):
                 if row and row[0]:
                     data.settings[str(row[0])] = "" if row[1] is None else str(row[1])
+        if "NhomAn" in wb.sheetnames:
+            groups = []
+            for row in wb["NhomAn"].iter_rows(min_row=2, max_col=3, values_only=True):
+                label, classes, code = (clean_spaces(str(v or "")) for v in (tuple(row) + (None,) * 3)[:3])
+                groups.append(MealGroup(label, [c for c in re.split(r"[,\s]+", classes) if c], code))
+            while groups and groups[-1].blank:
+                groups.pop()
+            data.meal_groups = groups or None
         if "NhatKy" in wb.sheetnames:
             for row in wb["NhatKy"].iter_rows(min_row=2, values_only=True):
                 if row and row[0] and row[1]:
@@ -131,6 +143,13 @@ class AppData:
             c = self.roster.classes[code]
             wl.append([c.code, c.khoi, c.ma_ngan, c.gvcn])
         plain_sheet(wl, [w for _, _, w in LOP_COLS], center_cols=(1, 2, 3))
+
+        if self.meal_groups:
+            wm = wb.create_sheet("NhomAn")
+            _header(wm, MEAL_COLS)
+            for g in self.meal_groups:
+                wm.append([g.label or None, ", ".join(g.classes) or None, g.code or None])
+            plain_sheet(wm, [w for _, w in MEAL_COLS], center_cols=(3,))
 
         wk = wb.create_sheet("NhatKy")
         _header(wk, LOG_COLS)

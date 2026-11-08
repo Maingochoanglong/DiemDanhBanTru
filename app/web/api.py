@@ -385,10 +385,10 @@ class Api:
             gom = " + ".join(r.classes)
             absent = []
             if r.code:
-                src = [c for c in layout.ghep_classes if c[0] == r.code[0]]
+                src = [c for c in layout.ghep_classes if r.code in st.groups_for(layout, c)]
                 gom += f" + {line.o} em ghép lớp {', '.join(src)}" if src else f" + {line.o} em ghép"
                 for code in src:
-                    groups = layout.ghep_codes(int(code[0]))
+                    groups = st.groups_for(layout, code)
                     for s in st.absent_students(code):
                         if s.an_ghep in groups:
                             g, picked = s.an_ghep, False
@@ -401,18 +401,18 @@ class Api:
         self_line = None
         if layout.self_classes:
             self_line = {"label": "Tự ăn tại lớp", "gom": ", ".join(layout.self_classes), "meals": summary.self_meals}
-        ask = [{"sid": s.id, "name": name(s), "full": s.ho_ten, "cls": code, "groups": layout.ghep_codes(int(code[0]))}
+        ask = [{"sid": s.id, "name": name(s), "full": s.ho_ten, "cls": code, "groups": st.groups_for(layout, code)}
                for code, s in summary.ask]
         ghep = []  # lớp ghép: đã ghi nhóm ăn ghép (cột Ăn ghép trong file Excel danh sách) cho bao nhiêu em
         for code in layout.ghep_classes:
-            groups = layout.ghep_codes(int(code[0]))
+            groups = st.groups_for(layout, code)
             kids = ws.ghep_students(code)
             info = ws.roster.classes.get(code)
             ghep.append({"code": code, "ma": info.ma_ngan if info else "", "n": len(kids),
                          "done": sum(1 for s in kids if s.an_ghep in groups)})
         return {"lines": lines, "self": self_line, "total": summary.total_meals, "present": summary.total_present,
                 "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask,
-                "ghep": ghep}
+                "ghep": ghep, "note": ws.meal_note, "config": bool(ws.data.meal_groups)}
 
     def pick_ghep(self, sid: str, group: str) -> dict:
         """Chọn nhóm ăn cho em ghép vắng (chỉ ngày đang mở); group rỗng = chọn lại."""
@@ -517,12 +517,12 @@ class Api:
         return {"ok": f"Đã hủy {n} lịch. Nếu đã ghi chú ở cột H, hãy xóa ghi chú đó trong ô Ghi chú của lớp.",
                 "state": self.state()}
 
-    # ================================================================== ghép lớp
     # ================================================================== cài đặt
     def settings(self) -> dict:
         st = self._ws.settings
+        groups = self._ws.data.meal_groups or []
         return {"data": str(self._ws.data.path), "so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", ""),
-                "version": __version__}
+                "version": __version__, "nhom_an": sum(1 for g in groups if not g.blank)}
 
     def choose_book(self, path: str | None = None) -> dict:
         path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", ("Excel (*.xlsx)",))
@@ -546,11 +546,13 @@ class Api:
             return {"error": f"Không đọc được file:\n{e}"}
         self._pending_import = (changes, path)
         mism = flag_mismatches(rows)
+        meal_errors, meal_warnings = self._ws.meal_check or ([], [])
         return {"file": Path(path).name, "n": len(rows), "n_bt": sum(1 for r in rows if r.red),
                 "first": not self._ws.roster.students,
                 "changes": [{"i": i, "text": c.text, "apply": c.apply, "removed": c.kind == "removed"}
                             for i, c in enumerate(changes)],
-                "mismatch": [f"{r.ho_ten} ({r.lop})" for r in mism[:8]]}
+                "mismatch": [f"{r.ho_ten} ({r.lop})" for r in mism[:8]],
+                "meal_errors": meal_errors, "meal_warnings": meal_warnings}
 
     def apply_import(self, selected: list) -> dict:
         if not self._pending_import:

@@ -11,11 +11,12 @@ CODE_RE = re.compile(r"(\d)\s*[./]\s*(\d)")
 @dataclass
 class MealRow:
     row: int
-    label: str  # nhãn cột J: "hiến", "1.2 ghép", "4.3 ghép 4.4"
+    label: str  # nhãn cột J: "cô Lan", "1.2 ghép", "4.3 ghép 4.4"
     meal_cell: str  # ô số suất, vd. I73
     classes: list[str] = field(default_factory=list)  # lớp cộng nguyên lớp
     o_cell: str | None = None  # số em ghép (chỉ hàng có HS ghép lẻ)
     m_cell: str | None = None  # số em ghép vắng
+    l_cell: str | None = None  # ô =O-M (số em ghép có mặt)
 
     @property
     def code(self) -> str | None:
@@ -33,6 +34,9 @@ class MealLayout:
     ghep_classes: list[str] = field(default_factory=list)  # lớp chia HS sang nhóm khác
     area: str = ""  # vùng in, vd. G68:O80
     o_values: dict[str, int] = field(default_factory=dict)  # cột O hiện có trong sổ
+    sum_cell: str | None = None  # ô cộng các nhóm, vd. G69 =SUM(I69:I80)
+    self_cell: str | None = None  # ô cộng các lớp ăn tại lớp, vd. G70
+    total_cell: str | None = None  # ô tổng cộng, vd. G72 =G69+G70
 
     def ghep_codes(self, khoi: int | None = None) -> list[str]:
         codes = [r.code for r in self.rows if r.code]
@@ -49,6 +53,24 @@ class MealLayout:
     @property
     def is_empty(self) -> bool:
         return not self.rows
+
+    def signature(self) -> tuple:
+        """Để so hai bảng suất ăn: cùng dòng, cùng nhãn, cùng lớp, cùng mã ghép lẻ, cùng các lớp ăn tại lớp."""
+        return (tuple((r.row, r.label, tuple(sorted(r.classes)), r.code) for r in self.rows),
+                tuple(sorted(self.self_classes)))
+
+
+@dataclass
+class MealGroup:
+    """Một dòng của bảng Nhóm ăn (sheet "Nhóm ăn" trong file Excel danh sách) = một dòng bảng suất ăn."""
+
+    label: str  # tên dòng in ở sổ, vd. "cô Lan", "1.2 ghép"; rỗng = dòng trống cách nhóm
+    classes: list[str] = field(default_factory=list)  # các lớp ăn chung cả lớp
+    code: str = ""  # mã nhận em ghép lẻ (cột Ăn ghép của em), vd. "1.2"
+
+    @property
+    def blank(self) -> bool:
+        return not self.label
 
 
 @dataclass
