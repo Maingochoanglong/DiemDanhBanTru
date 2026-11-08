@@ -162,7 +162,7 @@ function renderDiemDanh() {
       (un.length > show.length ? `<span class="text-muted small ms-1">và ${un.length - show.length} lớp khác</span>` : "");
 
   const t = st.totals;
-  $("#totals").textContent = t ? `${st.weekday} ${st.date_text} · Đã báo ${t.rep}/${t.n} lớp · Sĩ số ${t.si} · Vắng ${t.vang} · Hiện diện ${t.hd}` : "";
+  $("#totals").textContent = t ? `Sĩ số ${t.si} · Vắng ${t.vang} · Hiện diện ${t.hd}` : "";  // ngày ở thanh trên, lớp chưa báo ở dòng "Chưa báo"
   const m = st.meal;
   $("#mealBadge").innerHTML = m ? `<span class="badge fs-6 ${m.ok ? "text-bg-success" : "text-bg-danger"}" role="button" data-go="sa">
     <i class="bi ${m.ok ? "bi-check-circle" : "bi-exclamation-triangle"}"></i> ${m.ok ? `Tổng suất ${m.total} = hiện diện ${m.present}`
@@ -177,14 +177,15 @@ function renderDiemDanh() {
   const rows = st.rows.filter(r => r.kind === "class" ? keep(r) : ddFilter === "all").map(r => {
     if (r.kind === "khoi") return `<tr class="khoi"><td>${esc(r.code)}</td><td></td><td class="num">${r.si}</td><td class="num">${r.vang}</td><td class="num">${r.hd}</td><td></td><td></td></tr>`;
     const note = [r.sched ? "[Lịch]" : "", r.warn, r.note].filter(Boolean).join(" · ");
+    const tip = (r.sched ? "[Lịch] = sĩ số đổi theo lịch thêm/cắt. " : "") + [r.warn, r.note].filter(Boolean).join(" · ");
     const ten = r.reported ? esc(r.ten) : `<span class="text-muted fst-italic">(chưa báo)</span>` +
       (r.auto ? ` <span class="text-muted small">· nghỉ T6: ${esc(r.auto)}</span>` : "");
     return `<tr class="cls st-${r.status}" data-code="${esc(r.code)}">
       <td><span class="dot ${r.status}"></span>${esc(r.code)}${r.ma ? ` <span class="text-muted fw-normal small">(${esc(r.ma)})</span>` : ""}</td>
       <td class="gv">${esc(r.gvcn)}</td><td class="num">${r.si}</td><td class="num fw-bold">${r.vang || 0}</td><td class="num">${r.hd}</td>
-      <td class="ten">${ten}</td><td class="note"><div class="cut" title="${esc(note)}">${esc(note)}</div></td></tr>`;
+      <td class="ten">${ten}</td><td class="note"><div class="cut" title="${esc(tip)}">${esc(note)}</div></td></tr>`;
   });
-  if (t) rows.push(`<tr class="tong"><td>TỔNG CỘNG</td><td>đã báo ${t.rep}/${t.n} lớp</td><td class="num">${t.si}</td><td class="num">${t.vang}</td><td class="num">${t.hd}</td><td></td><td></td></tr>`);
+  if (t) rows.push(`<tr class="tong"><td>TỔNG CỘNG</td><td></td><td class="num">${t.si}</td><td class="num">${t.vang}</td><td class="num">${t.hd}</td><td></td><td></td></tr>`);
   $("#soBody").innerHTML = rows.join("") || `<tr><td colspan="7" class="text-center text-muted py-5">Chưa có danh sách học sinh. Vào Cài đặt để nhập.</td></tr>`;
   if (ddFilter !== "all" && !cls.some(keep)) $("#soBody").insertAdjacentHTML("afterbegin",
     `<tr><td colspan="7" class="text-center text-muted py-4">${ddFilter === "unrep" ? "Các lớp đều đã báo." : "Không lớp nào có em vắng."}</td></tr>`);
@@ -418,10 +419,10 @@ async function renderMeals() {
   $("#mealSub").textContent = m.self ? `Các nhóm ${m.groups_total} + tự ăn tại lớp ${m.self.meals} = ${m.total} suất` : `Các nhóm: ${m.groups_total} suất`;
   let a = "";
   if (m.ask.length) {  // em ghép vắng mà danh sách chưa ghi nhóm: hỏi em đó ăn nhóm nào
-    a += `<div class="alert alert-warning py-2 mb-2"><div class="fw-semibold mb-2"><i class="bi bi-question-circle-fill me-2"></i>Em ăn ghép vắng — chọn nhóm em đó ăn để trừ đúng suất:</div>` +
-      m.ask.map(x => `<div class="d-flex align-items-center gap-2 mb-1 flex-wrap"><span class="ask-name"><b>${esc(x.name)}</b> <span class="text-muted">lớp ${esc(x.cls)}</span></span>` +
-        x.groups.map(g => `<button class="btn btn-sm btn-outline-dark" data-pick="${esc(x.sid)}" data-g="${esc(g)}">Nhóm ${esc(g)}</button>`).join("") + `</div>`).join("") +
-      `<div class="small text-muted mt-1">Chỉ áp dụng cho ngày này. Muốn app tự biết: ghi nhóm của em ở cột <b>Ăn ghép</b> trong file Excel danh sách rồi nhập lại.</div></div>`;
+    a += `<div class="alert alert-warning py-2 mb-2"><div class="mb-1"><span class="fw-semibold"><i class="bi bi-question-circle-fill me-2"></i>Em ăn ghép vắng — chọn nhóm em đó ăn:</span>
+      <span class="small text-muted ms-2">chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách</span></div>` +
+      m.ask.map(x => `<div class="d-flex align-items-center gap-2 flex-wrap"><span class="ask-name"><b>${esc(x.name)}</b> <span class="text-muted">lớp ${esc(x.cls)}</span></span>` +
+        x.groups.map(g => `<button class="btn btn-sm btn-outline-dark py-0" data-pick="${esc(x.sid)}" data-g="${esc(g)}">Nhóm ${esc(g)}</button>`).join("") + `</div>`).join("") + `</div>`;
   }
   for (const w of m.warnings) a += `<div class="alert alert-danger py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(w)}</div>`;
   $("#mealAlerts").innerHTML = a;
@@ -429,14 +430,16 @@ async function renderMeals() {
     const vang = l.absent.length ? ` <span class="text-danger">− vắng ${l.absent.length}: ${l.absent.map(x => x.picked
       ? `<a href="#" class="link-danger" data-unpick="${esc(x.sid)}" title="Bấm để chọn lại nhóm">${esc(x.name)}</a>` : esc(x.name)).join(", ")}</span>` : "";
     return `<tr class="${l.m ? "table-warning" : ""}"><td class="fw-semibold">${esc(l.label)}</td><td>${esc(l.gom)}${vang}</td>
-      <td class="text-center fs-5 fw-bold">${l.meals}</td></tr>`;
+      <td class="text-center fw-bold">${l.meals}</td></tr>`;
   });
-  if (m.self) rows.push(`<tr class="text-muted"><td>${esc(m.self.label)}</td><td>${esc(m.self.gom)}</td><td class="text-center fs-5">${m.self.meals}</td></tr>`);
+  if (m.self) rows.push(`<tr class="text-muted"><td>${esc(m.self.label)}</td><td>${esc(m.self.gom)}</td><td class="text-center fw-bold">${m.self.meals}</td></tr>`);
   $("#mealBody").innerHTML = rows.join("");
-  const gh = (m.ghep || []).map(g => `<div class="mb-1"><i class="bi bi-diagram-3 me-1"></i>Lớp ghép <b>${esc(g.code)}</b>${g.ma ? ` (${esc(g.ma)})` : ""}:
-    đã ghi nhóm ăn ghép cho <b class="${g.done < g.n ? "text-warning-emphasis" : "text-success"}">${g.done}/${g.n} em</b>${g.done < g.n
-      ? " — ghi nhóm ở cột <b>Ăn ghép</b> trong file Excel danh sách rồi nhập lại" : ""} · <a href="#" data-hs="${esc(g.code)}">Xem các em</a></div>`).join("");
-  $("#mealInfo").innerHTML = gh + `<span class="text-muted">Suất mỗi nhóm = hiện diện các lớp trong nhóm + em ghép − em ghép vắng (như công thức trong sổ).</span>`;
+  const gh = (m.ghep || []).map(g => `<span class="me-3 text-nowrap"><i class="bi bi-diagram-3 me-1"></i>Lớp ghép <b>${esc(g.code)}</b>:
+    đã ghi nhóm <b class="${g.done < g.n ? "text-warning-emphasis" : "text-success"}">${g.done}/${g.n} em</b> ·
+    <a href="#" data-hs="${esc(g.code)}">Xem các em</a></span>`).join("");
+  const todo = (m.ghep || []).some(g => g.done < g.n);
+  $("#mealInfo").innerHTML = gh + (todo ? `<span class="text-muted">(ghi nhóm ở cột <b>Ăn ghép</b> trong Excel)</span>` : "");
+  $("#mealInfo").style.display = gh ? "" : "none";
   $$("#mealInfo [data-hs]").forEach(a => a.onclick = e => { e.preventDefault(); hsPreset = a.dataset.hs; showPage("hs"); });
   const pick = async (sid, g) => { const r = await api("pick_ghep", sid, g); applyState(r.state); renderMeals(); };
   $$("#mealAlerts [data-pick]").forEach(b => b.onclick = () => pick(b.dataset.pick, b.dataset.g));
@@ -537,9 +540,26 @@ async function scheduleDialog(kind, code, ids = []) {
 async function renderSettings() {
   const s = await api("settings");
   $("#ver").textContent = "Phiên bản " + s.version;
-  const row = (k, label) => `<div class="d-flex align-items-center gap-2 mb-2"><span style="width:260px" class="text-muted">${label}</span>
-    <input class="form-control" readonly value="${esc(s[k])}"><button class="btn btn-outline-secondary" data-open="${k}">Mở</button></div>`;
-  $("#cdFiles").innerHTML = row("so_file", "Sổ điểm danh tháng đang dùng") + row("cdhs_file", "File danh sách học sinh đã nhập") + row("data", "File dữ liệu của app");
+  // mỗi file 1 hàng: tên file (rê chuột xem đường dẫn đủ) + các nút của file đó
+  const row = (k, icon, label, btns, help = "") => {
+    const p = s[k] || "", name = p.split(/[\\/]/).pop();
+    return `<div class="d-flex align-items-center gap-3 py-2 border-top">
+      <i class="bi ${icon} fs-4 text-secondary"></i>
+      <div class="flex-grow-1" style="min-width:0"><div class="text-muted small">${label}</div>
+        <div class="fw-semibold text-truncate" title="${esc(p)}">${p ? esc(name) : `<span class="text-muted fw-normal">chưa có</span>`}</div>
+        ${help ? `<div class="text-muted small">${help}</div>` : ""}</div>
+      <div class="d-flex gap-2 flex-shrink-0">${btns}</div></div>`;
+  };
+  const folder = k => `<button class="btn btn-outline-secondary text-nowrap" data-open="${k}"><i class="bi bi-folder2-open"></i> Thư mục</button>`;
+  $("#cdFiles").innerHTML =
+    row("so_file", "bi-journal-text", "Sổ điểm danh tháng",
+      `<button class="btn btn-primary text-nowrap" data-cd="book"><i class="bi bi-journal-arrow-up"></i> Chọn sổ khác…</button>
+       <button class="btn btn-outline-primary text-nowrap" data-cd="notes"><i class="bi bi-journal-text"></i> Đọc ghi chú sổ…</button>` + folder("so_folder")) +
+    row("cdhs_file", "bi-file-earmark-spreadsheet", "Danh sách học sinh (Excel)",
+      `<button class="btn btn-primary text-nowrap" data-cd="import"><i class="bi bi-file-earmark-arrow-down"></i> Nhập danh sách…</button>
+       <button class="btn btn-outline-secondary text-nowrap" data-open="cdhs_file"><i class="bi bi-box-arrow-up-right"></i> Mở file</button>`,
+      "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép (file toàn trường tô đỏ cũng nhập được)") +
+    row("data", "bi-database", "Dữ liệu của app", folder("data_folder"));
 }
 
 async function importList(path) {
@@ -654,9 +674,13 @@ function wire() {
   };
 
   // Cài đặt
-  $("#cdBook").onclick = async () => { const r = await api("choose_book"); if (!r.cancel) { handle(r); renderSettings(); } };
-  $("#cdImport").onclick = () => importList();
-  $("#cdNotes").onclick = noteSuggestions;
+  $("#cdFiles").onclick = async e => {
+    const b = e.target.closest("[data-cd]");
+    if (!b) return;
+    if (b.dataset.cd === "book") { const r = await api("choose_book"); if (!r.cancel) { handle(r); renderSettings(); } }
+    else if (b.dataset.cd === "import") importList();
+    else if (b.dataset.cd === "notes") noteSuggestions();
+  };
 }
 
 // Gọi từ Python khi bấm nút đóng cửa sổ mà còn thay đổi chưa lưu

@@ -59,7 +59,7 @@ main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
 .dot.ok { background: var(--st-ok-b); }
 .dot.warn { background: var(--st-warn-b); }
 .dot.err { background: var(--st-err-b); }
-.legend .badge { font-weight: 500; font-size: .85rem; padding: .45em .7em; border: 1px solid #dee2e6; }
+.legend .dot { margin-right: .3rem; }
 
 .summary .todo { cursor: pointer; }
 .actionbar { display: flex; align-items: center; gap: 10px; }
@@ -69,6 +69,7 @@ main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
 .actionbar .state.err { color: #b02a37; font-weight: 600; cursor: pointer; }
 
 #mealAlerts:empty { display: none; }
+.meal td { padding-top: .32rem; padding-bottom: .32rem; vertical-align: middle; }
 
 /* bảng chọn tên của 1 lớp */
 #mdClass .modal-dialog { max-width: min(1180px, 96vw); }
