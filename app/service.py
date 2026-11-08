@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -47,6 +48,10 @@ def next_school_day(day: dt.date, step: int = 1) -> dt.date:
     while day.weekday() >= 5:
         day += dt.timedelta(days=step)
     return day
+
+
+# ghi chú lớp kiểu "Không nói gì là đủ" / "ko báo thì đủ": GV không nhắn nghĩa là lớp đủ
+NOTE_FULL = re.compile(r"\b(khong|ko|k)\s+(noi|bao|nhan|nt|ib)(\s+gi)?\s*(la|thi|coi nhu|tuc la)\s+du\b")
 
 
 @dataclass
@@ -268,6 +273,9 @@ class Workspace:
         for code, flag in flags.items():
             if code in st.classes:
                 st.cd(code).reported = flag
+        for code, c in st.classes.items():  # ghi chú sổ "Không nói gì là đủ": GV không nhắn thì lớp đủ
+            if code not in flags and not c.reported and NOTE_FULL.search(fold(c.note)):
+                c.reported = True
         self.state = st
         return st
 

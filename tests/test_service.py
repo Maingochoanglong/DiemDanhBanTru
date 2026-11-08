@@ -147,3 +147,15 @@ def test_si_so_unchanged_after_save_with_scheduled_cut(ws):
     assert ws.state.si_so("1D15") == 5
     assert ws.meals().balanced
     assert ws.load_day(day).si_so("1D15") == 5
+
+
+def test_class_note_no_message_means_full(ws):
+    book = ws.book_path or __import__("pathlib").Path(ws.settings["so_file"])
+    wb = sobook.load_book(book)
+    info = sobook.analyze(wb["28"])
+    info.cell("2D17", "ghichu").value = "Không nói gì là đủ"
+    wb.save(book)
+    st = ws.load_day(dt.date(2026, 10, 29))
+    assert st.cd("2D17").reported and "2D17" not in st.unreported()
+    assert "1D15" in st.unreported()  # lớp khác vẫn phải báo
+
