@@ -273,11 +273,12 @@ def test_pick_ghep_group_and_keep_it_in_temp_book(api, tmp_path):
     assert a2._ws.state.ghep_pick == {sid: "1.2"} and a2.meals()["ok"]
 
 
-def test_ghep_page_is_read_only_view(api):
-    g = api.ghep()["classes"]
-    c = next(x for x in g if x["code"] == "1D19")
-    assert c["n"] == 4 and c["done"] == 0 and [x["g"] for x in c["groups"]] == ["1.1", "1.2"]
-    assert not hasattr(api, "assign_ghep") and not hasattr(api, "assign_ghep_text")
+def test_meals_show_ghep_list_progress(api):
+    g = {x["code"]: x for x in api.meals()["ghep"]}
+    assert (g["1D19"]["n"], g["1D19"]["done"]) == (4, 0)
+    for name in ("ghep", "assign_ghep", "assign_ghep_text", "undo_friday"):
+        assert not hasattr(api, name)  # nhóm ghép chỉ ghi ở file Excel; cắt thứ 6 hủy ở trang Lịch thêm/cắt
+
 
 
 def test_save_check_gathers_all_questions(api):
@@ -287,4 +288,15 @@ def test_save_check_gathers_all_questions(api):
     api.set_absent("1D19", sid, True)  # em ghép chưa có nhóm vắng -> suất ăn lệch
     ck = api.save_check()
     assert ck["meal"] == {"total": ck["meal"]["present"] + 1, "present": ck["meal"]["present"], "ask": 1}
+
+
+def test_friday_class_with_only_auto_absent_is_still_unreported(api):
+    kid = next(s for s in api._ws.roster.students if s.ho_ten == "Lục Thảo Mi")  # 4D19
+    kid.cat_thu6 = True
+    api._ws.roster.invalidate()
+    api.open_day("2026-10-30", True)  # thứ 6
+    row = next(r for r in api.state()["rows"] if r.get("code") == "4D19")
+    assert not row["reported"] and row["status"] == "muted" and row["auto"] == "Thảo Mi" and row["ten"] == ""
+    ck = api.save_check()
+    assert "4D19" in ck["unreported"] and ck["unreported_auto"] == ["4D19"]
 
