@@ -143,6 +143,7 @@ function handle(r) {  // kết quả chung từ Python: lỗi, thông báo, tr�
 }
 
 // ------------------------------------------------------------------ màn Điểm danh
+let ddFilter = "all";  // lọc bảng điểm danh: all | unrep (chưa báo) | absent (có vắng)
 function renderDiemDanh() {
   const st = S;
   const sum = $("#summary");
@@ -150,8 +151,15 @@ function renderDiemDanh() {
   if (st.hint) h += `<div class="alert alert-warning py-2 mb-0 todo" data-go="cd"><i class="bi bi-gear me-2"></i>${esc(st.hint)}</div>`;
   for (const t of st.todo) h += `<div class="alert alert-danger py-2 mb-0 todo" data-open="${esc(t.code || "")}"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(t.text)}</div>`;
   if (st.info.length) h += `<div class="text-muted small px-1"><i class="bi bi-info-circle me-1"></i>${st.info.map(esc).join(" · ")}</div>`;
+
   sum.innerHTML = h;
   sum.style.display = h ? "" : "none";
+  const un = st.unreported || [];  // lớp chưa báo: bấm mã lớp để mở lớp đó
+  const show = un.slice(0, 12);
+  $("#unrep").innerHTML = !un.length ? `<span class="text-success small"><i class="bi bi-check-circle me-1"></i>Các lớp đều đã báo</span>`
+    : `<span class="text-muted me-1"><i class="bi bi-hourglass-split me-1"></i>Chưa báo (${un.length}):</span>` +
+      show.map(c => `<button class="btn btn-sm btn-outline-secondary py-0" data-open="${esc(c)}">${esc(c)}</button>`).join("") +
+      (un.length > show.length ? `<span class="text-muted small ms-1">và ${un.length - show.length} lớp khác</span>` : "");
 
   const t = st.totals;
   $("#totals").textContent = t ? `${st.weekday} ${st.date_text} · Đã báo ${t.rep}/${t.n} lớp · Sĩ số ${t.si} · Vắng ${t.vang} · Hiện diện ${t.hd}` : "";
@@ -160,10 +168,17 @@ function renderDiemDanh() {
     <i class="bi ${m.ok ? "bi-check-circle" : "bi-exclamation-triangle"}"></i> ${m.ok ? `Tổng suất ${m.total} = hiện diện ${m.present}`
       : `Suất ăn ${mealDiff(m)}${m.ask ? ` · ${m.ask} em ghép chưa rõ nhóm` : ""}`}</span>` : "";
 
-  const rows = st.rows.map(r => {
+  // lọc bảng: tất cả / chưa báo / có vắng
+  const cls = st.rows.filter(r => r.kind === "class");
+  const counts = { all: cls.length, unrep: cls.filter(r => !r.reported).length, absent: cls.filter(r => r.vang > 0).length };
+  $("#ddFilter").innerHTML = [["all", "Tất cả"], ["unrep", "Chưa báo"], ["absent", "Có vắng"]].map(([k, label]) =>
+    `<button type="button" class="btn ${ddFilter === k ? "btn-secondary" : "btn-outline-secondary"}" data-filter="${k}">${label} (${counts[k]})</button>`).join("");
+  const keep = r => ddFilter === "all" || (ddFilter === "unrep" ? !r.reported : r.vang > 0);
+  const rows = st.rows.filter(r => r.kind === "class" ? keep(r) : ddFilter === "all").map(r => {
     if (r.kind === "khoi") return `<tr class="khoi"><td>${esc(r.code)}</td><td></td><td class="num">${r.si}</td><td class="num">${r.vang}</td><td class="num">${r.hd}</td><td></td><td></td></tr>`;
-    const note = [r.sched ? "[Lịch]" : "", r.warn, r.info, r.note].filter(Boolean).join(" · ");
-    const ten = r.reported ? esc(r.ten) : `<span class="text-muted fst-italic">(chưa báo)</span>`;
+    const note = [r.sched ? "[Lịch]" : "", r.warn, r.note].filter(Boolean).join(" · ");
+    const ten = r.reported ? esc(r.ten) : `<span class="text-muted fst-italic">(chưa báo)</span>` +
+      (r.auto ? ` <span class="text-muted small">· nghỉ T6: ${esc(r.auto)}</span>` : "");
     return `<tr class="cls st-${r.status}" data-code="${esc(r.code)}">
       <td><span class="dot ${r.status}"></span>${esc(r.code)}${r.ma ? ` <span class="text-muted fw-normal small">(${esc(r.ma)})</span>` : ""}</td>
       <td class="gv">${esc(r.gvcn)}</td><td class="num">${r.si}</td><td class="num fw-bold">${r.vang || 0}</td><td class="num">${r.hd}</td>
@@ -171,6 +186,8 @@ function renderDiemDanh() {
   });
   if (t) rows.push(`<tr class="tong"><td>TỔNG CỘNG</td><td>đã báo ${t.rep}/${t.n} lớp</td><td class="num">${t.si}</td><td class="num">${t.vang}</td><td class="num">${t.hd}</td><td></td><td></td></tr>`);
   $("#soBody").innerHTML = rows.join("") || `<tr><td colspan="7" class="text-center text-muted py-5">Chưa có danh sách học sinh. Vào Cài đặt để nhập.</td></tr>`;
+  if (ddFilter !== "all" && !cls.some(keep)) $("#soBody").insertAdjacentHTML("afterbegin",
+    `<tr><td colspan="7" class="text-center text-muted py-4">${ddFilter === "unrep" ? "Các lớp đều đã báo." : "Không lớp nào có em vắng."}</td></tr>`);
 
   const ss = $("#saveState");
   if (st.unresolved) { ss.className = "state err"; ss.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> Còn ${st.unresolved} tên chưa rõ — xử lý xong mới lưu được`; }
@@ -203,7 +220,6 @@ function renderClass() {
     <span class="badge text-bg-danger fs-6">Vắng ${d.vang}</span><span class="badge text-bg-success fs-6">Hiện diện ${d.hd}</span>`;
   let a = "";
   for (const w of d.warnings) a += `<div class="alert alert-danger py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(w)}</div>`;
-  for (const w of d.notices || []) a += `<div class="alert alert-secondary py-2 mb-2"><i class="bi bi-info-circle me-2"></i>${esc(w)} (không tính)</div>`;
   if (d.pending.length) {
     a += `<div class="alert alert-warning py-2 mb-2"><b>Tên trong sổ chưa khớp danh sách</b> — bấm vào tên để chọn em đúng:<div class="mt-2 d-flex gap-2 flex-wrap">` +
       d.pending.map(p => `<button class="btn btn-danger" data-pend="${p.idx}"><i class="bi bi-question-circle"></i> ${esc(p.query)}</button>`).join("") + `</div></div>`;
@@ -212,6 +228,8 @@ function renderClass() {
   if (d.upcoming.length) a += `<div class="text-muted small mb-2"><i class="bi bi-calendar-event"></i> Sắp tới: ${esc(d.upcoming.join("; "))}</div>`;
   $("#clsAlerts").innerHTML = a;
   $("#clsNote").value = d.note;
+  const fri = d.names.some(n => n.absent && n.tags.includes("cắt thứ 6"));
+  $("#clsFull").innerHTML = `<i class="bi bi-check2-all"></i> ${fri ? "Đủ (trừ em nghỉ thứ 6)" : "Lớp này đủ"}`;
   $("#clsNames").innerHTML = d.names.map(n => `
     <button class="nm ${n.absent ? "on" : ""}" data-sid="${esc(n.id)}" title="${esc(n.full)} · ${esc(n.dob)}"
       data-s="${esc(n.full + " " + n.name + " " + (n.alias || ""))}" data-full="${esc(n.full)}" data-name="${esc(n.name)}">
@@ -342,7 +360,8 @@ async function doSave() {
   if (ck.blocked) return showBlocked(ck.blocked);
   const items = [];
   if (ck.unreported && ck.unreported.length) items.push(`<li class="mb-2"><b>${ck.unreported.length} lớp chưa báo</b>: ${esc(ck.unreported.join(", "))}.
-    Lưu bây giờ thì các lớp này tính <b>đủ</b>.</li>`);
+    Lưu bây giờ thì các lớp này coi như <b>không em nào vắng</b>` +
+    `${ck.unreported_auto && ck.unreported_auto.length ? ` (trừ các em nghỉ thứ 6 ở lớp ${esc(ck.unreported_auto.join(", "))})` : ""}.</li>`);
   if (ck.meal) items.push(`<li class="mb-2"><b class="text-danger">Suất ăn ${mealDiff(ck.meal)}</b> (tổng suất ${ck.meal.total}, hiện diện ${ck.meal.present})` +
     `${ck.meal.ask ? `: ${ck.meal.ask} em ăn ghép vắng chưa chọn nhóm` : ""}. Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch.</li>`);
   if (ck.conflicts && ck.conflicts.length) items.push(`<li class="mb-2"><b>Sĩ số khác nhau</b> giữa danh sách bán trú và sổ (có thể do thêm/cắt em chưa cập nhật):
@@ -414,7 +433,11 @@ async function renderMeals() {
   });
   if (m.self) rows.push(`<tr class="text-muted"><td>${esc(m.self.label)}</td><td>${esc(m.self.gom)}</td><td class="text-center fs-5">${m.self.meals}</td></tr>`);
   $("#mealBody").innerHTML = rows.join("");
-  $("#mealInfo").innerHTML = `<span class="text-muted">Suất mỗi nhóm = hiện diện các lớp trong nhóm + em ghép − em ghép vắng (như công thức trong sổ).</span>`;
+  const gh = (m.ghep || []).map(g => `<div class="mb-1"><i class="bi bi-diagram-3 me-1"></i>Lớp ghép <b>${esc(g.code)}</b>${g.ma ? ` (${esc(g.ma)})` : ""}:
+    đã ghi nhóm ăn ghép cho <b class="${g.done < g.n ? "text-warning-emphasis" : "text-success"}">${g.done}/${g.n} em</b>${g.done < g.n
+      ? " — ghi nhóm ở cột <b>Ăn ghép</b> trong file Excel danh sách rồi nhập lại" : ""} · <a href="#" data-hs="${esc(g.code)}">Xem các em</a></div>`).join("");
+  $("#mealInfo").innerHTML = gh + `<span class="text-muted">Suất mỗi nhóm = hiện diện các lớp trong nhóm + em ghép − em ghép vắng (như công thức trong sổ).</span>`;
+  $$("#mealInfo [data-hs]").forEach(a => a.onclick = e => { e.preventDefault(); hsPreset = a.dataset.hs; showPage("hs"); });
   const pick = async (sid, g) => { const r = await api("pick_ghep", sid, g); applyState(r.state); renderMeals(); };
   $$("#mealAlerts [data-pick]").forEach(b => b.onclick = () => pick(b.dataset.pick, b.dataset.g));
   $$("#mealBody [data-unpick]").forEach(b => b.onclick = e => { e.preventDefault(); pick(b.dataset.unpick, ""); });
@@ -422,8 +445,15 @@ async function renderMeals() {
 
 // ------------------------------------------------------------------ Học sinh
 let HS = null;
+let hsPreset = null;  // mở trang Học sinh lọc sẵn 1 lớp (bấm "Xem các em" ở trang Suất ăn)
 async function renderStudents() {
   const sel = $("#hsClass");
+  if (hsPreset !== null) {
+    if (![...sel.options].some(o => o.value === hsPreset)) sel.insertAdjacentHTML("beforeend", `<option>${esc(hsPreset)}</option>`);
+    sel.value = hsPreset;
+    $("#hsQ").value = "";
+    hsPreset = null;
+  }
   const cur = sel.value;
   HS = await api("students", $("#hsQ").value, cur, $("#hsBt").checked);
   if (sel.options.length !== HS.classes.length + 1) {
@@ -433,7 +463,7 @@ async function renderStudents() {
   $("#hsCount").textContent = `${HS.rows.length} em`;
   $("#hsBody").innerHTML = HS.rows.map(s => `<tr class="${s.now ? "" : "text-muted"}">
     <td>${esc(s.lop)}</td><td class="fw-semibold">${esc(s.ten)}</td><td>${esc(s.ns)}</td><td class="text-center">${s.bt ? `<i class="bi bi-check-lg text-success"></i>` : ""}</td>
-    <td>${esc(s.ghiso)}</td><td>${esc(s.ghep)}</td><td>${esc(s.db)}</td><td>${esc(s.gc)}</td></tr>`).join("");
+    <td>${esc(s.goi)}</td><td>${esc(s.ghep)}</td><td>${esc(s.db)}</td><td>${esc(s.gc)}</td></tr>`).join("");
 }
 
 // ------------------------------------------------------------------ Lịch thêm / cắt
@@ -503,23 +533,6 @@ async function scheduleDialog(kind, code, ids = []) {
 }
 
 // ------------------------------------------------------------------ Ghép lớp
-async function renderGhep() {  // chỉ xem: nhóm ghép lấy từ cột Ăn ghép trong file Excel danh sách
-  const g = await api("ghep");
-  if (!g.classes.length) {
-    $("#ghepBody").innerHTML = `<div class="card"><div class="card-body text-muted">Sổ đang mở không có lớp ghép (bảng suất ăn không có hàng "… ghép" nhận học sinh lẻ).</div></div>`;
-    return;
-  }
-  $("#ghepBody").innerHTML = g.classes.map(c => `
-    <div class="card shadow-sm mb-3"><div class="card-header bg-white d-flex align-items-center gap-2 flex-wrap">
-      <b class="fs-6">Lớp ${esc(c.code)}${c.ma ? " (" + esc(c.ma) + ")" : ""} — ${c.n} em ăn bán trú</b>
-      <span class="badge ${c.done === c.n ? "text-bg-success" : "text-bg-warning"}">Đã ghi nhóm ${c.done}/${c.n} em</span>
-      <div class="ms-auto d-flex gap-2 flex-wrap">${c.groups.map(gr => `<span class="badge text-bg-light border fs-6 fw-normal">Nhóm ${esc(gr.g)}: ${gr.n} em${gr.book != null ? ` · sổ ghi ${gr.book}` : ""}</span>`).join("")}</div></div>
-      <div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>Tên ghi sổ</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn ghép</th></tr></thead><tbody>
-      ${c.students.map(s => `<tr class="${s.ok ? "" : "table-warning"}"><td>${esc(s.name)}</td><td>${esc(s.full)}</td><td>${esc(s.dob)}</td>
-        <td>${s.ok ? esc(s.g) : s.g ? `${esc(s.g)} <span class="text-muted">(không có nhóm này)</span>` : `<span class="text-muted">chưa ghi</span>`}</td></tr>`).join("")}
-      </tbody></table></div></div>`).join("");
-}
-
 // ------------------------------------------------------------------ Cài đặt
 async function renderSettings() {
   const s = await api("settings");
@@ -563,7 +576,6 @@ function showPage(p) {
   if (p === "sa") renderMeals();
   if (p === "hs") renderStudents();
   if (p === "lich") renderLich();
-  if (p === "ghep") renderGhep();
   if (p === "cd") renderSettings();
 }
 
@@ -574,10 +586,11 @@ function wire() {
     const go = e.target.closest("[data-go]");
     if (go) { showPage(go.dataset.go); return; }
     const op = e.target.closest("[data-open]");
-    if (op && op.closest("#summary")) { openClass(op.dataset.open); return; }
+    if (op && op.closest("#summary, #unrep")) { openClass(op.dataset.open); return; }
     if (op && op.dataset.open) { api("open_path", op.dataset.open).then(r => r.error && info("Chưa mở được", r.error)); }
   });
   $("#soBody").onclick = e => { const tr = e.target.closest("tr.cls"); if (tr) openClass(tr.dataset.code); };
+  $("#ddFilter").onclick = e => { const b = e.target.closest("[data-filter]"); if (b) { ddFilter = b.dataset.filter; renderDiemDanh(); } };
   $("#dayPrev").onclick = () => gotoDay(f => api("step_day", -1, f));
   $("#dayNext").onclick = () => gotoDay(f => api("step_day", 1, f));
   $("#dayToday").onclick = () => { const d = new Date(); const iso = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); gotoDay(f => api("open_day", iso, f)); };
@@ -605,17 +618,6 @@ function wire() {
 
   // bảng chọn tên
   $("#clsNames").onclick = e => { const b = e.target.closest(".nm"); if (b) toggleName(b); };
-  $("#clsNames").oncontextmenu = async e => {  // chuột phải vào tên: cắt bán trú / thứ 6
-    const b = e.target.closest(".nm");
-    if (!b) return;
-    e.preventDefault();
-    const n = D.names.find(x => x.id === b.dataset.sid);
-    const k = await ask(n.full, `Lớp ${esc(D.code)} · sinh ${esc(n.dob)}`, [{ key: "cat", label: "Cắt bán trú từ ngày…", cls: "btn-outline-danger" },
-      n.friday ? { key: "unfri", label: "Bỏ cắt thứ 6", cls: "btn-outline-secondary" } : { key: "thu6", label: "Cắt thứ 6 hàng tuần…", cls: "btn-outline-secondary" },
-      { key: null, label: "Đóng", cls: "btn-light" }]);
-    if (k === "unfri") { handle(await api("undo_friday", n.id)); D = await api("class_detail", D.code); renderClass(); }
-    else if (k) scheduleDialog(k, D.code, [n.id]);
-  };
   $("#clsSearch").oninput = filterNames;  // ô tìm chỉ để lọc tên; chọn vắng = bấm vào ô tên
   // dán tên nhiều dòng: ô một dòng sẽ dính các dòng lại, nên đổi xuống dòng thành dấu phẩy
   $("#clsSearch").addEventListener("paste", e => {

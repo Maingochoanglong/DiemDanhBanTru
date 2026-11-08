@@ -137,7 +137,7 @@ class Api:
         n = st.absent_count(code)
         if c.extra or any(p[0] == code for p in st.pending) or st.class_warnings(code):
             return "err"
-        if not c.reported and not n:
+        if not c.reported:  # chưa báo (có thể đã có em nghỉ thứ 6 tự tính vắng)
             return "muted"
         return "warn" if n else "ok"
 
@@ -170,8 +170,9 @@ class Api:
                 rows.append({
                     "kind": "class", "code": code, "ma": info.ma_ngan if info else "",
                     "gvcn": info.gvcn if info else "", "si": st.si_so(code), "vang": n, "hd": st.present(code),
-                    "ten": names if (c.reported or n) else "", "reported": c.reported or bool(n),
-                    "note": note, "warn": warns[0] if warns else "", "info": "; ".join(st.class_notices(code)),
+                    "ten": names if c.reported else "", "reported": c.reported,
+                    "auto": names if not c.reported and n else "",  # chưa báo: chỉ có em nghỉ thứ 6 tự tính vắng
+                    "note": note, "warn": warns[0] if warns else "",
                     "sched": bool(st.scheduled_changes(code)),
                     "status": self._status(code),
                 })
@@ -256,7 +257,7 @@ class Api:
         return {
             "code": code, "ma": info.ma_ngan if info else "", "gvcn": info.gvcn if info else "",
             "si": st.si_so(code), "vang": st.absent_count(code), "hd": st.present(code),
-            "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "notices": st.class_notices(code), "extra": list(c.extra),
+            "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "extra": list(c.extra),
             "names": names, "others": others, "pending": pending, "upcoming": upcoming,
         }
 
@@ -332,7 +333,8 @@ class Api:
         blocked = self._blocked()
         if blocked:
             return {"blocked": blocked}
-        out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines()}
+        out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines(),
+               "unreported_auto": [c for c in st.unreported() if st.absent_count(c)]}
         if not ws.layout.is_empty:
             m = ws.meals()
             if not m.balanced:
@@ -401,8 +403,16 @@ class Api:
             self_line = {"label": "Tự ăn tại lớp", "gom": ", ".join(layout.self_classes), "meals": summary.self_meals}
         ask = [{"sid": s.id, "name": name(s), "full": s.ho_ten, "cls": code, "groups": layout.ghep_codes(int(code[0]))}
                for code, s in summary.ask]
+        ghep = []  # lớp ghép: đã ghi nhóm ăn ghép (cột Ăn ghép trong file Excel danh sách) cho bao nhiêu em
+        for code in layout.ghep_classes:
+            groups = layout.ghep_codes(int(code[0]))
+            kids = ws.ghep_students(code)
+            info = ws.roster.classes.get(code)
+            ghep.append({"code": code, "ma": info.ma_ngan if info else "", "n": len(kids),
+                         "done": sum(1 for s in kids if s.an_ghep in groups)})
         return {"lines": lines, "self": self_line, "total": summary.total_meals, "present": summary.total_present,
-                "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask}
+                "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask,
+                "ghep": ghep}
 
     def pick_ghep(self, sid: str, group: str) -> dict:
         """Chọn nhóm ăn cho em ghép vắng (chỉ ngày đang mở); group rỗng = chọn lại."""
@@ -428,7 +438,7 @@ class Api:
             if s.cat_tu:
                 special.append(f"cắt từ {fmt_date(s.cat_tu)}")
             rows.append({"id": s.id, "lop": s.lop, "ten": s.ho_ten, "ns": s.ngay_sinh, "bt": s.ban_tru,
-                         "ghiso": roster.display_name(s) if s.ban_tru else "", "ghep": s.an_ghep,
+                         "goi": s.ten_ghi_so or "", "ghep": s.an_ghep,
                          "db": "; ".join(special), "gc": s.ghi_chu, "now": s.is_boarding(day)})
         return {"rows": rows, "classes": roster.class_codes(), "data_dirty": self._ws.data_dirty}
 
@@ -507,34 +517,7 @@ class Api:
         return {"ok": f"Đã hủy {n} lịch. Nếu đã ghi chú ở cột H, hãy xóa ghi chú đó trong ô Ghi chú của lớp.",
                 "state": self.state()}
 
-    def undo_friday(self, sid: str) -> dict:
-        s = self._ws.roster.by_id(sid)
-        if s is not None:
-            return self.cancel_schedules([f"{sch.FRIDAY}|{s.id}"])
-        return {"state": self.state()}
-
     # ================================================================== ghép lớp
-    def ghep(self) -> dict:
-        """Trang Ghép lớp (chỉ xem): nhóm ăn của từng em lớp ghép, lấy từ cột Ăn ghép trong file Excel danh sách."""
-        ws = self._ws
-        layout = ws.layout
-        if ws.state is None or layout.is_empty or not layout.ghep_classes:
-            return {"classes": []}
-        o_now = ws.state.o_values(layout)
-        out = []
-        for code in layout.ghep_classes:
-            groups = layout.ghep_codes(int(code[0]))
-            students = ws.ghep_students(code)
-            info = ws.roster.classes.get(code)
-            out.append({
-                "code": code, "ma": info.ma_ngan if info else "", "groups": [
-                    {"g": g, "n": sum(1 for s in students if s.an_ghep == g), "book": layout.o_values.get(g),
-                     "now": o_now.get(g, 0)} for g in groups],
-                "students": [{"name": ws.roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
-                              "g": s.an_ghep, "ok": s.an_ghep in groups} for s in students],
-                "n": len(students), "done": sum(1 for s in students if s.an_ghep in groups)})
-        return {"classes": out}
-
     # ================================================================== cài đặt
     def settings(self) -> dict:
         st = self._ws.settings

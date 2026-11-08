@@ -19,23 +19,26 @@ def ws(tmp_path, monkeypatch, roster):
     return w
 
 
-def test_new_day_paste_save_reload(ws):
+def absent(ws, code, full):
+    """Bấm chọn vắng 1 em (như bấm ô tên trong cửa sổ lớp)."""
+    ws.push_undo()
+    ws.state.set_absent(code, next(s.id for s in ws.roster.students if s.ho_ten == full), True)
+
+
+def test_new_day_click_save_reload(ws):
     day = dt.date(2026, 10, 29)
     st = ws.load_day(day)
     assert not st.exists_in_book and ws.template_name == "28"
     assert st.cd("4D21").note.startswith("Vũ Khoa")  # ghi chú mang sang ngày mới
-    out = ws.paste("""Lớp 1D15 : 5/6
-Vắng : Tuấn Anh
-1D16 đủ
-Vắng Duy Mạnh, Hải Long""")
-    # dòng cuối không ghi lớp, không có người gửi (tin riêng): giáo vụ chọn lớp, lớp khớp tên xếp đầu
-    assert [o.message.cls for o in out] == ["1D15", "1D16", None]
-    assert out[2].guessed_from == ["2D17"] and ws.unplaced == [out[2].message]
-    ws.assign_unplaced(out[2].message, "2D17")
+    absent(ws, "1D15", "Lâm Quốc Tuấn Anh")
+    ws.push_undo()
+    ws.state.mark_full("1D16")
+    absent(ws, "2D17", "Viên Duy Mạnh")
+    absent(ws, "2D17", "Khổng Hải Long")
     assert ws.state.absent_names("2D17") == ["Duy Mạnh", "Hải Long"]
     assert ws.dirty
-    assert ws.undo() and ws.undo() and ws.state.absent_count("1D15") == 0  # bỏ lần chọn lớp, rồi lần dán
-    ws.paste("Lớp 1D15 : 5/6 Vắng : Tuấn Anh")
+    assert ws.undo() and ws.undo() and ws.state.absent_count("2D17") == 0  # bỏ 2 lần bấm
+    assert ws.state.absent_names("1D15") == ["Tuấn Anh"]
     assert ws.save() == "29"
 
     st2 = ws.load_day(day)
@@ -99,7 +102,7 @@ def test_zero_padded_sheet_name_and_data_file_locked(ws, tmp_path):
     wb.save(book)
     st = ws.load_day(dt.date(2026, 10, 1))
     assert st.exists_in_book and ws.sheet_name == "01"
-    ws.paste("Lớp 1D15 : 5/6 Vắng : Tuấn Anh")
+    absent(ws, "1D15", "Lâm Quốc Tuấn Anh")
     lock_file(ws.data.path).write_text("x")  # file dữ liệu đang mở trong Excel
     assert ws.save() == "01"
     assert "chưa ghi được file dữ liệu" in ws.warning and ws.data_dirty

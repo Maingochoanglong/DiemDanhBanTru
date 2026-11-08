@@ -176,20 +176,3 @@ def suggest(roster: Roster, cls: str, query: str, day: dt.date | None = None, n:
             scored.append((ratio, s))
     scored.sort(key=lambda x: -x[0])
     return [s for _, s in scored[:n]]
-
-
-def guess_class(roster: Roster, names: list[str], day: dt.date | None = None) -> list[str]:
-    """Đoán lớp cho tin không ghi mã lớp: lớp có nhiều tên khớp nhất (em bán trú)."""
-    if not names:
-        return []
-    best, out = 0, []
-    for code in roster.class_codes():
-        boarding = roster.boarding(code, day)
-        hits = sum(1 for q in names if _find(boarding, q))
-        if hits > best:
-            best, out = hits, [code]
-        elif hits == best and hits:
-            out.append(code)
-    if best < max(1, (len(names) + 1) // 2):
-        return []
-    return out

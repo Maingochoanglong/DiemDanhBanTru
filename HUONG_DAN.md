@@ -6,7 +6,7 @@ App giúp giáo vụ làm sổ điểm danh bán trú hằng ngày:
 - ghi tên đúng quy tắc;
 - tự đếm số vắng;
 - tự tính bảng suất ăn (kể cả các em ăn ghép);
-- in 2 tờ.
+- ghi vào sổ để in bằng Excel như thường lệ (2 tờ).
 
 Kết quả ghi vào **chính file sổ Excel đang dùng**, giữ y kiểu cũ: mỗi ngày 1 sheet, mỗi tháng 1 file.
 
@@ -41,18 +41,17 @@ Dữ liệu riêng của app (danh sách HS, ghép lớp, cài đặt) lưu ở 
 
 ## 3. Mỗi sáng
 
-Thanh bên trái có các trang: **Điểm danh** (dùng hằng ngày), **Suất ăn**, **Học sinh**, **Lịch thêm/cắt**, **Ghép lớp**, **Cài đặt**. Thanh trên cùng để chọn ngày: gõ ngày dạng `dd/mm/yyyy` rồi Enter, hoặc bấm nút lịch, 2 nút mũi tên, **Hôm nay**; nút **Mở sổ Excel** mở sổ đang dùng.
+Thanh bên trái có các trang: **Điểm danh** (dùng hằng ngày), **Suất ăn**, **Học sinh**, **Lịch thêm/cắt**, **Cài đặt**. Thanh trên cùng để chọn ngày: gõ ngày dạng `dd/mm/yyyy` rồi Enter, hoặc bấm nút lịch, 2 nút mũi tên, **Hôm nay**; nút **Mở sổ Excel** mở sổ đang dùng.
 
 Trang **Điểm danh**:
 
 | Phần | Dùng để |
 |---|---|
-| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem (tên chưa rõ, số GV báo lệch, sĩ số khác sổ). Tên GV kể mà em không ăn bán trú chỉ ghi chú, không tô đỏ. Lớp có ghi chú trong sổ kiểu *Không nói gì là đủ* thì GV không nhắn app vẫn tính là **đủ**. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
-| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn. Gõ đủ chữ thì chỉ hiện em có đủ các chữ đó (gõ `gia huy` không ra *Huỳnh Gia Lộc*); gõ có dấu thì ưu tiên em đúng dấu (`Nguyên Vũ` không ra *Nguyễn Vũ Khang*); em có tên cuối khớp đứng trước (`Thư` → *Minh Thư* trước *Thư Kỳ*); tên nào không có trong bảng thì hiện thành **ô viền đứt** ghi lý do: *Không ăn bán trú* (ô xám) hoặc *Không có trong danh sách* (ô vàng, nên xem lại tên) — các ô này không bấm được, không tính. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
+| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem (tên chưa rõ, sĩ số khác sổ). Thứ 6, lớp chưa báo vẫn ghi *(chưa báo)* kèm dòng xám *nghỉ T6: …* (các em cắt thứ 6 đã tự tính vắng). Lớp có ghi chú trong sổ kiểu *Không nói gì là đủ* thì GV không nhắn app vẫn tính là **đủ**. Phía trên bảng có dòng **Chưa báo (n): 1D15 · 4D21 …** — bấm mã lớp để mở lớp đó; nút lọc **Tất cả / Chưa báo / Có vắng** ở góc phải để bảng chỉ hiện các lớp cần xem. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
+| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn. Gõ đủ chữ thì chỉ hiện em có đủ các chữ đó (gõ `gia huy` không ra *Huỳnh Gia Lộc*); gõ có dấu thì ưu tiên em đúng dấu (`Nguyên Vũ` không ra *Nguyễn Vũ Khang*); em có tên cuối khớp đứng trước (`Thư` → *Minh Thư* trước *Thư Kỳ*); tên nào không có trong bảng thì hiện thành **ô viền đứt** ghi lý do: *Không ăn bán trú* (ô xám) hoặc *Không có trong danh sách* (ô vàng, nên xem lại tên) — các ô này không bấm được, không tính. Nút **Lớp này đủ** (lớp có em nghỉ thứ 6 thì nút ghi **Đủ (trừ em nghỉ thứ 6)**), ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
 
 Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền phía sau tối đi.
 
-> Đọc tin nhắn Zalo **tạm ẩn**, sẽ phát triển sau.
 
 Trang **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tính như công thức trong sổ (hiện diện các lớp + em ghép − em ghép vắng), ghi tên em ghép vắng ngay trong dòng. Dòng trên cùng phải là **Tổng suất = hiện diện**; khi lệch app ghi rõ **thừa / thiếu bao nhiêu suất** và lý do ở ngay dưới. Em ăn ghép vắng mà danh sách chưa ghi nhóm: app hỏi **em đó ăn nhóm nào** (bấm nút nhóm; bấm tên em trong dòng để chọn lại). Bấm **Lưu vào sổ** khi suất ăn còn lệch thì app hỏi lại trước khi lưu.
 
@@ -90,21 +89,21 @@ Nếu để tích ô *Ghi chú vào cột H*, app tự ghi chú vào cột H nh�
 
 Danh sách lịch chia nhóm: *Sắp áp dụng*, *Hàng tuần – cắt thứ 6*, *Đã áp dụng (30 ngày qua)*. Tích dòng rồi bấm **Hủy các lịch đã tích** để hủy.
 
-Làm nhanh ngay trong bảng chọn tên: **bấm chuột phải vào ô tên em** để chọn *Cắt bán trú từ ngày…*, *Cắt thứ 6 hàng tuần…* hoặc *Bỏ cắt thứ 6*. Nút **Thêm/cắt bán trú** ở cuối bảng chọn tên đặt lịch cho lớp đó. Ô tên có nhãn nhỏ *nghỉ T6* hoặc *cắt từ 01/11* nếu em đã có lịch.
+Nút **Thêm/cắt bán trú** ở cuối bảng chọn tên đặt lịch cho lớp đó. Bỏ lịch (kể cả *cắt thứ 6 hàng tuần*): trang **Lịch thêm/cắt**, tích dòng lịch rồi bấm **Hủy các lịch đã tích**. Ô tên có nhãn nhỏ *nghỉ T6* hoặc *cắt từ 01/11* nếu em đã có lịch.
 
 ## 5. Ghép lớp (lớp 1.5, 4.4 …)
 
 Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em chia sang ăn ở nhóm khác (1.1, 1.2 …).
 
 - Nhóm ăn của từng em ghi ở cột **Ăn ghép** trong file Excel danh sách (vd. *1.3*; để trống = không ăn ghép), rồi vào **Cài đặt → Nhập danh sách học sinh**. Đây là chỗ duy nhất ghi nhóm ghép.
-- Trang **Ghép lớp** chỉ để **xem**: mỗi lớp ghép có bao nhiêu em đã ghi nhóm, mỗi nhóm bao nhiêu em (so với số trong sổ), em nào chưa ghi (tô vàng).
+- Chân trang **Suất ăn** ghi mỗi lớp ghép đã ghi nhóm cho bao nhiêu em (vd. *1D19: 1/29 em*); bấm **Xem các em** để mở trang **Học sinh** lọc sẵn lớp đó (cột **Ăn ghép**).
 - Em đã có nhóm mà vắng: app tự trừ đúng nhóm, tự điền ô **vắng** trong bảng suất ăn của sổ.
 - Em chưa có nhóm mà vắng: trang **Suất ăn** hỏi em đó ăn nhóm nào (chỉ cho ngày đó). Mở lại ngày đã lưu, app đọc lại ô **vắng** trong sổ; chỉ hỏi lại khi không chắc em nào ở nhóm nào.
 - Lớp ghép chưa ghi nhóm cho đủ mọi em thì số em ghép mỗi nhóm giữ như sổ hôm trước.
 
 ## 6. Học sinh
 
-Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, tên ghi sổ, ăn ghép, lịch cắt/thêm.
+Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác** (như cột trong file Excel), ăn ghép, lịch cắt/thêm.
 
 - Muốn **thêm, sửa, xóa học sinh** (kể cả tên gọi khác): sửa trong **file Excel danh sách** rồi vào Cài đặt → **Nhập danh sách học sinh…**.
 - Lịch **cắt bán trú từ ngày**, **ăn từ ngày**, **cắt thứ 6**: đặt ở trang **Lịch thêm/cắt** hoặc menu *Thêm/cắt bán trú* trong bảng tên của lớp.

@@ -8,14 +8,12 @@ import os
 import re
 import threading
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from .core import matcher
 from .core.day import DayState
 from .core.meals import MealLayout, MealSummary
 from .core.models import ClassInfo
-from .core.parser import ParsedMessage, parse_messages
 from .core.text import class_sort_key, fold
 from .excel import sobook, tamthoi
 from .excel.database import AppData, default_data_path, short_codes
@@ -54,15 +52,6 @@ def next_school_day(day: dt.date, step: int = 1) -> dt.date:
 NOTE_FULL = re.compile(r"\b(khong|ko|k)\s+(noi|bao|nhan|nt|ib)(\s+gi)?\s*(la|thi|coi nhu|tuc la)\s+du\b")
 
 
-@dataclass
-class PasteOutcome:
-    message: ParsedMessage
-    results: list[matcher.MatchResult] = field(default_factory=list)
-    guessed_from: list[str] = field(default_factory=list)  # lớp gợi ý (xếp đầu khi chọn) cho tin không ghi lớp
-    suggestions: list = field(default_factory=list)  # đề nghị thêm/cắt bán trú (tin báo lịch)
-    schedule_known: bool = False  # tin báo lịch nhưng lịch đó đã có sẵn
-
-
 class NeedMonthBook(Exception):
     """Chưa có sổ cho tháng của ngày đang chọn."""
 
@@ -87,8 +76,6 @@ class Workspace:
         self.warning: str = ""  # cảnh báo sau lần lưu gần nhất
         self.dirty = False  # ngày đang mở có thay đổi chưa ghi vào sổ
         self.data_dirty = False  # danh sách HS / ghép lớp có thay đổi chưa lưu
-        self.paste_skipped: dict[dt.date, int] = {}  # tin Zalo của ngày khác (lần dán gần nhất)
-        self.unplaced: list[ParsedMessage] = []  # tin có tên vắng nhưng không tìm được lớp (chưa xử lý)
         # sổ tạm: tự lưu sau mỗi thao tác (chạy nền), xóa khi đã lưu vào sổ chính
         self.version = 0  # tăng mỗi lần ngày đang mở thay đổi
         self.temp_saved_at = ""  # giờ lưu tạm gần nhất
@@ -223,7 +210,6 @@ class Workspace:
         self._undo.clear()
         self.dirty = False
         self.sheet_checks = {}
-        self.unplaced = []
         path = self.book_for(day)
         self.book_path = path
         if path is None:
@@ -295,70 +281,6 @@ class Workspace:
         self.version += 1
         return True
 
-    def paste(self, text: str) -> list[PasteOutcome]:
-        """Đọc tin nhắn dán vào và ghi vào ngày đang mở.
-
-        Tin Zalo có ngày giờ: chỉ lấy tin đúng ngày đang mở (tin ngày khác đếm vào `paste_skipped`),
-        theo thứ tự giờ gửi nên tin sau của cùng lớp ghi đè tin trước."""
-        assert self.state is not None
-        known = set(self.state.classes)
-        out = []
-        self.paste_skipped = {}
-        msgs = []
-        for m in parse_messages(text, known):
-            if m.when is not None and m.when.date() != self.day:
-                d = m.when.date()
-                self.paste_skipped[d] = self.paste_skipped.get(d, 0) + 1
-            else:
-                msgs.append(m)
-        if any(m.is_report for m in msgs):
-            self.push_undo()
-        for msg in msgs:
-            po = PasteOutcome(msg)
-            if msg.cls is None:
-                self._resolve_class(msg, po)
-                if msg.cls is None:
-                    out.append(po)
-                    continue
-            elif msg.sender:
-                self._learn_sender(msg.sender, msg.cls)
-            if msg.schedule:
-                self._schedule_suggestions(msg, po)
-            if not msg.is_report:
-                out.append(po)
-                continue
-            if msg.full:
-                self.state.mark_full(msg.cls)
-                c = self.state.cd(msg.cls)
-                c.teacher_present, c.teacher_total = msg.present, msg.total
-            else:
-                po.results = self.state.apply_message(msg)
-            out.append(po)
-        seen = {m.raw for m in self.unplaced}
-        self.unplaced += [po.message for po in out
-                          if po.message.cls is None and po.message.is_report and po.message.raw not in seen]
-        return out
-
-    def assign_unplaced(self, msg: ParsedMessage, code: str) -> list[matcher.MatchResult]:
-        """Giáo vụ chọn lớp cho tin không rõ lớp: ghi tin vào lớp đó."""
-        assert self.state is not None
-        self.push_undo()
-        msg.cls = code
-        if msg.sender:
-            self._learn_sender(msg.sender, code)  # lần sau tin không ghi lớp của người này: lớp này xếp đầu
-        if msg.full:
-            self.state.mark_full(code)
-            c = self.state.cd(code)
-            c.teacher_present, c.teacher_total = msg.present, msg.total
-            results = []
-        else:
-            results = self.state.apply_message(msg)
-        self.unplaced = [m for m in self.unplaced if m is not msg]
-        return results
-
-    def dismiss_unplaced(self, msg: ParsedMessage) -> None:
-        self.unplaced = [m for m in self.unplaced if m is not msg]
-
     # ---------------------------------------------------------------- việc còn dở trước khi lưu
     def pending_names(self) -> dict[str, list[str]]:
         """Tên GV ghi mà app chưa xác định được em nào (chưa tính vắng), theo lớp."""
@@ -372,76 +294,7 @@ class Workspace:
         """Số tên GV báo vắng chưa xác định được em nào (chưa tính vắng). Còn > 0 thì chưa cho lưu."""
         if self.state is None:
             return 0
-        return len(self.state.pending) + sum(max(1, len(m.names)) for m in self.unplaced)
-
-    def _resolve_class(self, msg: ParsedMessage, po: PasteOutcome) -> None:
-        """Tin không ghi mã lớp: KHÔNG tự xếp lớp, giáo vụ luôn tự chọn lớp.
-
-        Chỉ tìm các lớp gợi ý để xếp đầu danh sách chọn: mã lớp trong tên Zalo, tên Zalo giống GVCN,
-        lớp người gửi đã báo lần trước, rồi lớp có các tên học sinh trong tin."""
-        from .core.senders import match_teacher, sender_key
-
-        assert self.state is not None
-        known = set(self.state.classes)
-        hints: list[str] = []
-        if msg.sender_class in known:
-            hints.append(msg.sender_class)
-        if msg.sender:
-            gvcn = {c: info.gvcn for c, info in self.roster.classes.items() if c in known and info.gvcn}
-            teacher = match_teacher(msg.sender, gvcn)
-            if teacher:
-                hints.append(teacher)
-            learned = self.settings.get(sender_key(msg.sender))
-            if learned in known:
-                hints.append(learned)
-        if msg.names:
-            hints += matcher.guess_class(self.roster, msg.names, self.day)
-        po.guessed_from = list(dict.fromkeys(hints))
-
-    def _learn_sender(self, sender: str, code: str) -> None:
-        from .core.senders import sender_key
-
-        key = sender_key(sender)
-        if key != "zalo|" and self.settings.get(key) != code:
-            self.settings[key] = code
-            self.data_dirty = True
-
-    def _schedule_suggestions(self, msg: ParsedMessage, po: PasteOutcome) -> None:
-        from .core.notes import suggest_from_note
-
-        if not msg.cls:
-            return
-        seen = msg.when.date() if msg.when else self.day
-        sugs = suggest_from_note(self.roster, msg.cls, _relative_dates(msg.schedule, seen), seen)
-        # "Thêm mới 1 HS: …": bỏ đề nghị thêm em tên "mới"/"em"/"HS" (chữ đệm, không phải tên)
-        po.suggestions = [s for s in sugs if fold(s.new_name) not in {"moi", "em", "hs", "hoc sinh", "ban"}]
-        po.schedule_known = not po.suggestions
-
-    def apply_paste_suggestion(self, sug) -> str:
-        """Áp dụng 1 đề nghị từ tin báo lịch; thêm ghi chú cột H như giáo vụ vẫn viết. Trả về ghi chú."""
-        from .core import schedule as sch
-        from .core.notes import apply_suggestions
-
-        if not apply_suggestions(self.roster, [sug]):
-            return ""
-        self.data_dirty = True
-        s = sug.student or next((x for x in reversed(self.roster.students) if x.ho_ten == sug.new_name), None)
-        ch = sug.changes
-        if ch.get("cat_tu"):
-            note = sch.note_text(sch.CUT, [s], ch["cat_tu"])
-        elif ch.get("cat_thu6"):
-            note = sch.note_text(sch.FRIDAY, [s], None)
-        elif ch.get("ban_tru"):
-            note = sch.note_text(sch.ADD, [s], ch.get("bt_tu") or self.day)
-        else:
-            note = ""
-        if note and self.state is not None and sug.code in self.state.classes:
-            self.push_undo()
-            c = self.state.cd(sug.code)
-            if note not in c.note:
-                c.note = f"{c.note}, {note}" if c.note else note
-        self.save_data()
-        return note
+        return len(self.state.pending)
 
     # ---------------------------------------------------------------- lưu & in
     def si_so_conflicts(self) -> list[tuple[str, int, int]]:
@@ -669,18 +522,6 @@ def _render_day(book: Path, state: DayState):
     sobook.write_day(info, state, state.meals(info.meal))
     sobook.select_only(wb, ws)
     return wb, ws
-
-
-def _relative_dates(text: str, seen: dt.date) -> str:
-    """Đổi "từ mai", "tháng sau" trong tin báo lịch thành ngày cụ thể (tính từ ngày gửi tin)."""
-    import re
-
-    from .core.schedule import next_month_start
-
-    nxt = next_school_day(seen)
-    text = re.sub(r"(?i)từ\s*(?:ngày\s*)?mai", f"từ {nxt.day}/{nxt.month}", text)
-    text = re.sub(r"(?i)(?:đầu\s*)?tháng\s*sau", f"tháng {next_month_start(seen).month}", text)
-    return text
 
 
 def _col(i: int) -> str:

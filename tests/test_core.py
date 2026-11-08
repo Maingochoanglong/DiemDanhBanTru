@@ -5,7 +5,7 @@ from app.core.day import DayState, split_names
 from app.core.models import Student
 from app.core.meals import MealLayout, MealRow
 from app.core.names import compute_display_names, short_name
-from app.core.parser import parse_messages
+from app.core.parser import extract_names
 from app.core.text import fold, norm_class, parse_date
 
 DAY = dt.date(2026, 10, 29)  # thứ 5
@@ -56,69 +56,6 @@ KNOWN = {"1D15", "1D16", "1D18", "1D19", "1D20", "2D16", "2D17", "2D18", "2D20",
          "3D18", "3D19", "3D20", "3D21", "3D22", "3D23", "4D18", "4D19", "4D20", "4D22",
          "5D18", "5D20", "5D21", "5D22"}
 
-SAMPLES = [
-    ("Lớp 1D15 : 29/31\nVắng : Hồ Khánh Ngọc ,Tuấn Anh", "1D15", (29, 31), ["Hồ Khánh Ngọc", "Tuấn Anh"], False),
-    ("Lớp 4D18: 38/41( lan, khuê, thanh mai)", "4D18", (38, 41), ["lan", "khuê", "thanh mai"], False),
-    ("3D19. 39/40. Vắng đức Thịnh", "3D19", (39, 40), ["đức Thịnh"], False),
-    ("4D19.     37/38( vắng 1 Hoài Nam)", "4D19", (37, 38), ["Hoài Nam"], False),
-    ("Lớp 5D20: đủ", "5D20", (None, None), [], True),
-    ("Lớp 1D16 đủ", "1D16", (None, None), [], True),
-    ("3D22: đủ", "3D22", (None, None), [], True),
-    ("2D21: 10/10", "2D21", (10, 10), [], True),
-    ("Lớp 4D20: 38/38", "4D20", (38, 38), [], True),
-    ("5D22: 7/7 đủ", "5D22", (7, 7), [], True),
-    ("1D19 đủ", "1D19", (None, None), [], True),
-    ("Lớp 1D20: 15/15", "1D20", (15, 15), [], True),
-    ("5D18: 38/39 vắng Quỳnh Như", "5D18", (38, 39), ["Quỳnh Như"], False),
-    ("Lớp 3D20 32/33 vắng Linh Đan", "3D20", (32, 33), ["Linh Đan"], False),
-    ("2D16 đủ", "2D16", (None, None), [], True),
-    ("Lớp 1D18: 28/28", "1D18", (28, 28), [], True),
-    ("4D22: vắng Toàn", "4D22", (None, None), ["Toàn"], False),
-    ("2D20:6/6", "2D20", (6, 6), [], True),
-    ("5D21: 6/6", "5D21", (6, 6), [], True),
-    ("3D21:7/7", "3D21", (7, 7), [], True),
-    ("Lớp 2D18: 38/40\nVắng: Lộc, Na", "2D18", (38, 40), ["Lộc", "Na"], False),
-    ("3D23: 15/15", "3D23", (15, 15), [], True),
-    ("3D18: 40/41(Mai Trọng Đức)", "3D18", (40, 41), ["Mai Trọng Đức"], False),
-]
-
-
-def test_parse_each_sample():
-    for text, cls, (p, t), names, full in SAMPLES:
-        msgs = parse_messages(text, KNOWN)
-        assert len(msgs) == 1, text
-        m = msgs[0]
-        assert (m.cls, m.present, m.total, m.names, m.full) == (cls, p, t, names, full), text
-
-
-def test_parse_without_class():
-    msgs = parse_messages("Vắng Duy Mạnh, tuấn Kiệt , Hải Long", KNOWN)
-    assert len(msgs) == 1 and msgs[0].cls is None
-    assert msgs[0].names == ["Duy Mạnh", "tuấn Kiệt", "Hải Long"]
-
-
-def test_parse_many_with_sender_lines_and_times():
-    text = """cô Hạnh 5D22
-5D22: 7/7 đủ
-07:40
-cô Thu 5D18 (Khối Trưởng)
-5D18: 38/39 vắng Quỳnh Như
-07:34
-thầy Lâm 3D19
-3D19. 39/40. Vắng đức Thịnh
-T5, 29/10
-"""
-    msgs = parse_messages(text, KNOWN)
-    assert [(m.cls, m.names, m.full) for m in msgs] == [
-        ("5D22", [], True),
-        ("5D18", ["Quỳnh Như"], False),
-        ("3D19", ["đức Thịnh"], False),
-    ]
-
-
-def test_parse_abbreviation_kept():
-    msgs = parse_messages("1D19: 28/29 vắng N. Bảo Ngoc", KNOWN)
-    assert msgs[0].names == ["N Bảo Ngoc"]
 
 
 # ---------- so khớp tên ----------
@@ -146,10 +83,6 @@ def test_suggest_typo(roster):
     assert r.candidates and r.candidates[0].ho_ten == "Tô Minh Khôi"
 
 
-def test_guess_class(roster):
-    assert matcher.guess_class(roster, ["Duy Mạnh", "tuấn Kiệt", "Hải Long"], DAY) == ["2D17"]
-
-
 # ---------- quy tắc theo ngày ----------
 def test_boarding_dates_and_auto_absent(roster):
     s = roster.students[0]
@@ -162,26 +95,14 @@ def test_boarding_dates_and_auto_absent(roster):
 
 
 # ---------- một ngày điểm danh ----------
-def test_day_apply_and_names(roster):
+def test_day_names_from_sheet_and_pick_ambiguous(roster):
     st = DayState.new(DAY, roster, roster.class_codes())
-    msg = parse_messages("Lớp 1D15 : 4/6 Vắng : Hồ Khánh Ngọc ,Tuấn Anh, Quỳnh Anh, Bảo Ngọc", KNOWN)[0]
-    res = st.apply_message(msg)
-    assert [r.status for r in res] == [matcher.OK, matcher.OK, matcher.NOT_BT, matcher.AMBIGUOUS]
-    assert st.absent_names("1D15") == ["Tuấn Anh", "Khánh Ngọc"]
-    assert st.si_so("1D15") == 6 and st.absent_count("1D15") == 2 and st.present("1D15") == 4
-    # chọn em cho tên trùng
-    code, pend = st.pending[0]
-    st.resolve_pending(code, pend, pend.candidates[2])
-    assert st.absent_count("1D15") == 3 and not st.pending
-    # GV báo 4/6 (vắng 2) nhưng đang ghi 3 tên -> cảnh báo
-    assert "Thừa 1 tên (GV báo vắng 2 em, đang ghi 3)" in st.class_warnings("1D15")
-
-
-def test_warning_says_how_many_names_are_missing(roster):
-    st = DayState.new(DAY, roster, roster.class_codes())
-    msg = parse_messages("Lớp 1D15 : 3/6 Vắng : Tuấn Anh", KNOWN)[0]  # báo vắng 3 nhưng chỉ ghi 1 tên
-    st.apply_message(msg)
-    assert "Thiếu 2 tên (GV báo vắng 3 em, mới ghi 1)" in st.class_warnings("1D15")
+    res = st.load_class_from_sheet("1D15", 6, "Hồ Khánh Ngọc ,Tuấn Anh, Bảo Ngọc", "")
+    assert [r.status for r in res] == [matcher.OK, matcher.OK, matcher.AMBIGUOUS]
+    assert st.absent_names("1D15") == ["Tuấn Anh", "Khánh Ngọc", "Bảo Ngọc"]  # tên trùng giữ nguyên chữ tới khi chọn em
+    assert st.si_so("1D15") == 6 and st.absent_count("1D15") == 3 and st.present("1D15") == 3
+    st.resolve_pending("1D15", res[2], res[2].candidates[2])  # chọn em cho tên trùng
+    assert st.absent_count("1D15") == 3 and not st.cd("1D15").extra and len(st.cd("1D15").manual) == 3
 
 
 def test_day_friday_auto_absent(roster):
@@ -301,12 +222,6 @@ def test_sheet_cell_notes(roster):
     assert st.cd("1D15").note == "cắt Hồ Khánh Ngọc"
 
 
-def test_parse_message_after_full_class_is_separate():
-    msgs = parse_messages("1D16 đủ\nVắng Duy Mạnh, Hải Long\n4D22: vắng Toàn\nVắng Bé Xíu", KNOWN)
-    assert [(m.cls, m.names) for m in msgs] == [
-        ("1D16", []), (None, ["Duy Mạnh", "Hải Long"]), ("4D22", ["Toàn"]), (None, ["Bé Xíu"])]
-
-
 def test_initial_matches_family_name_and_asks_when_two_fit(roster):
     day = dt.date(2026, 10, 29)
     # chữ viết tắt là họ: "V. Bảo Ngọc" = Võ Hoàng Bảo Ngọc; là từ ngay trước tên: "Đ. Bảo Ngọc" = Đặng Bảo Ngọc
@@ -342,14 +257,8 @@ def test_wrong_names_are_matched_or_reported(roster):
     assert m("1D15", "Bảo Ngọc").status == matcher.AMBIGUOUS  # 3 em cùng tên -> hỏi
 
 
-def test_friday_count_without_friday_students_is_not_a_mismatch(roster):
-    roster.students[24].cat_thu6 = True  # Lục Thảo Mi 4D19 cắt thứ 6; lớp có 2 em
-    fri = dt.date(2026, 10, 30)
-    for text, ok in [("4D19: 1/2 đủ", True), ("4D19: 1/1 đủ", True), ("4D19 đủ", True), ("4D19: 2/2 đủ", False)]:
-        st = DayState.new(fri, roster, roster.class_codes())
-        msg = parse_messages(text, KNOWN | {"4D19"})[0]
-        st.mark_full("4D19")
-        c = st.cd("4D19")
-        c.teacher_present, c.teacher_total = msg.present, msg.total
-        assert st.absent_names("4D19") == ["Thảo Mi"]
-        assert (st.class_warnings("4D19") == []) == ok, text
+def test_names_that_look_like_stop_words():
+    assert extract_names("31/41 (Hoàng Nghi, Gia Lâm)") == ["Hoàng Nghi", "Gia Lâm"]
+    assert extract_names("vang Minh Anh, nghi phep Bao Ngoc") == ["Minh Anh", "Bao Ngoc"]
+    assert extract_names("Vang Minh Anh") == ["Minh Anh"]
+    assert extract_names("vắng: Duy kien, quỳnh anh") == ["Duy kien", "quỳnh anh"]

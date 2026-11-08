@@ -17,7 +17,6 @@
       <a class="nav-link" data-page="sa" href="#"><i class="bi bi-cup-hot"></i>Suất ăn</a>
       <a class="nav-link" data-page="hs" href="#"><i class="bi bi-people"></i>Học sinh</a>
       <a class="nav-link" data-page="lich" href="#"><i class="bi bi-calendar-event"></i>Lịch thêm/cắt</a>
-      <a class="nav-link" data-page="ghep" href="#"><i class="bi bi-diagram-3"></i>Ghép lớp</a>
       <a class="nav-link" data-page="cd" href="#"><i class="bi bi-gear"></i>Cài đặt</a>
     </nav>
     <div class="ver" id="ver"></div>
@@ -42,11 +41,14 @@
     <!-- ===== Điểm danh ===== -->
     <section class="page show" id="page-dd">
       <div class="summary" id="summary"></div>
+      <div class="d-flex align-items-center gap-2 flex-wrap px-1" id="ddBar">
+        <div class="d-flex align-items-center gap-1 flex-wrap" id="unrep"></div>
+        <div class="ms-auto btn-group btn-group-sm" id="ddFilter" role="group" aria-label="Lọc bảng"></div>
+      </div>
       <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
         <div class="card-header bg-white d-flex align-items-center gap-3 flex-wrap">
           <span class="fw-bold fs-6" id="totals"></span>
           <span id="mealBadge"></span>
-          <span class="ms-auto text-muted small">Bấm vào một lớp để chọn em vắng</span>
         </div>
         <div class="so-wrap">
           <table class="table table-bordered so">
@@ -60,6 +62,7 @@
           <span class="badge text-bg-light"><span class="dot warn"></span>có vắng</span>
           <span class="badge text-bg-light"><span class="dot err"></span>cần xem</span>
           <span class="text-muted small ms-2">[Lịch] = sĩ số đổi theo lịch thêm/cắt</span>
+          <span class="text-muted small ms-auto">Bấm vào một lớp để chọn em vắng</span>
         </div>
       </div>
       <div class="actionbar">
@@ -91,7 +94,7 @@
       </div></div>
       <div class="card shadow-sm flex-grow-1" style="min-height:0"><div class="so-wrap h-100">
         <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
-          <th>Lớp</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn BT</th><th>Tên ghi sổ</th><th>Ăn ghép</th><th>Đặc biệt</th><th>Ghi chú</th></tr></thead>
+          <th>Lớp</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn BT</th><th>Tên gọi khác</th><th>Ăn ghép</th><th>Đặc biệt</th><th>Ghi chú</th></tr></thead>
           <tbody id="hsBody"></tbody></table></div></div>
       <div class="text-muted small">Trang này chỉ để tra cứu. Muốn thêm, sửa học sinh: sửa file Excel danh sách rồi vào <b>Cài đặt → Nhập danh sách học sinh</b>. Lịch cắt / thêm bán trú đặt ở trang <b>Lịch thêm/cắt</b>.</div>
     </section>
@@ -109,16 +112,6 @@
           <th style="width:42px"></th><th>Ngày áp dụng</th><th>Lớp</th><th>Học sinh</th><th>Việc</th></tr></thead>
           <tbody id="lichBody"></tbody></table></div></div>
       <div><button class="btn btn-outline-danger" id="lichCancel"><i class="bi bi-x-circle"></i> Hủy các lịch đã tích</button></div>
-    </section>
-
-    <!-- ===== Ghép lớp ===== -->
-    <section class="page" id="page-ghep">
-      <div class="card shadow-sm"><div class="card-body py-2 text-muted">
-        Trang này để <b>xem</b> nhóm ăn của các em lớp ghép. Muốn sửa: ghi nhóm (vd. <b>1.2</b>) ở cột <b>Ăn ghép</b> trong file Excel
-        danh sách rồi vào <b>Cài đặt → Nhập danh sách học sinh</b>. Lớp đã ghi nhóm cho mọi em thì app tự trừ em vắng đúng nhóm;
-        chưa đủ thì khi có em vắng, trang Suất ăn hỏi em đó ăn nhóm nào.
-      </div></div>
-      <div class="so-wrap" id="ghepBody"></div>
     </section>
 
     <!-- ===== Cài đặt ===== -->

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from . import matcher
 from .meals import MealLayout, MealSummary, compute_meals
 from .models import Roster, Student
-from .parser import ParsedMessage, extract_names
+from .parser import extract_names
 from .text import clean_spaces, fold, lower, title_words
 
 
@@ -120,25 +120,6 @@ class DayState:
         c.not_bt.clear()
         c.reported = True
         self.pending = [p for p in self.pending if p[0] != code]
-
-    def apply_message(self, msg: ParsedMessage) -> list[matcher.MatchResult]:
-        """Ghi tin nhắn của 1 lớp: danh sách vắng của lớp = các tên trong tin."""
-        assert msg.cls
-        code = msg.cls
-        c = self.cd(code)
-        results = [matcher.match_name(self.roster, code, q, self.date) for q in msg.names]
-        c.manual = []
-        c.extra = []
-        c.not_bt = [r.query for r in results if r.status == matcher.NOT_BT]
-        self.pending = [p for p in self.pending if p[0] != code]
-        for r in results:
-            if r.status == matcher.OK and r.student and r.student.id not in c.manual:
-                c.manual.append(r.student.id)
-            elif r.status in (matcher.AMBIGUOUS, matcher.NOT_FOUND, matcher.OTHER_CLASS):
-                self.pending.append((code, r))
-        c.reported = True
-        c.teacher_present, c.teacher_total = msg.present, msg.total
-        return results
 
     def resolve_pending(self, code: str, result: matcher.MatchResult, student: Student | None, keep_raw: bool = False) -> None:
         """Giáo vụ chọn em đúng cho tên chưa rõ (hoặc giữ nguyên văn / bỏ qua)."""
@@ -281,32 +262,11 @@ class DayState:
     def class_warnings(self, code: str) -> list[str]:
         c = self.cd(code)
         out = []
-        n = self.absent_count(code)
-        si = self.si_so(code)
-        # thứ 6: GV có thể báo sĩ số đã trừ các em cắt thứ 6 ("32/32 đủ" khi sĩ số 34, 2 em cắt thứ 6)
-        k = sum(1 for sid in self.auto_absent(code) if sid not in c.auto_off)
-        friday_net = bool(k) and c.teacher_total == si - k
-        if c.teacher_total is not None and c.teacher_total != si and not friday_net:
-            out.append(f"GV báo sĩ số {c.teacher_total}, sổ tính {si}")
-        if c.teacher_present is not None and c.teacher_total is not None:
-            told = c.teacher_total - c.teacher_present
-            explained = bool(c.not_bt) and told - n == len(c.not_bt)  # phần chênh là các em không ăn BT GV kể thêm
-            if told != n and not (friday_net and told + k == n) and not explained:
-                # điều cần biết đặt đầu câu: cột Ghi chú hẹp có thể cắt phần cuối
-                if told > n:
-                    out.append(f"Thiếu {told - n} tên (GV báo vắng {told} em, mới ghi {n})")
-                else:
-                    out.append(f"Thừa {n - told} tên (GV báo vắng {told} em, đang ghi {n})")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
         if self.si_so_mismatch(code):
             out.append(f"Sĩ số theo danh sách {self.roster.si_so(code, self.date)}, trong sổ đang ghi {c.sheet_si_so}")
         return out
-
-    def class_notices(self, code: str) -> list[str]:
-        """Điều nên biết nhưng không sai (không tô đỏ): tên GV kể mà em không ăn bán trú."""
-        c = self.cd(code)
-        return ["Không ăn BT: " + ", ".join(c.not_bt)] if c.not_bt else []
 
     def si_so_mismatch(self, code: str) -> bool:
         """Danh sách và sổ lệch nhau thật (không tính phần thay đổi do lịch thêm/cắt đã đặt).
