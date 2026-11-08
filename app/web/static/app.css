@@ -68,6 +68,8 @@ main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
 .actionbar .state.dirty { color: #b35c00; }
 .actionbar .state.err { color: #b02a37; font-weight: 600; cursor: pointer; }
 
+#mealAlerts:empty { display: none; }
+
 /* bảng chọn tên của 1 lớp */
 #mdClass .modal-dialog { max-width: min(1180px, 96vw); }
 #mdClass .modal-body { min-height: 62vh; }

@@ -54,7 +54,7 @@ Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền ph�
 
 > Đọc tin nhắn Zalo **tạm ẩn**, sẽ phát triển sau.
 
-Trang **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tự trừ các em ghép vắng (ghi tên em vắng ngay trong dòng). Dòng trên cùng phải là **Tổng suất = hiện diện**.
+Trang **Suất ăn**: bảng suất ăn cho từng nhóm bảo mẫu, tính như công thức trong sổ (hiện diện các lớp + em ghép − em ghép vắng), ghi tên em ghép vắng ngay trong dòng. Dòng trên cùng phải là **Tổng suất = hiện diện**; khi lệch app ghi rõ **thừa / thiếu bao nhiêu suất** và lý do ở ngay dưới. Em ăn ghép vắng mà danh sách chưa ghi nhóm: app hỏi **em đó ăn nhóm nào** (bấm nút nhóm; bấm tên em trong dòng để chọn lại). Bấm **Lưu vào sổ** khi suất ăn còn lệch thì app hỏi lại trước khi lưu.
 
 ### Kiểm tra tên trong sổ
 
@@ -93,15 +93,13 @@ Làm nhanh ngay trong bảng chọn tên: **bấm chuột phải vào ô tên em
 
 ## 5. Ghép lớp (lớp 1.5, 4.4 …)
 
-Trang **Ghép lớp** liệt kê các em ăn bán trú của lớp ghép (lớp không có hàng riêng trong bảng suất ăn).
+Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em chia sang ăn ở nhóm khác (1.1, 1.2 …).
 
-- Tích một hoặc nhiều em, rồi bấm **→ Ăn ở 1.1**, **→ Ăn ở 1.2**…
-- Hoặc bấm **Dán danh sách ghép…** và gõ mỗi dòng: `1.1: Bảo Ngọc, Gia Hân, Minh Khôi`.
-- Bấm **Lưu danh sách ghép**.
-
-Khi đã gán đủ cả lớp, mỗi lần em ghép vắng, app tự điền ô **vắng** đúng hàng trong bảng suất ăn. Khi chưa gán đủ, app giữ số em ghép như sổ cũ; bạn **bấm vào hàng nhóm** (có hình bút chì) trong trang Suất ăn để nhập số em ghép vắng.
-
-Cách gọn nhất: ghi nhóm ghép của từng em (vd. *1.3*) ở cột **Ăn ghép** trong file Excel danh sách rồi nhập lại; app tự gán theo cột đó. Ô để trống = em không ăn ghép.
+- Nhóm ăn của từng em ghi ở cột **Ăn ghép** trong file Excel danh sách (vd. *1.3*; để trống = không ăn ghép), rồi vào **Cài đặt → Nhập danh sách học sinh**. Đây là chỗ duy nhất ghi nhóm ghép.
+- Trang **Ghép lớp** chỉ để **xem**: mỗi lớp ghép có bao nhiêu em đã ghi nhóm, mỗi nhóm bao nhiêu em (so với số trong sổ), em nào chưa ghi (tô vàng).
+- Em đã có nhóm mà vắng: app tự trừ đúng nhóm, tự điền ô **vắng** trong bảng suất ăn của sổ.
+- Em chưa có nhóm mà vắng: trang **Suất ăn** hỏi em đó ăn nhóm nào (chỉ cho ngày đó). Mở lại ngày đã lưu, app đọc lại ô **vắng** trong sổ; chỉ hỏi lại khi không chắc em nào ở nhóm nào.
+- Lớp ghép chưa ghi nhóm cho đủ mọi em thì số em ghép mỗi nhóm giữ như sổ hôm trước.
 
 ## 6. Học sinh
 

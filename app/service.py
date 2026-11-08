@@ -254,10 +254,13 @@ class Workspace:
         if ws is None and src is not None:
             st.template_date = sobook.sheet_date(src)
         if ws is not None and info:
-            for mr in info.meal.rows:  # số vắng ghép đã ghi trong sổ (dùng khi chưa có danh sách ghép đủ)
-                if mr.code and mr.m_cell:
-                    v = ws[mr.m_cell].value
-                    st.manual_m[mr.code] = int(v) if isinstance(v, (int, float)) else 0
+            m_book = {}  # số em ghép vắng đã ghi trong sổ (cột M): suy ra nhóm của em vắng chưa ghi nhóm
+            for mr in info.meal.rows:
+                v = ws[mr.m_cell].value if mr.code and mr.m_cell else None
+                if isinstance(v, (int, float)) and v:
+                    m_book[mr.code] = int(v)
+            if m_book:
+                st.picks_from_book(info.meal, m_book)
         flags = self.data.reported_flags(day)
         if ws is not None and not flags:
             for c in st.classes.values():  # ngày đã ghi sổ trước khi dùng app: coi như các lớp đã báo
@@ -641,36 +644,6 @@ class Workspace:
     # ---------------------------------------------------------------- ghép lớp
     def ghep_students(self, code: str):
         return self.roster.sort_like_roster(self.roster.boarding(code, self.day))
-
-    def assign_ghep(self, ids: list[str], group: str) -> None:
-        for s in self.roster.students:
-            if s.id in ids:
-                s.an_ghep = group
-        self.data_dirty = True
-
-    def assign_ghep_text(self, cls: str, text: str) -> tuple[int, list[str]]:
-        """Dán danh sách ghép, mỗi dòng 'mã nhóm: tên, tên…' (vd. '1.2: Bảo Ngọc, Gia Hân')."""
-        import re
-
-        from .core.parser import extract_names
-
-        n, problems = 0, []
-        for line in text.splitlines():
-            m = re.match(r"\s*(\d)\s*[./]\s*(\d)\s*[:\-–]?\s*(.*)$", line)
-            if not m:
-                if line.strip():
-                    problems.append(f"Không hiểu dòng: {line.strip()}")
-                continue
-            group = f"{m.group(1)}.{m.group(2)}"
-            for q in extract_names(m.group(3)):
-                r = matcher.match_name(self.roster, cls, q, self.day)
-                if r.status == matcher.OK and r.student:
-                    r.student.an_ghep = group
-                    self.data_dirty = True
-                    n += 1
-                else:
-                    problems.append(f"{group}: '{q}' {'trùng nhiều em' if r.status == matcher.AMBIGUOUS else 'không tìm thấy'}")
-        return n, problems
 
 
 def _render_day(book: Path, state: DayState):

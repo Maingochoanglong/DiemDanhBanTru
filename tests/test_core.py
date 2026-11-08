@@ -228,24 +228,55 @@ def test_meals_with_ghep(roster):
     assert summary.balanced, summary.warnings
 
 
-def test_meals_without_full_ghep_list_uses_manual_counts(roster):
-    layout = MealLayout(
-        rows=[MealRow(72, "1.1 ghép", "I72", ["1D15"], "O72", "M72"),
-              MealRow(73, "1.2 ghép", "I73", ["1D16"], "O73", "M73")],
-        ghep_classes=["1D19"],
-        o_values={"1.1": 3, "1.2": 1},
-    )
-    roster.students[13].an_ghep = "1.1"  # mới gán 1/4 em -> chưa đủ, giữ số O trong sổ
+GHEP_LAYOUT = dict(
+    rows=[MealRow(72, "1.1 ghép", "I72", ["1D15"], "O72", "M72"),
+          MealRow(73, "1.2 ghép", "I73", ["1D16"], "O73", "M73")],
+    ghep_classes=["1D19"],
+    o_values={"1.1": 3, "1.2": 1},
+)
+
+
+def test_meals_ask_group_for_absent_ghep_without_group(roster):
+    layout = MealLayout(**GHEP_LAYOUT)
+    roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc đã có nhóm; 3 em còn lại chưa -> giữ số O trong sổ
     st = DayState.new(DAY, roster, roster.class_codes())
-    st.set_absent("1D19", roster.students[14].id, True)
+    st.set_absent("1D19", roster.students[13].id, True)  # đã có nhóm: tự trừ ở 1.1, không hỏi
+    st.set_absent("1D19", roster.students[14].id, True)  # Phùng Gia Hân chưa có nhóm: app hỏi
     summary = st.meals(layout)
-    assert {x.row.code: x.o for x in summary.lines} == {"1.1": 3, "1.2": 1}
-    assert any("chưa có danh sách ghép đầy đủ" in w for w in summary.warnings)
-    st.manual_m["1.2"] = 1  # giáo vụ nhập tay
+    line = {x.row.code: x for x in summary.lines}
+    assert {c: x.o for c, x in line.items()} == {"1.1": 3, "1.2": 1}
+    assert [s.ho_ten for _, s in summary.ask] == ["Phùng Gia Hân"]
+    assert line["1.1"].m == 1 and line["1.1"].absent_names == ["Bảo Ngọc"]
+
+    st.pick_ghep(roster.students[14].id, "1.2")
     summary = st.meals(layout)
-    line = {x.row.code: x for x in summary.lines}["1.2"]
-    assert (line.m, line.meals) == (1, st.present("1D16") + 1 - 1)
-    assert not any("ghép" in w for w in summary.warnings)  # bảng giả thiếu lớp khác nên tổng không cân
+    line = {x.row.code: x for x in summary.lines}
+    assert not summary.ask
+    assert (line["1.2"].m, line["1.2"].meals, line["1.2"].absent_names) == (1, st.present("1D16") + 1 - 1, ["Gia Hân"])
+    st.pick_ghep(roster.students[14].id, "")  # chọn lại
+    assert st.meals(layout).ask
+
+
+def test_picks_from_book_only_when_sure(roster):
+    layout = MealLayout(**GHEP_LAYOUT)
+    a, b = roster.students[14].id, roster.students[15].id
+
+    def day(*absent):
+        st = DayState.new(DAY, roster, roster.class_codes())
+        for sid in absent:
+            st.set_absent("1D19", sid, True)
+        return st
+
+    st = day(a)
+    st.picks_from_book(layout, {"1.2": 1})
+    assert st.ghep_pick == {a: "1.2"} and not st.meals(layout).ask
+    st = day(a, b)
+    st.picks_from_book(layout, {"1.2": 2})
+    assert st.ghep_pick == {a: "1.2", b: "1.2"}
+    st = day(a, b)
+    st.picks_from_book(layout, {"1.1": 1, "1.2": 1})  # không biết em nào nhóm nào: để app hỏi lại
+    assert st.ghep_pick == {} and len(st.meals(layout).ask) == 2
+
 
 
 def test_match_partial_and_joined(roster):

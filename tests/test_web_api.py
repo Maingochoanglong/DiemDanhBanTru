@@ -250,3 +250,32 @@ def test_class_detail_lists_non_boarding_students_with_reason(api):
     assert all(n["full"] != "Mạc Trần Quỳnh Anh" for n in d["names"])
     o = next(x for x in d["others"] if "Mạc Trần Quỳnh Anh" in x["s"])
     assert o["why"] == "Không ăn bán trú"
+
+
+def test_pick_ghep_group_and_keep_it_in_temp_book(api, tmp_path):
+    sid = sid_of(api, "1D19", "Phùng Gia Hân")
+    api.set_absent("1D19", sid, True)
+    m = api.meals()
+    assert [a["full"] for a in m["ask"]] == ["Phùng Gia Hân"] and m["ask"][0]["groups"] == ["1.1", "1.2"]
+    assert not m["ok"] and api.state()["meal"]["ask"] == 1
+    r = api.pick_ghep(sid, "1.2")
+    assert r["meals"]["ok"] and not r["meals"]["ask"] and r["state"]["meal"]["ask"] == 0
+    line = next(x for x in r["meals"]["lines"] if x["code"] == "1.2")
+    assert line["absent"] == [{"sid": sid, "name": "Gia Hân", "picked": True}] and "em ghép lớp 1D19" in line["gom"]
+    assert r["meals"]["groups_total"] + (r["meals"]["self"] or {}).get("meals", 0) == r["meals"]["total"]
+    api._ws.autosave_flush()
+
+    ws2 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")  # mất điện, mở lại app: nhóm đã chọn vẫn còn
+    ws2.autosave_delay = 3600
+    a2 = Api(ws2)
+    a2.boot()
+    a2.restore_temp(True)
+    assert a2._ws.state.ghep_pick == {sid: "1.2"} and a2.meals()["ok"]
+
+
+def test_ghep_page_is_read_only_view(api):
+    g = api.ghep()["classes"]
+    c = next(x for x in g if x["code"] == "1D19")
+    assert c["n"] == 4 and c["done"] == 0 and [x["g"] for x in c["groups"]] == ["1.1", "1.2"]
+    assert not hasattr(api, "assign_ghep") and not hasattr(api, "assign_ghep_text")
+

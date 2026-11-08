@@ -72,7 +72,8 @@
     <!-- ===== Suất ăn ===== -->
     <section class="page" id="page-sa">
       <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
-        <div class="card-header bg-white"><span class="fs-5 fw-bold" id="mealTotal"></span></div>
+        <div class="card-header bg-white"><div class="fs-5 fw-bold" id="mealTotal"></div><div class="small text-muted" id="mealSub"></div></div>
+        <div class="px-3 pt-2" id="mealAlerts"></div>
         <div class="so-wrap"><table class="table table-hover mb-0 sticky-head">
           <thead><tr><th style="width:200px">Nhóm</th><th>Gồm</th><th class="text-center" style="width:110px">Suất</th></tr></thead>
           <tbody id="mealBody"></tbody></table></div>
@@ -112,9 +113,10 @@
 
     <!-- ===== Ghép lớp ===== -->
     <section class="page" id="page-ghep">
-      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2">
-        <span class="text-muted">Lớp ghép không có hàng riêng trong bảng suất ăn; tích các em rồi bấm nhóm ăn. Em vắng thì app tự trừ đúng nhóm.</span>
-        <button class="btn btn-primary ms-auto" id="ghepSave"><i class="bi bi-save"></i> Lưu danh sách ghép</button>
+      <div class="card shadow-sm"><div class="card-body py-2 text-muted">
+        Trang này để <b>xem</b> nhóm ăn của các em lớp ghép. Muốn sửa: ghi nhóm (vd. <b>1.2</b>) ở cột <b>Ăn ghép</b> trong file Excel
+        danh sách rồi vào <b>Cài đặt → Nhập danh sách học sinh</b>. Lớp đã ghi nhóm cho mọi em thì app tự trừ em vắng đúng nhóm;
+        chưa đủ thì khi có em vắng, trang Suất ăn hỏi em đó ăn nhóm nào.
       </div></div>
       <div class="so-wrap" id="ghepBody"></div>
     </section>
