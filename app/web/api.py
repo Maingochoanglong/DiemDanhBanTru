@@ -183,7 +183,7 @@ class Api:
                          "n": len(st.classes)}
         if not ws.layout.is_empty:
             m = ws.meals()
-            out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced}
+            out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced, "ask": len(m.ask)}
         n_pending = len(st.pending)
         out["unresolved"] = ws.unresolved_count()
         out["unreported"] = st.unreported()
@@ -350,27 +350,38 @@ class Api:
         if st is None or layout.is_empty:
             return {"empty": True}
         summary = ws.meals()
-        manual = st.manual_codes(layout)
+        name = ws.roster.display_name
         lines = []
         for line in summary.lines:
             r = line.row
             gom = " + ".join(r.classes)
+            absent = []
             if r.code:
-                gom += f" + ghép {line.o} em"
-                if line.m:
-                    gom += f" − vắng {line.m}"
-            lines.append({"label": r.label, "gom": gom, "meals": line.meals, "m": line.m or 0,
-                          "absent": line.absent_names, "code": r.code or "",
-                          "manual": bool(r.code and r.code in manual), "manual_m": st.manual_m.get(r.code, 0) if r.code else 0})
+                src = [c for c in layout.ghep_classes if c[0] == r.code[0]]
+                gom += f" + {line.o} em ghép lớp {', '.join(src)}" if src else f" + {line.o} em ghép"
+                for code in src:
+                    groups = layout.ghep_codes(int(code[0]))
+                    for s in st.absent_students(code):
+                        if s.an_ghep in groups:
+                            g, picked = s.an_ghep, False
+                        else:
+                            g, picked = st.ghep_pick.get(s.id), True
+                        if g == r.code:
+                            absent.append({"sid": s.id, "name": name(s), "picked": picked})
+            lines.append({"label": r.label, "gom": gom, "meals": line.meals, "m": line.m or 0, "code": r.code or "",
+                          "absent": absent})
         self_line = None
         if layout.self_classes:
             self_line = {"label": "Tự ăn tại lớp", "gom": ", ".join(layout.self_classes), "meals": summary.self_meals}
+        ask = [{"sid": s.id, "name": name(s), "full": s.ho_ten, "cls": code, "groups": layout.ghep_codes(int(code[0]))}
+               for code, s in summary.ask]
         return {"lines": lines, "self": self_line, "total": summary.total_meals, "present": summary.total_present,
-                "ok": summary.balanced, "warnings": summary.warnings}
+                "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask}
 
-    def set_manual_m(self, code: str, value: int) -> dict:
+    def pick_ghep(self, sid: str, group: str) -> dict:
+        """Chọn nhóm ăn cho em ghép vắng (chỉ ngày đang mở); group rỗng = chọn lại."""
         self._ws.push_undo()
-        self._ws.state.manual_m[code] = max(0, int(value))
+        self._ws.state.pick_ghep(sid, group)
         return {"meals": self.meals(), "state": self.state()}
 
     # ================================================================== học sinh
@@ -478,6 +489,7 @@ class Api:
 
     # ================================================================== ghép lớp
     def ghep(self) -> dict:
+        """Trang Ghép lớp (chỉ xem): nhóm ăn của từng em lớp ghép, lấy từ cột Ăn ghép trong file Excel danh sách."""
         ws = self._ws
         layout = ws.layout
         if ws.state is None or layout.is_empty or not layout.ghep_classes:
@@ -490,22 +502,12 @@ class Api:
             info = ws.roster.classes.get(code)
             out.append({
                 "code": code, "ma": info.ma_ngan if info else "", "groups": [
-                    {"g": g, "n": sum(1 for s in students if s.an_ghep == g), "book": layout.o_values.get(g)}
-                    for g in groups],
-                "students": [{"id": s.id, "name": ws.roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
+                    {"g": g, "n": sum(1 for s in students if s.an_ghep == g), "book": layout.o_values.get(g),
+                     "now": o_now.get(g, 0)} for g in groups],
+                "students": [{"name": ws.roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
                               "g": s.an_ghep, "ok": s.an_ghep in groups} for s in students],
-                "total": sum(o_now.get(g, 0) for g in groups), "n": len(students)})
-        return {"classes": out, "data_dirty": ws.data_dirty}
-
-    def assign_ghep(self, ids: list, group: str) -> dict:
-        self._ws.assign_ghep(list(ids), group)
-        self._ws.roster.invalidate()
-        return {"ghep": self.ghep(), "state": self.state()}
-
-    def assign_ghep_text(self, code: str, text: str) -> dict:
-        n, problems = self._ws.assign_ghep_text(code, text)
-        self._ws.roster.invalidate()
-        return {"ghep": self.ghep(), "state": self.state(), "n": n, "problems": problems[:20]}
+                "n": len(students), "done": sum(1 for s in students if s.an_ghep in groups)})
+        return {"classes": out}
 
     # ================================================================== cài đặt
     def settings(self) -> dict:

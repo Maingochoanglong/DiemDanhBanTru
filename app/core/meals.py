@@ -67,6 +67,12 @@ class MealSummary:
     total_meals: int
     total_present: int
     warnings: list[str] = field(default_factory=list)
+    ask: list = field(default_factory=list)  # em ghép vắng chưa rõ ăn nhóm nào: (lớp, em)
+
+    @property
+    def group_meals(self) -> int:
+        """Tổng suất các nhóm (ô G69 trong sổ); cộng với tự ăn tại lớp ra tổng suất."""
+        return self.total_meals - self.self_meals
 
     @property
     def balanced(self) -> bool:
@@ -78,11 +84,8 @@ def compute_meals(
     present: dict[str, int],
     ghep_absent: dict[str, list[str]],
     o_values: dict[str, int],
-    m_values: dict[str, int] | None = None,
 ) -> MealSummary:
-    """present: hiện diện mỗi lớp; ghep_absent: mã nhóm -> tên em ghép vắng; o_values: mã -> số em ghép.
-    m_values: số em ghép vắng nhập tay (dùng cho nhóm chưa có danh sách ghép đầy đủ)."""
-    m_values = m_values or {}
+    """present: hiện diện mỗi lớp; ghep_absent: mã nhóm -> tên em ghép vắng; o_values: mã -> số em ghép."""
     lines = []
     for r in layout.rows:
         meals = sum(present.get(c, 0) for c in r.classes)
@@ -90,7 +93,7 @@ def compute_meals(
         if r.code:
             names = ghep_absent.get(r.code, [])
             line.o = o_values.get(r.code, 0)
-            line.m = m_values[r.code] if r.code in m_values else len(names)
+            line.m = len(names)
             line.absent_names = list(names)
             line.meals += line.o - line.m
         lines.append(line)

@@ -54,11 +54,32 @@ def test_month_change_needs_new_book(ws):
     assert sobook.load_book(new).sheetnames == ["2"]
 
 
-def test_ghep_text_assign(ws):
+def test_ghep_groups_from_list_column(ws):
     ws.load_day(dt.date(2026, 10, 29))
-    n, problems = ws.assign_ghep_text("1D19", "1.1: Bảo Ngọc, Gia Hân\n1.2 - Đức Anh, Minh Khang\nxyz")
-    assert n == 4 and problems == ["Không hiểu dòng: xyz"]
+    groups = {"Châu Bảo Ngọc": "1.1", "Phùng Gia Hân": "1.1", "Tạ Đức Anh": "1.2", "Quách Minh Khang": "1.2"}
+    for s in ws.roster.students:
+        s.an_ghep = groups.get(s.ho_ten, s.an_ghep)
+    ws.roster.invalidate()
+    st = ws.state
+    st.set_absent("1D19", next(s.id for s in ws.roster.students if s.ho_ten == "Tạ Đức Anh"), True)
+    m = ws.meals()
+    assert m.balanced and not m.ask
+
+
+def test_reopen_day_infers_ghep_group_from_book(ws):
+    day = dt.date(2026, 10, 29)
+    st = ws.load_day(day)
+    sid = next(s.id for s in ws.roster.students if s.ho_ten == "Phùng Gia Hân")
+    ws.push_undo()
+    st.set_absent("1D19", sid, True)
+    assert [s.ho_ten for _, s in ws.meals().ask] == ["Phùng Gia Hân"] and not ws.meals().balanced
+    st.pick_ghep(sid, "1.2")
     assert ws.meals().balanced
+    assert ws.save() == "29"
+    assert sobook.load_book(ws.book_path)["29"]["M24"].value == 1  # hàng 1.2 ghép, cột vắng
+    st2 = ws.load_day(day)  # mở lại: sổ ghi 1 vắng ở 1.2, em vắng chưa có nhóm -> suy ra em đó ăn 1.2
+    assert st2.ghep_pick == {sid: "1.2"} and ws.meals().balanced and not ws.meals().ask
+
 
 
 def test_next_school_day():

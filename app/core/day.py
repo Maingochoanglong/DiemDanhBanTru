@@ -36,7 +36,7 @@ class DayState:
     classes: dict[str, ClassDay] = field(default_factory=dict)
     exists_in_book: bool = False  # sheet ngày này đã có trong sổ
     pending: list[tuple[str, matcher.MatchResult]] = field(default_factory=list)  # tên cần xử lý
-    manual_m: dict[str, int] = field(default_factory=dict)  # số em ghép vắng nhập tay theo mã nhóm
+    ghep_pick: dict[str, str] = field(default_factory=dict)  # id em ghép vắng -> nhóm ăn giáo vụ chọn hôm nay
     template_date: dt.date | None = None  # ngày của sheet mẫu (sổ hôm trước) khi tạo ngày mới
 
     # ---------- khởi tạo ----------
@@ -188,23 +188,57 @@ class DayState:
         boarding = self.roster.boarding(code, self.date)
         return bool(boarding) and all(s.an_ghep in codes for s in boarding)
 
-    def manual_codes(self, layout: MealLayout) -> set[str]:
-        """Mã nhóm phải nhập tay số vắng ghép (lớp ghép chưa gán đủ danh sách)."""
-        out: set[str] = set()
-        for code in layout.ghep_classes:
-            if not self.ghep_ready(layout, code):
-                out.update(layout.ghep_codes(int(code[0])))
-        return out
+    def _ghep_group(self, groups: list[str], s: Student) -> str | None:
+        """Nhóm em ghép ăn: theo cột Ăn ghép của danh sách; chưa ghi thì theo nhóm giáo vụ chọn hôm nay."""
+        if s.an_ghep in groups:
+            return s.an_ghep
+        g = self.ghep_pick.get(s.id)
+        return g if g in groups else None
 
     def ghep_absent(self, layout: MealLayout) -> dict[str, list[str]]:
-        """mã nhóm -> tên em ghép vắng (chỉ với lớp ghép đã gán đủ)."""
+        """mã nhóm -> tên em ghép vắng (đã biết em ăn nhóm nào)."""
         out: dict[str, list[str]] = {}
         for code in layout.ghep_classes:
-            if not self.ghep_ready(layout, code):
-                continue
+            groups = layout.ghep_codes(int(code[0]))
             for s in self.absent_students(code):
-                out.setdefault(s.an_ghep, []).append(self.roster.display_name(s))
+                g = self._ghep_group(groups, s)
+                if g:
+                    out.setdefault(g, []).append(self.roster.display_name(s))
         return out
+
+    def ghep_unknown(self, layout: MealLayout) -> list[tuple[str, Student]]:
+        """Em ghép vắng chưa biết ăn nhóm nào (danh sách chưa ghi nhóm, hôm nay chưa chọn): (lớp, em)."""
+        out = []
+        for code in layout.ghep_classes:
+            groups = layout.ghep_codes(int(code[0]))
+            if groups:
+                out += [(code, s) for s in self.absent_students(code) if not self._ghep_group(groups, s)]
+        return out
+
+    def pick_ghep(self, sid: str, group: str) -> None:
+        """Giáo vụ chọn nhóm ăn cho em ghép vắng (chỉ trong ngày này); group rỗng = chọn lại."""
+        if group:
+            self.ghep_pick[sid] = group
+        else:
+            self.ghep_pick.pop(sid, None)
+
+    def picks_from_book(self, layout: MealLayout, m_book: dict[str, int]) -> None:
+        """Mở lại ngày đã ghi sổ: sổ có số em ghép vắng (cột M) mà danh sách chưa ghi nhóm của em vắng.
+        Chỉ suy ra khi chắc chắn (mọi em chưa rõ nhóm đều thuộc cùng một nhóm); không thì app hỏi lại."""
+        by_khoi: dict[int, list[str]] = {}
+        for code in layout.ghep_classes:
+            by_khoi.setdefault(int(code[0]), []).append(code)
+        for khoi, codes in by_khoi.items():
+            groups = layout.ghep_codes(khoi)
+            absent = [s for c in codes for s in self.absent_students(c)]
+            unknown = [s for s in absent if not self._ghep_group(groups, s)]
+            if not unknown:
+                continue
+            rest = {g: m_book.get(g, 0) - sum(1 for s in absent if self._ghep_group(groups, s) == g) for g in groups}
+            left = [g for g in groups if rest[g] > 0]
+            if len(left) == 1 and rest[left[0]] == len(unknown):
+                for s in unknown:
+                    self.ghep_pick[s.id] = left[0]
 
     def o_values(self, layout: MealLayout) -> dict[str, int]:
         """Số em ghép mỗi nhóm: theo danh sách ghép nếu đã gán đủ, không thì giữ số trong sổ."""
@@ -218,10 +252,9 @@ class DayState:
 
     def meals(self, layout: MealLayout) -> MealSummary:
         present = {c: self.present(c) for c in self.classes}
-        manual = self.manual_codes(layout)
-        m_values = {gc: self.manual_m.get(gc, 0) for gc in manual}
         o_vals = self.o_values(layout)
-        summary = compute_meals(layout, present, self.ghep_absent(layout), o_vals, m_values)
+        summary = compute_meals(layout, present, self.ghep_absent(layout), o_vals)
+        summary.ask = self.ghep_unknown(layout)
         for code in layout.ghep_classes:
             codes = layout.ghep_codes(int(code[0]))
             if not codes:
@@ -229,23 +262,18 @@ class DayState:
             o_sum = sum(o_vals.get(gc, 0) for gc in codes)
             if o_sum != self.si_so(code):
                 summary.warnings.append(
-                    f"Lớp ghép {code}: tổng số em ghép ở các nhóm {', '.join(codes)} là {o_sum}, "
-                    f"khác sĩ số {self.si_so(code)}"
+                    f"Lớp ghép {code} có {self.si_so(code)} em ăn bán trú nhưng các nhóm {', '.join(codes)} "
+                    f"đang tính {o_sum} em ghép. Ghi nhóm cho từng em ở cột Ăn ghép trong file Excel danh sách "
+                    "rồi nhập lại danh sách."
                 )
-            if not self.ghep_ready(layout, code):
-                n_abs = self.absent_count(code)
-                m_sum = sum(m_values.get(gc, 0) for gc in codes)
-                if n_abs != m_sum:
-                    summary.warnings.append(
-                        f"Lớp ghép {code} chưa có danh sách ghép đầy đủ: có {n_abs} em vắng "
-                        f"({', '.join(self.absent_names(code))}) nhưng mới đánh {m_sum} vắng ghép. "
-                        "Bấm đúp vào hàng nhóm để nhập, hoặc ghi nhóm cho từng em ở cột Ăn ghép trong file Excel danh sách rồi nhập lại."
-                        if n_abs else
-                        f"Lớp ghép {code} không có em vắng nhưng đang đánh {m_sum} vắng ghép."
-                    )
-        if not summary.balanced and not summary.warnings:
+            extra = self.cd(code).extra
+            if extra:
+                summary.warnings.append(
+                    f"Lớp ghép {code} có tên vắng chưa rõ là em nào ({', '.join(extra)}) nên chưa trừ được suất ở nhóm ghép."
+                )
+        if not summary.balanced and not summary.warnings and not summary.ask:
             summary.warnings.append(
-                f"Tổng suất ăn {summary.total_meals} khác tổng hiện diện {summary.total_present}"
+                f"Tổng suất ăn {summary.total_meals} khác tổng hiện diện {summary.total_present}."
             )
         return summary
 

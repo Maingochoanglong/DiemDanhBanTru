@@ -60,9 +60,9 @@ def write_state_sheet(wb, state, book: str | Path, now: dt.datetime | None = Non
                    c.note, c.sheet_si_so, "x" if c.keep_sheet_si_so else "", c.teacher_present, c.teacher_total,
                    _join(c.not_bt)])
     ws.append([])
-    ws.append(["Nhóm ghép", "Số vắng nhập tay"])
-    for k, v in state.manual_m.items():
-        ws.append([k, v])
+    ws.append(["Em ghép vắng", "Ăn nhóm"])
+    for sid, g in state.ghep_pick.items():
+        ws.append([sid, g])
 
 
 def save(wb, path: str | Path) -> None:
@@ -82,7 +82,7 @@ class TempInfo:
     book: Path
     saved_at: str
     classes: dict[str, dict] = field(default_factory=dict)
-    manual_m: dict[str, int] = field(default_factory=dict)
+    ghep_pick: dict[str, str] = field(default_factory=dict)
 
 
 def read(path: str | Path) -> TempInfo | None:
@@ -113,8 +113,8 @@ def read(path: str | Path) -> TempInfo | None:
         }
         i += 1
     for r in rows[i + 2:]:
-        if r and r[0] and _int(r[1]) is not None:
-            info.manual_m[str(r[0])] = _int(r[1])
+        if r and len(r) > 1 and isinstance(r[0], str) and isinstance(r[1], str) and r[0] and r[1]:
+            info.ghep_pick[r[0]] = r[1]  # (sổ tạm bản cũ ghi số vắng theo nhóm: bỏ qua, app hỏi lại)
     return info
 
 
@@ -126,5 +126,5 @@ def apply(info: TempInfo, state) -> None:
             if k in ("manual", "auto_off"):
                 v = type(v)(sid for sid in v if state.roster.by_id(sid))
             setattr(c, k, v)
-    state.manual_m = dict(info.manual_m)
+    state.ghep_pick = {sid: g for sid, g in info.ghep_pick.items() if state.roster.by_id(sid)}
     state.pending = []
