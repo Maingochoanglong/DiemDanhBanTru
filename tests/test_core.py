@@ -128,7 +128,7 @@ def test_meals_with_ghep(roster):
             MealRow(72, "1.1 ghép", "I72", ["1D15"], "O72", "M72"),
             MealRow(73, "1.2 ghép", "I73", ["1D16"], "O73", "M73"),
             MealRow(78, "4.2 ghép 4.4", "I78", ["4D19"], "O78", "M78"),
-            MealRow(80, "hiến", "I80", ["2D17"]),
+            MealRow(80, "cô Lan", "I80", ["2D17"]),
         ],
         self_classes=[],
         ghep_classes=["1D19", "4D21"],

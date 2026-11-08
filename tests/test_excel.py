@@ -44,7 +44,7 @@ def make_book(path):
     ws["A15"] = "TỔNG CỘNG"
     ws["G16"] = "Phường X, ngày     tháng 10 năm 2026  "
     ws["I20"] = "Suất ăn"
-    ws["I21"], ws["J21"] = "=F10", "hiến"
+    ws["I21"], ws["J21"] = "=F10", "cô Lan"
     ws["G21"] = "=SUM(I21:I25)"
     ws["M22"] = "vắng"
     ws["I23"], ws["J23"], ws["L23"], ws["O23"] = "=F6+L23", "1.1 ghép", "=O23-M23", 2
@@ -68,7 +68,7 @@ def test_analyze_layout(book):
     m = info.meal
     assert m.ghep_classes == ["1D19", "4D21"]
     assert [(r.label, r.classes, r.code) for r in m.rows] == [
-        ("hiến", ["2D17"], None),
+        ("cô Lan", ["2D17"], None),
         ("1.1 ghép", ["1D15"], "1.1"),
         ("1.2 ghép", ["1D16"], "1.2"),
         ("4.2 ghép 4.4", ["4D19"], "4.2"),

@@ -100,6 +100,27 @@ Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em c
 - Em đã có nhóm mà vắng: app tự trừ đúng nhóm, tự điền ô **vắng** trong bảng suất ăn của sổ.
 - Em chưa có nhóm mà vắng: trang **Suất ăn** hỏi em đó ăn nhóm nào (chỉ cho ngày đó). Mở lại ngày đã lưu, app đọc lại ô **vắng** trong sổ; chỉ hỏi lại khi không chắc em nào ở nhóm nào.
 - Lớp ghép chưa ghi nhóm cho đủ mọi em thì số em ghép mỗi nhóm giữ như sổ hôm trước.
+- Em có thể ghép sang nhóm khác khối (vd. em lớp 1 ăn cùng nhóm 2.1): cột **Ăn ghép** ghi mã nhóm đó là được.
+
+### Đổi cách ghép (đầu năm học, hoặc giữa năm): sheet "Nhóm ăn"
+
+Bảng suất ăn cuối mỗi tờ điểm danh (lớp nào ăn chung dòng nào) khai báo ở sheet **Nhóm ăn** trong file Excel danh sách, không cần sửa công thức trong sổ:
+
+| Tên dòng (in ở sổ) | Các lớp ăn chung | Mã ghép lẻ |
+|---|---|---|
+| cô Lan | 1D20, 3D22, 5D22 | |
+| cô Mai | 2D21, 3D23, 4D22 | |
+| *(dòng trống = cách dòng)* | | |
+| 1.1 ghép | 1D15 | 1.1 |
+| 2.4 ghép 2.5 | 2D19, 2D20 | |
+| 4.2 ghép 4.4 | 4D19 | 4.2 |
+
+- Mỗi dòng của sheet = một dòng bảng suất ăn, đúng thứ tự. **Các lớp ăn chung** là các lớp ăn cả lớp ở dòng đó (ghi *2D19* hay *2.4* đều được).
+- **Mã ghép lẻ**: chỉ ghi khi dòng nhận em ghép lẻ từ lớp chia nhóm (như 1D19, 4D21). Em ăn dòng nào thì cột **Ăn ghép** của em ghi đúng mã đó. Tên dòng phải bắt đầu bằng mã (vd. *1.2 ghép*).
+- Lớp không có ở sheet và không có em ghi **Ăn ghép** = **ăn tại lớp**.
+- Sửa xong: **Cài đặt → Nhập danh sách…**. Hộp duyệt có dòng *Bảng Nhóm ăn: …* ghi rõ thay đổi; sheet ghi sai (lớp không có, một lớp ở 2 dòng, mã trùng…) thì app báo lỗi và giữ bảng cũ.
+- **Từ tờ ngày mới** (kể cả tờ đầu tháng của sổ tháng mới), app tự dựng bảng suất ăn theo sheet này: dòng, nhãn, công thức, ô số em ghép, ô cộng các nhóm, ô cộng các lớp ăn tại lớp, vùng in. **Các tờ đã có trong sổ giữ nguyên.** Trang **Suất ăn** ghi rõ khi bảng của ngày đang mở khác sheet Nhóm ăn.
+- File danh sách không có sheet Nhóm ăn thì app giữ bảng suất ăn như sổ (như trước).
 
 ## 6. Học sinh
 
@@ -110,7 +131,7 @@ Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem e
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
-- **Nhập danh sách…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- **Nhập danh sách…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép*, có thể kèm sheet **Nhóm ăn** — xem mục 5; hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
 - Sửa file Excel danh sách xong, lần mở app sau app tự thấy file đã sửa và hỏi **Nhập lại** (hoặc *Để sau*).
 - **Đọc ghi chú sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
 

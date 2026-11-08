@@ -4,7 +4,7 @@ App Windows nhỏ gọn giúp giáo vụ làm sổ điểm danh bán trú hằng
 
 - bấm vào lớp, tìm hoặc dán tên GV báo rồi bấm chọn từng em vắng (chỉ hiện các em ăn bán trú của lớp);
 - ghi tên theo quy tắc, đếm số vắng;
-- tự tính bảng suất ăn cho bảo mẫu, kể cả các lớp ghép;
+- tự tính bảng suất ăn cho bảo mẫu, kể cả các lớp ghép; bảng suất ăn của tờ ngày mới dựng theo sheet *Nhóm ăn* trong file danh sách (đổi cách ghép không phải sửa công thức sổ);
 - ghi vào sổ Excel giữ y mẫu cũ (mỗi ngày 1 sheet, mỗi tháng 1 file) (in bằng Excel như thường lệ).
 
 👉 **Hướng dẫn sử dụng: [HUONG_DAN.md](HUONG_DAN.md)**
@@ -33,7 +33,7 @@ Cấu trúc mã:
 | Thư mục | Nội dung |
 |---|---|
 | `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), tách tên trong ô sổ / ghi chú (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`), đọc ghi chú sổ (`notes.py`). |
-| `app/excel/` | Đọc file danh sách học sinh (chữ đỏ hoặc cột Bán trú), file dữ liệu của app, sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu), sổ tạm tự lưu `… tamthoi.xlsx` (`tamthoi.py`), sao lưu, in qua Excel. |
+| `app/excel/` | Đọc file danh sách học sinh (chữ đỏ hoặc cột Bán trú), file dữ liệu của app, sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu, dựng lại bảng suất ăn theo bảng Nhóm ăn), sổ tạm tự lưu `… tamthoi.xlsx` (`tamthoi.py`), sao lưu, in qua Excel. |
 | `app/service.py` | Điều phối các thao tác (mở ngày, dán tin, lưu, tạo sổ tháng mới). |
 | `app/web/` | Giao diện web: `api.py` (cầu nối giao diện ↔ xử lý sổ), `static/` (HTML, JavaScript, Bootstrap 5 + Bootstrap Icons đóng kèm, chạy không cần mạng), `run.py` (mở cửa sổ pywebview), `devserver.py` (máy chủ thử). |
 | `tests/` | Test với dữ liệu giả (không chứa thông tin thật của học sinh). |
