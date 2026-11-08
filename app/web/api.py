@@ -610,6 +610,8 @@ class Api:
             printing.open_folder(b if b.exists() else Path(st["so_file"]))
         elif kind == "data_folder":
             printing.open_folder(self._ws.data.path)
+        elif kind == "cdhs_folder" and st.get("cdhs_file"):
+            printing.open_folder(Path(st["cdhs_file"]))
         return {"ok": ""}
 
     # ================================================================== đóng app

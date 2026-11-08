@@ -49,20 +49,15 @@
         <div class="card-header bg-white d-flex align-items-center gap-3 flex-wrap">
           <span class="fw-bold fs-6" id="totals"></span>
           <span id="mealBadge"></span>
+          <span class="ms-auto legend small text-muted d-flex gap-3" title="Bấm vào một lớp để chọn em vắng">
+            <span><span class="dot muted"></span>chưa báo</span><span><span class="dot ok"></span>đủ</span>
+            <span><span class="dot warn"></span>có vắng</span><span><span class="dot err"></span>cần xem</span></span>
         </div>
         <div class="so-wrap">
           <table class="table table-bordered so">
             <thead><tr><th>Lớp</th><th>GVCN</th><th class="num">Sĩ số</th><th class="num">Vắng</th><th class="num">Hiện diện</th><th>Tên học sinh vắng</th><th>Ghi chú</th></tr></thead>
             <tbody id="soBody"></tbody>
           </table>
-        </div>
-        <div class="card-footer bg-white legend d-flex gap-2 align-items-center flex-wrap">
-          <span class="badge text-bg-light"><span class="dot muted"></span>chưa báo</span>
-          <span class="badge text-bg-light"><span class="dot ok"></span>đủ</span>
-          <span class="badge text-bg-light"><span class="dot warn"></span>có vắng</span>
-          <span class="badge text-bg-light"><span class="dot err"></span>cần xem</span>
-          <span class="text-muted small ms-2">[Lịch] = sĩ số đổi theo lịch thêm/cắt</span>
-          <span class="text-muted small ms-auto">Bấm vào một lớp để chọn em vắng</span>
         </div>
       </div>
       <div class="actionbar">
@@ -77,8 +72,9 @@
       <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
         <div class="card-header bg-white"><div class="fs-5 fw-bold" id="mealTotal"></div><div class="small text-muted" id="mealSub"></div></div>
         <div class="px-3 pt-2" id="mealAlerts"></div>
-        <div class="so-wrap"><table class="table table-hover mb-0 sticky-head">
-          <thead><tr><th style="width:200px">Nhóm</th><th>Gồm</th><th class="text-center" style="width:110px">Suất</th></tr></thead>
+        <div class="so-wrap"><table class="table table-sm table-hover mb-0 sticky-head meal">
+          <thead><tr><th style="width:200px">Nhóm</th><th>Gồm</th>
+            <th class="text-center" style="width:110px" title="Suất mỗi nhóm = hiện diện các lớp trong nhóm + em ghép − em ghép vắng (như công thức trong sổ)">Suất</th></tr></thead>
           <tbody id="mealBody"></tbody></table></div>
         <div class="card-footer bg-white small" id="mealInfo"></div>
       </div>
@@ -96,46 +92,32 @@
         <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
           <th>Lớp</th><th>Họ tên</th><th>Ngày sinh</th><th>Ăn BT</th><th>Tên gọi khác</th><th>Ăn ghép</th><th>Đặc biệt</th><th>Ghi chú</th></tr></thead>
           <tbody id="hsBody"></tbody></table></div></div>
-      <div class="text-muted small">Trang này chỉ để tra cứu. Muốn thêm, sửa học sinh: sửa file Excel danh sách rồi vào <b>Cài đặt → Nhập danh sách học sinh</b>. Lịch cắt / thêm bán trú đặt ở trang <b>Lịch thêm/cắt</b>.</div>
+      <div class="text-muted small">Trang này chỉ để tra cứu. Muốn thêm, sửa học sinh: sửa file Excel danh sách rồi vào <b>Cài đặt → Nhập danh sách…</b>. Lịch cắt / thêm bán trú đặt ở trang <b>Lịch thêm/cắt</b>.</div>
     </section>
 
     <!-- ===== Lịch thêm/cắt ===== -->
     <section class="page" id="page-lich">
-      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2 flex-wrap">
-        <span class="text-muted">Đặt trước ngày cắt hoặc thêm; tới ngày đó app tự đổi sĩ số. Em "cắt thứ 6" tự tính vắng mỗi thứ 6.</span>
-        <button class="btn btn-danger ms-auto" data-sched="cat"><i class="bi bi-scissors"></i> Cắt bán trú…</button>
-        <button class="btn btn-success" data-sched="them"><i class="bi bi-person-plus"></i> Thêm bán trú…</button>
-        <button class="btn btn-outline-secondary" data-sched="thu6"><i class="bi bi-calendar-minus"></i> Cắt thứ 6 hàng tuần…</button>
+      <div class="card shadow-sm"><div class="card-body py-2 d-flex align-items-center gap-2">
+        <span class="text-muted small me-auto">Đặt trước ngày cắt / thêm, tới ngày đó app tự đổi sĩ số.</span>
+        <button class="btn btn-danger text-nowrap" data-sched="cat"><i class="bi bi-scissors"></i> Cắt bán trú…</button>
+        <button class="btn btn-success text-nowrap" data-sched="them"><i class="bi bi-person-plus"></i> Thêm bán trú…</button>
+        <button class="btn btn-outline-secondary text-nowrap" data-sched="thu6"><i class="bi bi-calendar-minus"></i> Cắt thứ 6…</button>
+        <button class="btn btn-outline-danger text-nowrap" id="lichCancel"><i class="bi bi-x-circle"></i> Hủy lịch đã tích</button>
       </div></div>
       <div class="card shadow-sm flex-grow-1" style="min-height:0"><div class="so-wrap h-100">
         <table class="table table-hover table-tight mb-0 sticky-head"><thead><tr>
           <th style="width:42px"></th><th>Ngày áp dụng</th><th>Lớp</th><th>Học sinh</th><th>Việc</th></tr></thead>
           <tbody id="lichBody"></tbody></table></div></div>
-      <div><button class="btn btn-outline-danger" id="lichCancel"><i class="bi bi-x-circle"></i> Hủy các lịch đã tích</button></div>
     </section>
 
     <!-- ===== Cài đặt ===== -->
     <section class="page" id="page-cd">
       <div class="card shadow-sm"><div class="card-body">
-        <h5 class="card-title">File đang dùng</h5>
+        <h5 class="card-title mb-3">File đang dùng</h5>
         <div id="cdFiles"></div>
-        <div class="mt-2 d-flex gap-2 flex-wrap">
-          <button class="btn btn-primary" id="cdBook"><i class="bi bi-journal-arrow-up"></i> Chọn sổ điểm danh…</button>
-          <button class="btn btn-outline-secondary" data-open="so_folder"><i class="bi bi-folder2-open"></i> Mở thư mục sổ</button>
-          <button class="btn btn-outline-secondary" data-open="backup"><i class="bi bi-clock-history"></i> Mở thư mục sao lưu</button>
-          <button class="btn btn-outline-secondary" data-open="data_folder"><i class="bi bi-folder"></i> Mở thư mục dữ liệu</button>
-        </div>
-      </div></div>
-      <div class="card shadow-sm"><div class="card-body">
-        <h5 class="card-title">Danh sách học sinh</h5>
-        <p class="text-muted mb-2">File Excel gồm các cột <b>Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép</b>. File danh sách học sinh toàn trường (em tô chữ đỏ là ăn bán trú) cũng nhập được.</p>
-        <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-primary" id="cdImport"><i class="bi bi-file-earmark-arrow-down"></i> Nhập danh sách học sinh…</button>
-          <button class="btn btn-outline-primary" id="cdNotes"><i class="bi bi-journal-text"></i> Đọc ghi chú trong sổ…</button>
-        </div>
       </div></div>
       <div class="text-muted small px-1">
-        • Mỗi lần ghi, app tự sao lưu file cũ vào thư mục SaoLuu cạnh file (giữ 30 bản gần nhất).<br>
+        • Mỗi lần ghi, app tự sao lưu sổ cũ vào thư mục SaoLuu cạnh sổ (giữ 30 bản gần nhất) — <a href="#" data-open="backup">mở thư mục sao lưu</a>.<br>
         • Nếu sổ đang mở trong Excel, hãy đóng Excel rồi bấm Lưu lại.
       </div>
     </section>

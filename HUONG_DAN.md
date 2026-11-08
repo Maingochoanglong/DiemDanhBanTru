@@ -24,13 +24,13 @@ Máy cần Windows 10/11. In trực tiếp cần Microsoft Excel. Không cần c
 
 Mở app lần đầu, app **không hỏi chọn file**. Màn chính hiện dòng nhắc màu vàng; bạn tự làm khi sẵn sàng. Bấm **Cài đặt** ở thanh bên trái:
 
-1. **Nhập danh sách học sinh…**: chọn file Excel danh sách. Dùng được 2 dạng:
+1. **Nhập danh sách…**: chọn file Excel danh sách. Dùng được 2 dạng:
    - **file đơn giản**: các cột *Lớp · Họ tên · Ngày sinh (hoặc Ngày tháng năm sinh) · Bán trú*, cột Bán trú ghi **Có** / **Không**. Có thể thêm cột **Tên gọi khác** (chỉ sửa trong file Excel này, app đọc khi nhập danh sách; ô trống = không có tên gọi khác): tên GV hay báo khác tên thật, vd. em có tên nước ngoài thường gọi là *Mi Mi*; nhiều tên thì cách nhau dấu phẩy, tên đầu là tên ghi vào sổ. Cột Họ tên chỉ ghi họ và tên thật. Em **trùng cả họ và tên** trong cùng lớp thì ghi chữ A/B ở cột Tên gọi khác (vd. *Gia Hưng A*, *Gia Hưng B*); để trống thì app tự đặt A/B theo ngày sinh (em sinh trước là A). Em **trùng tên nhưng khác họ** thì app hiện cả họ lẫn tên (vd. *Lò Gia Hân*, *Vi Gia Hân*);
    - file danh sách học sinh toàn trường, trong đó **em tô chữ đỏ là có ăn bán trú**.
 
    App liệt kê các thay đổi để bạn duyệt rồi bấm **Áp dụng**.
-2. **Chọn sổ điểm danh…**: chọn sổ của tháng hiện tại (ví dụ `PH3.SỔ ĐIỂM DANH T11.xlsx`).
-3. Nếu muốn, bấm **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H và đề xuất cập nhật danh sách, ví dụ:
+2. **Chọn sổ khác…** (lần đầu: chọn sổ): chọn sổ của tháng hiện tại (ví dụ `PH3.SỔ ĐIỂM DANH T11.xlsx`).
+3. Nếu muốn, bấm **Đọc ghi chú sổ…**: app đọc ghi chú cột H và đề xuất cập nhật danh sách, ví dụ:
    - "Thứ 6 hàng tuần cắt 2 em …" → đánh dấu **cắt thứ 6**: thứ 6 các em tự được tính vắng.
    - "Tháng 11 cắt …" (hoặc "T11 CẮT …") → **cắt bán trú từ 01/11**; "Từ 12/10 cắt bán trú …" → cắt từ 12/10.
    - "thêm … ghép 1.3" → thêm em vào bán trú lớp đó, ăn ghép ở nhóm 1.3.
@@ -76,7 +76,7 @@ Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
 
 Trang **Lịch thêm/cắt** dùng khi biết trước một em sẽ thôi ăn hoặc bắt đầu ăn, ví dụ từ ngày mai hay từ đầu tháng sau:
 
-1. Bấm **Cắt bán trú…**, **Thêm bán trú…** hoặc **Cắt thứ 6 hàng tuần…**.
+1. Bấm **Cắt bán trú…**, **Thêm bán trú…** hoặc **Cắt thứ 6…**.
 2. Chọn lớp, rồi **tích** các em. Muốn thêm em chưa có trong danh sách: tích dòng cuối *Học sinh mới…* rồi gõ họ tên.
 3. Chọn ngày áp dụng: bấm **Ngày học kế tiếp**, **Đầu tháng sau**, hoặc gõ ngày.
 4. Bấm **Lưu lịch**.
@@ -85,11 +85,11 @@ Từ ngày đó app tự đổi sĩ số và danh sách tên của lớp. Trên 
 
 Nếu để tích ô *Ghi chú vào cột H*, app tự ghi chú vào cột H như cách bạn vẫn viết, ví dụ "Tháng 11 cắt bán trú Hồ Khánh Ngọc" hoặc "Từ 30/10 cắt bán trú …". Ghi chú tự mang sang các ngày sau. Nhớ bấm **Lưu vào sổ** để ghi chú vào sổ.
 
-**Thứ 6 học nửa buổi**: em nào nghỉ ăn thứ 6 hàng tuần thì bấm **Cắt thứ 6 hàng tuần…**. Mỗi thứ 6, app tự tính các em này vắng, kể cả khi GV báo "đủ".
+**Thứ 6 học nửa buổi**: em nào nghỉ ăn thứ 6 hàng tuần thì bấm **Cắt thứ 6…**. Mỗi thứ 6, app tự tính các em này vắng, kể cả khi GV báo "đủ".
 
-Danh sách lịch chia nhóm: *Sắp áp dụng*, *Hàng tuần – cắt thứ 6*, *Đã áp dụng (30 ngày qua)*. Tích dòng rồi bấm **Hủy các lịch đã tích** để hủy.
+Danh sách lịch chia nhóm: *Sắp áp dụng*, *Hàng tuần – cắt thứ 6*, *Đã áp dụng (30 ngày qua)*. Tích dòng rồi bấm **Hủy lịch đã tích** để hủy.
 
-Nút **Thêm/cắt bán trú** ở cuối bảng chọn tên đặt lịch cho lớp đó. Bỏ lịch (kể cả *cắt thứ 6 hàng tuần*): trang **Lịch thêm/cắt**, tích dòng lịch rồi bấm **Hủy các lịch đã tích**. Ô tên có nhãn nhỏ *nghỉ T6* hoặc *cắt từ 01/11* nếu em đã có lịch.
+Nút **Thêm/cắt bán trú** ở cuối bảng chọn tên đặt lịch cho lớp đó. Bỏ lịch (kể cả *cắt thứ 6 hàng tuần*): trang **Lịch thêm/cắt**, tích dòng lịch rồi bấm **Hủy lịch đã tích**. Ô tên có nhãn nhỏ *nghỉ T6* hoặc *cắt từ 01/11* nếu em đã có lịch.
 
 ## 5. Ghép lớp (lớp 1.5, 4.4 …)
 
@@ -105,14 +105,14 @@ Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em c
 
 Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác** (như cột trong file Excel), ăn ghép, lịch cắt/thêm.
 
-- Muốn **thêm, sửa, xóa học sinh** (kể cả tên gọi khác): sửa trong **file Excel danh sách** rồi vào Cài đặt → **Nhập danh sách học sinh…**.
+- Muốn **thêm, sửa, xóa học sinh** (kể cả tên gọi khác): sửa trong **file Excel danh sách** rồi vào Cài đặt → **Nhập danh sách…**.
 - Lịch **cắt bán trú từ ngày**, **ăn từ ngày**, **cắt thứ 6**: đặt ở trang **Lịch thêm/cắt** hoặc menu *Thêm/cắt bán trú* trong bảng tên của lớp.
 
 Việc ít làm với danh sách nằm trong trang **Cài đặt**:
 
-- **Nhập danh sách học sinh…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
+- **Nhập danh sách…** khi có danh sách mới (file đơn giản *Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép*, hoặc file danh sách học sinh toàn trường tô đỏ). App liệt kê từng thay đổi (em mới, đổi lớp, thôi/bắt đầu ăn) để bạn duyệt. Thông tin cắt thứ 6, ăn ghép… vẫn giữ nguyên.
 - Sửa file Excel danh sách xong, lần mở app sau app tự thấy file đã sửa và hỏi **Nhập lại** (hoặc *Để sau*).
-- **Đọc ghi chú trong sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
+- **Đọc ghi chú sổ…**: app đọc ghi chú cột H của sổ (vd. "Tháng 11 cắt …", "Thứ 6 hàng tuần cắt …") để gợi ý cập nhật danh sách.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 
