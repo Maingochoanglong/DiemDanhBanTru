@@ -171,7 +171,8 @@ class Api:
                     "kind": "class", "code": code, "ma": info.ma_ngan if info else "",
                     "gvcn": info.gvcn if info else "", "si": st.si_so(code), "vang": n, "hd": st.present(code),
                     "ten": names if (c.reported or n) else "", "reported": c.reported or bool(n),
-                    "note": note, "warn": warns[0] if warns else "", "sched": bool(st.scheduled_changes(code)),
+                    "note": note, "warn": warns[0] if warns else "", "info": "; ".join(st.class_notices(code)),
+                    "sched": bool(st.scheduled_changes(code)),
                     "status": self._status(code),
                 })
             si = sum(st.si_so(c) for c in codes)
@@ -255,7 +256,7 @@ class Api:
         return {
             "code": code, "ma": info.ma_ngan if info else "", "gvcn": info.gvcn if info else "",
             "si": st.si_so(code), "vang": st.absent_count(code), "hd": st.present(code),
-            "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "extra": list(c.extra),
+            "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "notices": st.class_notices(code), "extra": list(c.extra),
             "names": names, "others": others, "pending": pending, "upcoming": upcoming,
         }
 
@@ -311,6 +312,33 @@ class Api:
         return {"state": self.state(), "flash": "Đã hoàn tác." if ok else "Không còn gì để hoàn tác."}
 
     # ================================================================== lưu / in
+    def _blocked(self) -> dict | None:
+        ws = self._ws
+        n = ws.unresolved_count()
+        if not n:
+            return None
+        lines = [f"Lớp {code}: {', '.join(names)}" for code, names in ws.pending_names().items()]
+        return {"n": n, "lines": lines, "code": next(iter(ws.pending_names()), None)}
+
+    def _conflict_lines(self) -> list[str]:
+        return [f"{c}: theo danh sách {ds} em, trong sổ đang ghi {so} em" for c, ds, so in self._ws.si_so_conflicts()]
+
+    def save_check(self) -> dict:
+        """Mọi điều cần hỏi trước khi lưu, để giao diện hỏi một lần: còn tên chưa rõ (không lưu được),
+        lớp chưa báo, suất ăn lệch, sĩ số danh sách khác sổ."""
+        ws, st = self._ws, self._ws.state
+        if st is None or not ws.book_path:
+            return {}
+        blocked = self._blocked()
+        if blocked:
+            return {"blocked": blocked}
+        out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines()}
+        if not ws.layout.is_empty:
+            m = ws.meals()
+            if not m.balanced:
+                out["meal"] = {"total": m.total_meals, "present": m.total_present, "ask": len(m.ask)}
+        return out
+
     def save(self, choice: str | None = None) -> dict:
         """Lưu vào sổ. Có thể trả về: blocked (còn tên chưa rõ), conflicts (hỏi sĩ số), locked, error, ok."""
         ws, st = self._ws, self._ws.state
@@ -318,14 +346,12 @@ class Api:
             return {"error": "Chưa mở ngày nào."}
         if not ws.book_path:
             return {"error": "Chưa có sổ điểm danh cho tháng này. Vào Cài đặt → Chọn sổ."}
-        n = ws.unresolved_count()
-        if n:
-            lines = [f"Lớp {code}: {', '.join(names)}" for code, names in ws.pending_names().items()]
-            first = next(iter(ws.pending_names()), None)
-            return {"blocked": {"n": n, "lines": lines, "code": first}}
+        blocked = self._blocked()
+        if blocked:
+            return {"blocked": blocked}
         conflicts = ws.si_so_conflicts()
         if conflicts and choice is None:
-            return {"conflicts": [f"{c}: theo danh sách {ds} em, trong sổ đang ghi {so} em" for c, ds, so in conflicts]}
+            return {"conflicts": self._conflict_lines()}
         if conflicts and choice == "keep":
             ws.keep_sheet_si_so([c for c, _, _ in conflicts])
         try:

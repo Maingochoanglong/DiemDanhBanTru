@@ -279,3 +279,12 @@ def test_ghep_page_is_read_only_view(api):
     assert c["n"] == 4 and c["done"] == 0 and [x["g"] for x in c["groups"]] == ["1.1", "1.2"]
     assert not hasattr(api, "assign_ghep") and not hasattr(api, "assign_ghep_text")
 
+
+def test_save_check_gathers_all_questions(api):
+    ck = api.save_check()
+    assert "1D15" in ck["unreported"] and ck["meal"] is None and ck["conflicts"] == []
+    sid = sid_of(api, "1D19", "Phùng Gia Hân")
+    api.set_absent("1D19", sid, True)  # em ghép chưa có nhóm vắng -> suất ăn lệch
+    ck = api.save_check()
+    assert ck["meal"] == {"total": ck["meal"]["present"] + 1, "present": ck["meal"]["present"], "ask": 1}
+

@@ -236,6 +236,7 @@ def test_not_boarding_name_is_warned_not_counted(ws):  # noqa: F811
     ws.paste("1D15: 5/6 vắng Quỳnh Anh")  # Mạc Trần Quỳnh Anh có trong lớp nhưng không ăn bán trú
     st = ws.state
     assert st.absent_count("1D15") == 0 and not ws.pending_names()
-    assert "Không ăn BT: Quỳnh Anh" in st.class_warnings("1D15")
+    assert st.class_notices("1D15") == ["Không ăn BT: Quỳnh Anh"]
+    assert st.class_warnings("1D15") == []  # không phải lỗi: chênh 1 em đúng bằng em không ăn BT, không tô đỏ
     ws.paste("1D15 đủ")
-    assert not any("Không ăn BT" in w for w in st.class_warnings("1D15"))
+    assert st.class_notices("1D15") == []

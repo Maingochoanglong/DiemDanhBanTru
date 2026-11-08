@@ -290,7 +290,8 @@ class DayState:
             out.append(f"GV báo sĩ số {c.teacher_total}, sổ tính {si}")
         if c.teacher_present is not None and c.teacher_total is not None:
             told = c.teacher_total - c.teacher_present
-            if told != n and not (friday_net and told + k == n):
+            explained = bool(c.not_bt) and told - n == len(c.not_bt)  # phần chênh là các em không ăn BT GV kể thêm
+            if told != n and not (friday_net and told + k == n) and not explained:
                 # điều cần biết đặt đầu câu: cột Ghi chú hẹp có thể cắt phần cuối
                 if told > n:
                     out.append(f"Thiếu {told - n} tên (GV báo vắng {told} em, mới ghi {n})")
@@ -298,11 +299,14 @@ class DayState:
                     out.append(f"Thừa {n - told} tên (GV báo vắng {told} em, đang ghi {n})")
         if c.extra:
             out.append("Tên chưa xác định: " + ", ".join(c.extra))
-        if c.not_bt:
-            out.append("Không ăn BT: " + ", ".join(c.not_bt))
         if self.si_so_mismatch(code):
             out.append(f"Sĩ số theo danh sách {self.roster.si_so(code, self.date)}, trong sổ đang ghi {c.sheet_si_so}")
         return out
+
+    def class_notices(self, code: str) -> list[str]:
+        """Điều nên biết nhưng không sai (không tô đỏ): tên GV kể mà em không ăn bán trú."""
+        c = self.cd(code)
+        return ["Không ăn BT: " + ", ".join(c.not_bt)] if c.not_bt else []
 
     def si_so_mismatch(self, code: str) -> bool:
         """Danh sách và sổ lệch nhau thật (không tính phần thay đổi do lịch thêm/cắt đã đặt).

@@ -30,6 +30,27 @@ function matches(q, text) {  // mỗi từ gõ vào là đầu của một chữ
   const words = fold(text).split(/\s+/);
   return fold(q).split(/\s+/).filter(Boolean).every(t => words.some(w => w.startsWith(t)));
 }
+const wordsOf = s => String(s || "").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+// chữ có dấu, không phụ thuộc vị trí dấu thanh: "Thuý" và "Thúy" là một, "Nguyên" khác "Nguyễn"
+const TONE = /[\u0300\u0301\u0303\u0309\u0323]/g;
+const toneKey = w => { const d = w.normalize("NFD").toLowerCase(); return d.replace(TONE, "").normalize("NFC") + (d.match(TONE) || []).join(""); };
+// mức khớp của tên gõ với một em: 3 = đủ chữ, đúng dấu · 2 = đủ chữ (bỏ dấu) · 1 = chỉ khớp đầu chữ · 0 = không khớp
+function matchLevel(q, text) {
+  const qw = wordsOf(q), tw = wordsOf(text), qf = qw.map(fold), tf = tw.map(fold);
+  if (!qf.length || !qf.every(t => tf.some(w => w.startsWith(t)))) return 0;
+  if (!qf.every(t => tf.includes(t))) return 1;
+  if (!/[^\x00-\x7f]/.test(q)) return 2;  // gõ không dấu
+  const tk = tw.map(toneKey);
+  return qw.map(toneKey).every(t => tk.includes(t)) ? 3 : 2;
+}
+// tên gõ trùng phần cuối tên em (GV hay gọi tên cuối): "Thư" -> Minh Thư đứng trước Thư Kỳ
+function tailMatch(q, b) {
+  const qf = wordsOf(q).map(fold);
+  return [b.dataset.full, b.dataset.name].some(s => {
+    const w = wordsOf(s).map(fold);
+    return w.length >= qf.length && qf.every((t, i) => w[w.length - qf.length + i] === t);
+  });
+}
 
 function toast(msg, kind = "success") {
   if (!msg) return;
@@ -141,7 +162,7 @@ function renderDiemDanh() {
 
   const rows = st.rows.map(r => {
     if (r.kind === "khoi") return `<tr class="khoi"><td>${esc(r.code)}</td><td></td><td class="num">${r.si}</td><td class="num">${r.vang}</td><td class="num">${r.hd}</td><td></td><td></td></tr>`;
-    const note = [r.sched ? "[Lịch]" : "", r.warn, r.note].filter(Boolean).join(" · ");
+    const note = [r.sched ? "[Lịch]" : "", r.warn, r.info, r.note].filter(Boolean).join(" · ");
     const ten = r.reported ? esc(r.ten) : `<span class="text-muted fst-italic">(chưa báo)</span>`;
     return `<tr class="cls st-${r.status}" data-code="${esc(r.code)}">
       <td><span class="dot ${r.status}"></span>${esc(r.code)}${r.ma ? ` <span class="text-muted fw-normal small">(${esc(r.ma)})</span>` : ""}</td>
@@ -182,6 +203,7 @@ function renderClass() {
     <span class="badge text-bg-danger fs-6">Vắng ${d.vang}</span><span class="badge text-bg-success fs-6">Hiện diện ${d.hd}</span>`;
   let a = "";
   for (const w of d.warnings) a += `<div class="alert alert-danger py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(w)}</div>`;
+  for (const w of d.notices || []) a += `<div class="alert alert-secondary py-2 mb-2"><i class="bi bi-info-circle me-2"></i>${esc(w)} (không tính)</div>`;
   if (d.pending.length) {
     a += `<div class="alert alert-warning py-2 mb-2"><b>Tên trong sổ chưa khớp danh sách</b> — bấm vào tên để chọn em đúng:<div class="mt-2 d-flex gap-2 flex-wrap">` +
       d.pending.map(p => `<button class="btn btn-danger" data-pend="${p.idx}"><i class="bi bi-question-circle"></i> ${esc(p.query)}</button>`).join("") + `</div></div>`;
@@ -191,7 +213,8 @@ function renderClass() {
   $("#clsAlerts").innerHTML = a;
   $("#clsNote").value = d.note;
   $("#clsNames").innerHTML = d.names.map(n => `
-    <button class="nm ${n.absent ? "on" : ""}" data-sid="${esc(n.id)}" title="${esc(n.full)} · ${esc(n.dob)}" data-s="${esc(n.full + " " + n.name + " " + (n.alias || ""))}">
+    <button class="nm ${n.absent ? "on" : ""}" data-sid="${esc(n.id)}" title="${esc(n.full)} · ${esc(n.dob)}"
+      data-s="${esc(n.full + " " + n.name + " " + (n.alias || ""))}" data-full="${esc(n.full)}" data-name="${esc(n.name)}">
       <i class="bi ${n.absent ? "bi-x-circle-fill" : "bi-circle"} ck"></i><span>${esc(n.name)}</span>
       ${n.tags.length ? `<span class="tg">${esc(n.tags.join(", "))}</span>` : ""}</button>`).join("")
     || `<div class="text-muted">Lớp này chưa có em nào ăn bán trú trong danh sách.</div>`;
@@ -205,20 +228,27 @@ const searchTerms = q => q.split(/[,;\n]|\s+v[aà]\s+/i)
 // tên gõ / dán không có trong bảng: ô viền đứt nằm luôn trong lưới tên, ghi lý do
 function missTile(t) {
   const o = (D.others || []).find(x => matches(t, x.s));
-  return `<div class="nm miss ${o ? "known" : ""}" title="Không tính vào bán trú của lớp">
+  return `<div class="nm miss ${o ? "known" : ""}" style="order:2" title="Không tính vào bán trú của lớp">
     <i class="bi ${o ? "bi-person-slash" : "bi-question-circle"} ck"></i>
     <span><span class="d-block">${esc(t)}</span><small class="why">${esc(o ? o.why : "Không có trong danh sách")}</small></span></div>`;
 }
 
 function filterNames() {  // chỉ lọc, không chọn: hiện các em khớp một trong các tên đã gõ / dán
   const terms = searchTerms($("#clsSearch").value), found = new Set();
-  let n = 0;
   $$("#clsNames .nm.miss").forEach(x => x.remove());
-  $$("#clsNames .nm").forEach(b => {
-    const hit = terms.filter(t => matches(t, b.dataset.s));
-    hit.forEach(t => found.add(t));
-    const ok = !terms.length || hit.length > 0;
+  const tiles = $$("#clsNames .nm"), rank = new Map();
+  for (const t of terms) {  // mỗi tên chỉ hiện các em khớp tốt nhất (đủ chữ, đúng dấu trước; khớp đầu chữ khi đang gõ dở)
+    const lv = tiles.map(b => matchLevel(t, b.dataset.s));
+    const best = Math.max(0, ...lv);
+    if (!best) continue;
+    found.add(t);
+    tiles.forEach((b, i) => { if (lv[i] === best) rank.set(b, Math.min(rank.get(b) ?? 1, tailMatch(t, b) ? 0 : 1)); });
+  }
+  let n = 0;
+  tiles.forEach(b => {
+    const ok = !terms.length || rank.has(b);
     b.style.display = ok ? "" : "none";
+    b.style.order = terms.length && ok ? rank.get(b) : "";
     n += ok;
   });
   const miss = terms.filter(t => !found.has(t));
@@ -300,35 +330,39 @@ async function gotoDay(fn) {
   }
 }
 
+function showBlocked(b) {  // còn tên chưa rõ: chưa lưu được, đưa tới lớp cần xử lý
+  return ask("Chưa lưu được", `<p class="text-danger fw-bold">Còn ${b.n} tên chưa rõ — chưa lưu được.</p>
+    <ul>${b.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay", cls: "btn-danger" }], { icon: "bi-exclamation-triangle-fill", danger: true })
+    .then(() => { showPage("dd"); if (b.code) openClass(b.code); return false; });
+}
+
 async function doSave() {
-  if (S && S.unreported && S.unreported.length) {  // lời nhắc trước đây nằm ở nút In
-    const k = await ask("Còn lớp chưa báo", `<p>Còn <b>${S.unreported.length} lớp chưa báo</b>: ${esc(S.unreported.join(", "))}.</p>
-      <p>Lưu bây giờ thì các lớp này được tính <b>đủ</b> (không em nào vắng).</p>`,
-      [{ key: "go", label: "Vẫn lưu" }, { key: "stay", label: "Ở lại", cls: "btn-outline-secondary" }], { icon: "bi-exclamation-circle" });
-    if (k !== "go") return false;
-  }
-  const meal = S && S.meal;
-  if (meal && !meal.ok) {
-    const k = await ask("Suất ăn chưa khớp", `<p>Tổng suất ${meal.total}, hiện diện ${meal.present}: <b class="text-danger">${mealDiff(meal)}</b>.</p>` +
-      (meal.ask ? `<p>Có <b>${meal.ask} em ăn ghép vắng</b> chưa chọn nhóm ăn.</p>` : "") +
-      `<p>Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch như vậy.</p>`,
-      [{ key: "see", label: "Xem trang Suất ăn" }, { key: "go", label: "Vẫn lưu", cls: "btn-outline-danger" }, { key: "stay", label: "Hủy", cls: "btn-outline-secondary" }],
-      { icon: "bi-cup-hot" });
-    if (k === "see") { showPage("sa"); return false; }
-    if (k !== "go") return false;
-  }
-  let r = await api("save");
+  // hỏi một lần mọi điều cần biết trước khi lưu
+  const ck = await api("save_check");
+  if (ck.blocked) return showBlocked(ck.blocked);
+  const items = [];
+  if (ck.unreported && ck.unreported.length) items.push(`<li class="mb-2"><b>${ck.unreported.length} lớp chưa báo</b>: ${esc(ck.unreported.join(", "))}.
+    Lưu bây giờ thì các lớp này tính <b>đủ</b>.</li>`);
+  if (ck.meal) items.push(`<li class="mb-2"><b class="text-danger">Suất ăn ${mealDiff(ck.meal)}</b> (tổng suất ${ck.meal.total}, hiện diện ${ck.meal.present})` +
+    `${ck.meal.ask ? `: ${ck.meal.ask} em ăn ghép vắng chưa chọn nhóm` : ""}. Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch.</li>`);
+  if (ck.conflicts && ck.conflicts.length) items.push(`<li class="mb-2"><b>Sĩ số khác nhau</b> giữa danh sách bán trú và sổ (có thể do thêm/cắt em chưa cập nhật):
+    <ul>${ck.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   let choice = null;
-  if (r.blocked) {
-    await ask("Chưa lưu được", `<p class="text-danger fw-bold">Còn ${r.blocked.n} tên chưa rõ — chưa lưu được.</p>
-      <ul>${r.blocked.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay", cls: "btn-danger" }], { icon: "bi-exclamation-triangle-fill", danger: true });
-    showPage("dd");
-    if (r.blocked.code) openClass(r.blocked.code);
-    return false;
+  if (items.length) {
+    const btns = ck.conflicts && ck.conflicts.length
+      ? [{ key: "keep", label: "Lưu, giữ sĩ số như sổ" }, { key: "list", label: "Lưu, dùng sĩ số theo danh sách", cls: "btn-outline-primary" }]
+      : [{ key: "go", label: "Vẫn lưu" }];
+    if (ck.meal) btns.push({ key: "see", label: "Xem trang Suất ăn", cls: "btn-outline-secondary" });
+    btns.push({ key: "stay", label: "Hủy", cls: "btn-outline-secondary" });
+    const k = await ask("Kiểm tra trước khi lưu", `<ul class="ps-3 mb-0">${items.join("")}</ul>`, btns, { icon: "bi-clipboard-check" });
+    if (k === "see") { showPage("sa"); return false; }
+    if (!["go", "keep", "list"].includes(k)) return false;
+    if (k !== "go") choice = k;
   }
-  if (r.conflicts) {
-    choice = await ask("Sĩ số khác nhau", `<p>Các lớp sau có sĩ số theo danh sách bán trú khác sĩ số đang ghi trong sổ (có thể do thêm/cắt em chưa cập nhật). Ghi sĩ số nào vào sổ?</p>
-      <ul>${r.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`,
+  let r = await api("save", choice);
+  if (r.blocked) return showBlocked(r.blocked);
+  if (r.conflicts) {  // hiếm: sĩ số đổi giữa lúc hỏi và lúc lưu
+    choice = await ask("Sĩ số khác nhau", `<p>Ghi sĩ số nào vào sổ?</p><ul>${r.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`,
       [{ key: "keep", label: "Giữ sĩ số như trong sổ" }, { key: "list", label: "Dùng sĩ số theo danh sách", cls: "btn-outline-primary" }, { key: null, label: "Hủy", cls: "btn-outline-secondary" }]);
     if (!choice) return false;
     r = await api("save", choice);

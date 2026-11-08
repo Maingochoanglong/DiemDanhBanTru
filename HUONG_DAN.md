@@ -47,8 +47,8 @@ Trang **Điểm danh**:
 
 | Phần | Dùng để |
 |---|---|
-| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
-| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn; tên nào không có trong bảng thì hiện thành **ô viền đứt** ghi lý do: *Không ăn bán trú* (ô xám) hoặc *Không có trong danh sách* (ô vàng, nên xem lại tên) — các ô này không bấm được, không tính. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
+| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem (tên chưa rõ, số GV báo lệch, sĩ số khác sổ). Tên GV kể mà em không ăn bán trú chỉ ghi chú, không tô đỏ. Lớp có ghi chú trong sổ kiểu *Không nói gì là đủ* thì GV không nhắn app vẫn tính là **đủ**. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
+| **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn. Gõ đủ chữ thì chỉ hiện em có đủ các chữ đó (gõ `gia huy` không ra *Huỳnh Gia Lộc*); gõ có dấu thì ưu tiên em đúng dấu (`Nguyên Vũ` không ra *Nguyễn Vũ Khang*); em có tên cuối khớp đứng trước (`Thư` → *Minh Thư* trước *Thư Kỳ*); tên nào không có trong bảng thì hiện thành **ô viền đứt** ghi lý do: *Không ăn bán trú* (ô xám) hoặc *Không có trong danh sách* (ô vàng, nên xem lại tên) — các ô này không bấm được, không tính. Nút **Lớp này đủ**, ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
 
 Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền phía sau tối đi.
 
@@ -65,9 +65,10 @@ App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/th
 ### Lưu vào sổ
 
 1. Bấm **Lưu vào sổ** (Ctrl+S). Nếu chưa có sheet ngày hôm nay, app sao chép sheet hôm trước rồi điền số liệu.
-   - Còn **lớp chưa báo**: app nhắc tên các lớp đó (lưu thì các lớp này được tính **đủ**). Bấm **Vẫn lưu** hoặc **Ở lại** để chờ GV báo.
    - Còn **tên chưa rõ** thì app **chưa cho lưu**; bấm **Xử lý ngay** để app mở lớp cần xử lý.
-   - Sĩ số theo danh sách khác sĩ số trong sổ: app hỏi **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
+   - Còn điều cần biết thì app hỏi **một lần** trong hộp **Kiểm tra trước khi lưu**: **lớp chưa báo** (lưu thì tính **đủ**),
+     **suất ăn thừa/thiếu** (nút **Xem trang Suất ăn**), **sĩ số danh sách khác sổ** (chọn **giữ sĩ số như sổ** hay **dùng sĩ số theo danh sách**).
+     Bấm **Hủy** để ở lại sửa.
 2. In: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ (tờ 1 bảng điểm danh, tờ 2 bảng suất ăn).
 
 Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
