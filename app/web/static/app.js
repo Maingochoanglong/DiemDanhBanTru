@@ -182,7 +182,7 @@ function renderDiemDanh() {
       (r.auto ? ` <span class="text-muted small">· nghỉ T6: ${esc(r.auto)}</span>` : "");
     return `<tr class="cls st-${r.status}" data-code="${esc(r.code)}">
       <td><span class="dot ${r.status}"></span>${esc(r.code)}${r.ma ? ` <span class="text-muted fw-normal small">(${esc(r.ma)})</span>` : ""}</td>
-      <td class="gv">${esc(r.gvcn)}</td><td class="num">${r.si}</td><td class="num fw-bold">${r.vang || 0}</td><td class="num">${r.hd}</td>
+      <td class="gv"><div class="cut" title="${esc(r.gvcn)}">${esc(r.gvcn)}</div></td><td class="num">${r.si}</td><td class="num fw-bold">${r.vang || 0}</td><td class="num">${r.hd}</td>
       <td class="ten">${ten}</td><td class="note"><div class="cut" title="${esc(tip)}">${esc(note)}</div></td></tr>`;
   });
   if (t) rows.push(`<tr class="tong"><td>TỔNG CỘNG</td><td></td><td class="num">${t.si}</td><td class="num">${t.vang}</td><td class="num">${t.hd}</td><td></td><td></td></tr>`);
