@@ -38,6 +38,7 @@ jobs:
         # Kèm thông tin phiên bản (tên app, mô tả) và không nén UPX: Windows ít cảnh báo nhầm hơn.
         run: |
           python packaging/make_version_file.py build/version_info.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
           pyinstaller --noconfirm --onefile --windowed --noupx --name DiemDanhBanTru --version-file build/version_info.txt --add-data "app/web/static;app/web/static" run_app.py
 
       - name: Kiểm tra thông tin phiên bản trong file .exe

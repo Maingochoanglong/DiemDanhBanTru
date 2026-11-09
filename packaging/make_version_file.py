@@ -32,7 +32,10 @@ TEMPLATE = """VSVersionInfo(
 def main(out: str) -> None:
     parts = [int(x) for x in __version__.split(".")][:4]
     parts += [0] * (4 - len(parts))
-    Path(out).write_text(TEMPLATE.format(t=tuple(parts), v=__version__), encoding="utf-8")
+    out_path = Path(out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(TEMPLATE.format(t=tuple(parts), v=__version__), encoding="utf-8")
+    print(f"Đã tạo {out_path} (phiên bản {__version__})")
 
 
 if __name__ == "__main__":
