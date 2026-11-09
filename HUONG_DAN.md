@@ -47,7 +47,7 @@ Trang **Điểm danh**:
 
 | Phần | Dùng để |
 |---|---|
-| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem (tên chưa rõ, sĩ số khác sổ). Thứ 6, lớp chưa báo vẫn ghi *(chưa báo)* kèm dòng xám *nghỉ T6: …* (các em cắt thứ 6 đã tự tính vắng). Lớp có ghi chú trong sổ kiểu *Không nói gì là đủ* thì GV không nhắn app vẫn tính là **đủ**. Phía trên bảng có dòng **Chưa báo (n): 1D15 · 4D21 …** — bấm mã lớp để mở lớp đó; nút lọc **Tất cả / Chưa báo / Có vắng** ở góc phải để bảng chỉ hiện các lớp cần xem. Ghi chú dài: rê chuột để xem đủ. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
+| **Bảng điểm danh** | Có các cột như sổ: **Lớp · GVCN · Sĩ số · Vắng · Hiện diện · Tên học sinh vắng · Ghi chú**, dòng cộng từng khối và **TỔNG CỘNG**. Màu dòng: xám = chưa báo, xanh = đủ, cam = có vắng, đỏ = cần xem (tên chưa rõ, sĩ số khác sổ). Thứ 6, lớp chưa báo vẫn ghi *(chưa báo)* kèm dòng xám *nghỉ T6: …* (các em cắt thứ 6 đã tự tính vắng). Lớp **đủ hay vắng luôn do bạn bấm**: app không tự tính đủ (kể cả lớp có ghi chú kiểu *Không nói gì là đủ*). Phía trên bảng có dòng **Chưa báo (n): 1D15 · 4D21 …** — bấm mã lớp để mở lớp đó; nút lọc **Tất cả / Chưa báo / Có vắng** ở góc phải để bảng chỉ hiện các lớp cần xem. Ghi chú và danh sách tên dài tự xuống dòng; bấm nút **«** ở góc trên thanh bên để thu gọn thanh bên, bảng rộng hơn. Phía trên bảng có **Tổng suất = hiện diện** (xanh khi khớp, đỏ khi lệch — bấm để xem trang Suất ăn). |
 | **Bảng chọn tên** (**bấm vào 1 lớp**) | Hiện tên các em ăn bán trú của lớp dạng **ô chữ to**. **Bấm vào ô tên = vắng** (ô chuyển đỏ), bấm lại để bỏ. Ô **Tìm tên** to ở trên, gõ không cần dấu (`long`, `hai long`, `h long` đều ra *Hải Long*); ô tìm **chỉ để lọc** tên (không tự chọn, Enter cũng không chọn); chọn vắng = **bấm vào ô tên**. Gõ hoặc **dán nhiều tên cách nhau dấu phẩy** (vd. `Gia Huy, Bảo Anh, Minh`) thì hiện các em có các tên đó để bấm chọn. Gõ đủ chữ thì chỉ hiện em có đủ các chữ đó (gõ `gia huy` không ra *Huỳnh Gia Lộc*); gõ có dấu thì ưu tiên em đúng dấu (`Nguyên Vũ` không ra *Nguyễn Vũ Khang*); em có tên cuối khớp đứng trước (`Thư` → *Minh Thư* trước *Thư Kỳ*); tên nào không có trong bảng thì hiện thành **ô viền đứt** ghi lý do: *Không ăn bán trú* (ô xám) hoặc *Không có trong danh sách* (ô vàng, nên xem lại tên) — các ô này không bấm được, không tính. Nút **Lớp này đủ** (lớp có em nghỉ thứ 6 thì nút ghi **Đủ (trừ em nghỉ thứ 6)**), ô **Ghi chú (cột H)**, nút **Thêm/cắt bán trú**. Bấm **Xong** (hoặc Esc) để đóng. |
 
 Hộp hỏi và bảng chọn tên luôn hiện **giữa màn hình**, nền phía sau tối đi.
@@ -71,6 +71,8 @@ App còn đối chiếu số trong sổ: lớp lệch sĩ số hoặc thiếu/th
 2. In: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ (tờ 1 bảng điểm danh, tờ 2 bảng suất ăn).
 
 Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
+
+Nút **Đặt lại** đưa mọi lớp của ngày đang mở về *chưa báo* và bỏ hết tên vắng đã chọn (ghi chú, sĩ số giữ nguyên). Dùng khi sheet của ngày đó đã được tạo sẵn trong sổ nên app hiểu nhầm là đã điểm danh. Sổ chỉ đổi khi bấm **Lưu vào sổ**. (Sheet tạo sẵn mà còn trống — chưa có tên vắng nào — thì app đã tự coi các lớp là *chưa báo*.)
 
 ## 4. Lịch thêm / cắt bán trú, nghỉ thứ 6
 
@@ -102,9 +104,15 @@ Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em c
 - Lớp ghép chưa ghi nhóm cho đủ mọi em thì số em ghép mỗi nhóm giữ như sổ hôm trước.
 - Em có thể ghép sang nhóm khác khối (vd. em lớp 1 ăn cùng nhóm 2.1): cột **Ăn ghép** ghi mã nhóm đó là được.
 
-### Đổi cách ghép (đầu năm học, hoặc giữa năm): sheet "Nhóm ăn"
+### Đổi cách ghép (đầu năm học, hoặc giữa năm)
 
-Bảng suất ăn cuối mỗi tờ điểm danh (lớp nào ăn chung dòng nào) khai báo ở sheet **Nhóm ăn** trong file Excel danh sách, không cần sửa công thức trong sổ:
+Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và cột **Tên ghép** (dòng trống cách nhóm giữ nguyên). Bấm **Sửa cách ghép**:
+
+- mỗi dòng: **Tên ghép** (chữ in ở sổ), **Chọn lớp** (bấm các lớp ăn cả lớp ở dòng đó; lớp đang ở dòng khác chọn thì chuyển sang), **Mã ghép lẻ** (chỉ dòng nhận em ghép lẻ, vd. 1.2);
+- nút ↑ ↓ đổi thứ tự, ✕ xóa dòng, **Thêm dòng**, **Thêm dòng trống**; dưới cùng ghi các lớp **ăn tại lớp**;
+- **Lưu cách ghép**: từ tờ ngày mới app dựng bảng suất ăn trong sổ theo đó (vẫn đúng mẫu sổ: cột suất + cột tên ghép, công thức, ô cộng, vùng in). Tờ ngày đang mở đã có trong sổ thì tích **Dựng lại bảng suất ăn cả tờ ngày đang mở** nếu muốn đổi luôn hôm nay.
+
+Cũng có thể khai báo ở sheet **Nhóm ăn** trong file Excel danh sách (khi nhập danh sách, app hỏi có dùng bảng trong sheet không — bỏ tích nếu đã sửa trong app):
 
 | Tên dòng (in ở sổ) | Các lớp ăn chung | Mã ghép lẻ |
 |---|---|---|

@@ -5,7 +5,7 @@ import pytest
 from app.excel import sobook
 from app.excel.database import AppData
 from app.service import NeedMonthBook, Workspace, next_school_day
-from tests.test_excel import make_book
+from tests.test_excel import DAY28, make_book
 
 
 @pytest.fixture
@@ -152,13 +152,34 @@ def test_si_so_unchanged_after_save_with_scheduled_cut(ws):
     assert ws.load_day(day).si_so("1D15") == 5
 
 
-def test_class_note_no_message_means_full(ws):
+def test_note_no_message_does_not_mark_full(ws):
+    """Lớp ghi chú "Không nói gì là đủ": đủ hay vắng vẫn do giáo vụ bấm, app không tự tính đủ."""
     book = ws.book_path or __import__("pathlib").Path(ws.settings["so_file"])
     wb = sobook.load_book(book)
     info = sobook.analyze(wb["28"])
     info.cell("2D17", "ghichu").value = "Không nói gì là đủ"
     wb.save(book)
     st = ws.load_day(dt.date(2026, 10, 29))
-    assert st.cd("2D17").reported and "2D17" not in st.unreported()
-    assert "1D15" in st.unreported()  # lớp khác vẫn phải báo
+    assert "2D17" in st.unreported() and "1D15" in st.unreported()
 
+
+def test_blank_sheet_made_in_advance_is_not_reported(ws):
+    """Sheet tạo sẵn trong sổ còn trống: các lớp vẫn chưa báo. Sheet đã ghi tên vắng (trước khi dùng app): đã báo."""
+    book = ws.book_path or __import__("pathlib").Path(ws.settings["so_file"])
+    wb = sobook.load_book(book)
+    blank = sobook.create_day_sheet(wb, dt.date(2026, 10, 29), wb["28"])
+    sobook.analyze(blank)
+    wb.save(book)
+    st = ws.load_day(dt.date(2026, 10, 29))
+    assert st.exists_in_book and len(st.unreported()) == len(st.classes)
+    st28 = ws.load_day(DAY28)
+    assert not st28.unreported()
+
+
+def test_reset_day(ws):
+    st = ws.load_day(DAY28)  # sổ có tên vắng: app coi như đã báo
+    assert not st.unreported() and st.absent_names("1D15") == ["Tuấn Anh"]
+    ws.reset_day()
+    assert len(ws.state.unreported()) == len(ws.state.classes) and ws.state.absent_names("1D15") == []
+    assert ws.state.cd("4D21").note.startswith("Vũ Khoa") and ws.dirty  # ghi chú giữ nguyên
+    assert ws.undo() and ws.state.absent_names("1D15") == ["Tuấn Anh"]

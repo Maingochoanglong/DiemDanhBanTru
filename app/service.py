@@ -5,16 +5,15 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-import re
 import threading
 import time
 from pathlib import Path
 
 from .core import matcher
 from .core.day import DayState
-from .core.meals import MealLayout, MealSummary
+from .core.meals import MealGroup, MealLayout, MealSummary
 from .core.models import ClassInfo
-from .core.text import class_sort_key, fold
+from .core.text import class_sort_key, clean_spaces, fold
 from .excel import sobook, tamthoi
 from .excel.database import AppData, default_data_path, short_codes
 from .excel.files import is_locked
@@ -56,8 +55,6 @@ def next_school_day(day: dt.date, step: int = 1) -> dt.date:
     return day
 
 
-# ghi chú lớp kiểu "Không nói gì là đủ" / "ko báo thì đủ": GV không nhắn nghĩa là lớp đủ
-NOTE_FULL = re.compile(r"\b(khong|ko|k)\s+(noi|bao|nhan|nt|ib)(\s+gi)?\s*(la|thi|coi nhu|tuc la)\s+du\b")
 
 
 class NeedMonthBook(Exception):
@@ -83,6 +80,9 @@ class Workspace:
         self.sheet_name: str = ""  # tên sheet của ngày đang mở (vd. "01" hoặc "29")
         self.warning: str = ""  # cảnh báo sau lần lưu gần nhất
         self.meal_note: str = ""  # bảng suất ăn ngày đang mở so với bảng Nhóm ăn (dựng lại / khác / lỗi)
+        self.meal_force: dt.date | None = None  # ngày đã có tờ trong sổ nhưng giáo vụ muốn dựng lại bảng suất ăn
+        self._src_info: sobook.SheetInfo | None = None  # sheet ngày đang mở (hoặc sheet mẫu nếu chưa có)
+        self._src_exists = False  # sheet ngày đang mở đã có trong sổ
         self.meal_check: tuple[list[str], list[str]] | None = None  # (lỗi, lưu ý) của sheet Nhóm ăn lần nhập gần nhất
         self.dirty = False  # ngày đang mở có thay đổi chưa ghi vào sổ
         self.data_dirty = False  # danh sách HS / ghép lớp có thay đổi chưa lưu
@@ -250,9 +250,68 @@ class Workspace:
         plan = sobook.plan_meal_table(info, groups, split, counts)
         return None if plan.signature() == info.meal.signature() else plan
 
-    def _rebuild_meal_table(self, ws, day: dt.date, quiet: bool = False) -> sobook.SheetInfo | None:
-        """Tờ ngày mới: dựng lại bảng suất ăn theo Nhóm ăn (nếu khác). Trả về thông tin sheet sau khi ghi.
-        quiet: không báo lỗi (dùng khi lưu tạm chạy nền)."""
+    def _apply_meal_plan(self) -> None:
+        """Bảng suất ăn ngày đang mở: theo sổ, hoặc theo bảng Nhóm ăn nếu tờ chưa có / giáo vụ chọn dựng lại."""
+        info, exists = self._src_info, self._src_exists
+        self.layout = info.meal if info else MealLayout()
+        self.meal_note = ""
+        if info is None or not self.data.meal_groups:
+            return
+        try:
+            plan = self.meal_plan(info, self.day)
+        except sobook.MealTableError as e:
+            plan, self.meal_note = None, f"Chưa dựng được bảng suất ăn theo cách ghép đã đặt: {e}"
+        if plan is not None and (not exists or self.meal_force == self.day):
+            self.layout = plan
+            self.meal_note = ("Khi lưu, app dựng bảng suất ăn của tờ này theo cách ghép đã đặt." if exists
+                              else "Ngày này chưa có trong sổ: khi lưu, app dựng bảng suất ăn theo cách ghép đã đặt.")
+        elif plan is not None:
+            self.meal_note = ("Bảng suất ăn của tờ này trong sổ khác cách ghép đã đặt. App tính theo sổ; "
+                              "từ tờ ngày mới app dựng theo cách ghép đã đặt.")
+
+    def meal_groups_current(self) -> tuple[list[MealGroup], bool]:
+        """Cách ghép đang dùng; chưa đặt thì lấy theo bảng suất ăn của sổ. Trả về (các dòng, đã đặt chưa)."""
+        if self.data.meal_groups:
+            return list(self.data.meal_groups), True
+        info = self._src_info
+        groups: list[MealGroup] = []
+        if info is not None and not info.meal.is_empty:
+            prev = None
+            for r in info.meal.rows:
+                if prev is not None:
+                    groups += [MealGroup("") for _ in range(r.row - prev - 1)]
+                groups.append(MealGroup(r.label, list(r.classes), r.code or ""))
+                prev = r.row
+        return groups, False
+
+    def set_meal_groups(self, raw: list[tuple[str, list[str], str]], apply_today: bool) -> list[str]:
+        """Lưu cách ghép đặt trong app (trang Suất ăn). Trả về danh sách lỗi (rỗng = đã lưu)."""
+        kid_codes: dict[str, set[str]] = {}
+        for s in self.roster.students:
+            if s.ban_tru and s.an_ghep:
+                kid_codes.setdefault(s.lop_tinh, set()).add(s.an_ghep)
+        rows = [(i + 1, clean_spaces(label), ", ".join(classes), clean_spaces(code)) for i, (label, classes, code) in enumerate(raw)]
+        codes = sorted(set(self.roster.class_codes()) | set(self._src_info.class_rows if self._src_info else []),
+                       key=class_sort_key)
+        groups, errors, _ = check_meal_groups(rows, codes, kid_codes)
+        errors = [e.replace("Nhóm ăn, dòng", "Dòng").replace("Nhóm ăn: lớp", "Lớp").replace("Nhóm ăn: mã", "Mã")
+                  for e in errors]
+        if errors:
+            return errors
+        if not any(not g.blank for g in groups):
+            return ["Chưa có dòng nào."]
+        self.data.meal_groups = groups
+        self.save_data()
+        if apply_today and self._src_exists:
+            self.meal_force = self.day
+        self._apply_meal_plan()
+        return []
+
+    def _rebuild_meal_table(self, ws, day: dt.date, quiet: bool = False, existing: bool = False) -> sobook.SheetInfo | None:
+        """Tờ ngày mới (hoặc tờ có sẵn mà giáo vụ chọn dựng lại): dựng lại bảng suất ăn theo cách ghép đã đặt,
+        nếu khác. Trả về thông tin sheet sau khi ghi. quiet: không báo lỗi (dùng khi lưu tạm chạy nền)."""
+        if existing and self.meal_force != day:
+            return None
         info = sobook.analyze(ws)
         try:
             plan = self.meal_plan(info, day)
@@ -287,6 +346,7 @@ class Workspace:
             prev = Path(self.settings["so_file"]) if self.settings.get("so_file") else None
             self.state = DayState.new(day, self.roster, self.roster.class_codes())
             self.layout = MealLayout()
+            self._src_info, self._src_exists = None, False
             raise NeedMonthBook(day.month, day.year, prev)
 
         wb = self._book(path)
@@ -301,18 +361,11 @@ class Workspace:
         st = DayState.new(day, self.roster, codes)
         self.template_name = src.title if src is not None else None
         self.layout = info.meal if info else MealLayout()
-        self.meal_note = ""
-        if info is not None and self.data.meal_groups:
-            try:
-                plan = self.meal_plan(info, day)
-            except sobook.MealTableError as e:
-                plan, self.meal_note = None, f"Chưa dựng được bảng suất ăn theo bảng Nhóm ăn: {e}"
-            if plan is not None and ws is None:
-                self.layout = plan
-                self.meal_note = "Ngày này chưa có trong sổ: khi lưu, app dựng bảng suất ăn theo bảng Nhóm ăn."
-            elif plan is not None:
-                self.meal_note = ("Bảng suất ăn của ngày này trong sổ khác bảng Nhóm ăn. App tính theo sổ; "
-                                  "từ tờ ngày mới app dựng theo bảng Nhóm ăn.")
+        recs: dict = {}
+        self._src_info, self._src_exists = info, ws is not None
+        if self.meal_force != day:
+            self.meal_force = None
+        self._apply_meal_plan()
         if info:
             recs = sobook.read_records(info)
             self._ensure_classes({c: r.gvcn for c, r in recs.items()})
@@ -336,19 +389,28 @@ class Workspace:
             if m_book:
                 st.picks_from_book(info.meal, m_book)
         flags = self.data.reported_flags(day)
-        if ws is not None and not flags:
-            for c in st.classes.values():  # ngày đã ghi sổ trước khi dùng app: coi như các lớp đã báo
+        if ws is not None and not flags and any(rec.names for rec in recs.values()):
+            # ngày đã điểm danh trong sổ trước khi dùng app (sổ có tên vắng): coi như các lớp đã báo.
+            # Sheet tạo sẵn còn trống thì các lớp vẫn "chưa báo": đủ hay vắng do giáo vụ bấm.
+            for c in st.classes.values():
                 c.reported = True
         for code, flag in flags.items():
             if code in st.classes:
                 st.cd(code).reported = flag
-        for code, c in st.classes.items():  # ghi chú sổ "Không nói gì là đủ": GV không nhắn thì lớp đủ
-            if code not in flags and not c.reported and NOTE_FULL.search(fold(c.note)):
-                c.reported = True
         self.state = st
         return st
 
     # ---------------------------------------------------------------- nhập liệu
+    def reset_day(self) -> None:
+        """Đặt lại điểm danh ngày đang mở: mọi lớp về "chưa báo", bỏ hết tên vắng đã chọn (giữ ghi chú, sĩ số).
+        Dùng khi sheet trong sổ đã tạo sẵn nên app hiểu nhầm là đã điểm danh."""
+        assert self.state is not None
+        self.push_undo()
+        for c in self.state.classes.values():
+            c.manual, c.extra, c.auto_off = [], [], set()
+            c.reported = False
+        self.state.ghep_pick.clear()
+
     def push_undo(self) -> None:
         if self.state is not None:
             self._undo.append(self.state.snapshot())
@@ -415,6 +477,7 @@ class Workspace:
         if info is not None:
             self.layout = info.meal
             self.meal_note = ""
+            self._src_info, self._src_exists, self.meal_force = info, True, None
         self.state.exists_in_book = True
         for code in self.state.classes:
             c = self.state.cd(code)
@@ -463,7 +526,8 @@ class Workspace:
             if gen != self._as_gen:
                 return
             try:
-                wb, _ = _render_day(book, state, lambda ws, d: self._rebuild_meal_table(ws, d, quiet=True))
+                wb, _ = _render_day(book, state, lambda ws, d, existing=False: self._rebuild_meal_table(
+                    ws, d, quiet=True, existing=existing))
                 tamthoi.write_state_sheet(wb, state, book)
                 tamthoi.save(wb, tamthoi.temp_path(book))
                 self.temp_saved_at = time.strftime("%H:%M:%S")
@@ -596,7 +660,7 @@ class Workspace:
 
 def _render_day(book: Path, state: DayState, on_new_sheet=None):
     """Đọc sổ và ghi ngày `state` vào sheet của ngày đó (tạo sheet từ mẫu nếu chưa có). Chưa lưu file.
-    on_new_sheet(ws, ngày): việc làm thêm với sheet vừa tạo (dựng lại bảng suất ăn)."""
+    on_new_sheet(ws, ngày, existing=...): dựng lại bảng suất ăn (sheet vừa tạo; sheet có sẵn khi giáo vụ chọn)."""
     wb = sobook.load_book(book)
     ws = sobook.day_sheets(wb).get(state.date.day)
     if ws is None:
@@ -606,6 +670,8 @@ def _render_day(book: Path, state: DayState, on_new_sheet=None):
         ws = sobook.create_day_sheet(wb, state.date, tpl)
         if on_new_sheet is not None:
             on_new_sheet(ws, state.date)
+    elif on_new_sheet is not None:
+        on_new_sheet(ws, state.date, existing=True)
     info = sobook.analyze(ws)
     if info is None:
         raise ValueError(f"Sheet {ws.title} không đúng mẫu điểm danh.")

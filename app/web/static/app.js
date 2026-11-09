@@ -427,13 +427,17 @@ async function renderMeals() {
   for (const w of m.warnings) a += `<div class="alert alert-danger py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>${esc(w)}</div>`;
   if (m.note) a += `<div class="alert alert-info py-2 mb-2"><i class="bi bi-info-circle-fill me-2"></i>${esc(m.note)}</div>`;
   $("#mealAlerts").innerHTML = a;
-  const rows = m.lines.map(l => {
+  const rows = [];
+  let prev = null;
+  for (const l of m.lines) {  // như bảng trong sổ: cột suất, cột tên ghép; dòng trống giữ chỗ cách dòng
+    for (let r = prev === null ? l.row : prev + 1; r < l.row; r++) rows.push(`<tr class="gap"><td colspan="3"></td></tr>`);
+    prev = l.row;
     const vang = l.absent.length ? ` <span class="text-danger">− vắng ${l.absent.length}: ${l.absent.map(x => x.picked
       ? `<a href="#" class="link-danger" data-unpick="${esc(x.sid)}" title="Bấm để chọn lại nhóm">${esc(x.name)}</a>` : esc(x.name)).join(", ")}</span>` : "";
-    return `<tr class="${l.m ? "table-warning" : ""}"><td class="fw-semibold">${esc(l.label)}</td><td>${esc(l.gom)}${vang}</td>
-      <td class="text-center fw-bold">${l.meals}</td></tr>`;
-  });
-  if (m.self) rows.push(`<tr class="text-muted"><td>${esc(m.self.label)}</td><td>${esc(m.self.gom)}</td><td class="text-center fw-bold">${m.self.meals}</td></tr>`);
+    rows.push(`<tr class="${l.m ? "table-warning" : ""}"><td class="text-center fw-bold text-danger fs-6">${l.meals}</td>
+      <td class="fw-semibold">${esc(l.label)}</td><td>${esc(l.gom)}${vang}</td></tr>`);
+  }
+  if (m.self) rows.push(`<tr class="text-muted"><td class="text-center fw-bold">${m.self.meals}</td><td>${esc(m.self.label)}</td><td>${esc(m.self.gom)}</td></tr>`);
   $("#mealBody").innerHTML = rows.join("");
   const gh = (m.ghep || []).map(g => `<span class="me-3 text-nowrap"><i class="bi bi-diagram-3 me-1"></i>Lớp ghép <b>${esc(g.code)}</b>:
     đã ghi nhóm <b class="${g.done < g.n ? "text-warning-emphasis" : "text-success"}">${g.done}/${g.n} em</b> ·
@@ -445,6 +449,107 @@ async function renderMeals() {
   const pick = async (sid, g) => { const r = await api("pick_ghep", sid, g); applyState(r.state); renderMeals(); };
   $$("#mealAlerts [data-pick]").forEach(b => b.onclick = () => pick(b.dataset.pick, b.dataset.g));
   $$("#mealBody [data-unpick]").forEach(b => b.onclick = e => { e.preventDefault(); pick(b.dataset.unpick, ""); });
+}
+
+// ------------------------------------------------------------------ Sửa cách ghép (bảng suất ăn)
+let MG = null;  // {groups: [{label, classes, code, gap}], classes: [{code, ma}], exists}
+
+async function editMeals() {
+  MG = await api("meal_groups");
+  MG.groups = MG.groups.map(g => ({ ...g, classes: [...g.classes], gap: !g.label && !g.classes.length && !g.code }));
+  $("#mealEditor").hidden = false;
+  $("#mealView").hidden = true;
+  $("#mealEditBtn").hidden = true;
+  renderMealEditor();
+}
+
+function closeMealEditor() {
+  MG = null;
+  $("#mealEditor").hidden = true;
+  $("#mealView").hidden = false;
+  $("#mealEditBtn").hidden = false;
+}
+
+function renderMealEditor() {
+  const used = {};
+  MG.groups.forEach((g, i) => g.classes.forEach(c => { used[c] = i; }));
+  const ma = Object.fromEntries(MG.classes.map(c => [c.code, c.ma]));
+  const free = MG.classes.map(c => c.code).filter(c => !(c in used));
+  const n = MG.groups.length;
+  const rows = MG.groups.map((g, i) => {
+    const btns = `<div class="btn-group btn-group-sm">
+      <button class="btn btn-outline-secondary" data-mv="${i}" data-d="-1" title="Lên" ${i === 0 ? "disabled" : ""}><i class="bi bi-arrow-up"></i></button>
+      <button class="btn btn-outline-secondary" data-mv="${i}" data-d="1" title="Xuống" ${i === n - 1 ? "disabled" : ""}><i class="bi bi-arrow-down"></i></button>
+      <button class="btn btn-outline-danger" data-del="${i}" title="Xóa dòng"><i class="bi bi-x-lg"></i></button></div>`;
+    if (g.gap) return `<tr class="gap"><td colspan="3" class="text-muted small fst-italic">— dòng trống (cách dòng trong sổ) —</td><td class="text-end">${btns}</td></tr>`;
+    const chips = g.classes.map(c => `<span class="badge text-bg-light border fs-6 fw-semibold me-1">${esc(c)}${ma[c] ? ` <span class="text-muted fw-normal">(${esc(ma[c])})</span>` : ""}</span>`).join("");
+    return `<tr><td><input class="form-control fw-semibold" data-lb="${i}" value="${esc(g.label)}" placeholder="vd. 1.2 ghép"></td>
+      <td>${chips || `<span class="text-muted small me-1">chưa có lớp</span>`}<button class="btn btn-sm btn-outline-primary py-0" data-cls="${i}"><i class="bi bi-pencil-square"></i> Chọn lớp</button></td>
+      <td><input class="form-control text-center" data-code="${i}" value="${esc(g.code)}" placeholder="—" title="Chỉ ghi khi dòng này nhận em ghép lẻ (vd. 1.2)"></td>
+      <td class="text-end text-nowrap">${btns}</td></tr>`;
+  });
+  $("#mealEditor").innerHTML = `<div class="alert alert-light border small my-2">Mỗi dòng ở đây = 1 dòng bảng suất ăn trong sổ (cột suất + cột tên ghép), đúng thứ tự từ trên xuống.
+      Lớp không thuộc dòng nào thì <b>ăn tại lớp</b>. <b>Mã ghép lẻ</b>: chỉ ghi ở dòng nhận em ghép lẻ từ lớp chia nhóm (vd. 1.2); em nào ăn dòng đó thì cột <b>Ăn ghép</b> trong file danh sách ghi đúng mã này.</div>
+    <div id="mgErr"></div>
+    <table class="table table-sm align-middle meal-edit mb-2"><thead><tr><th style="width:230px">Tên ghép (in ở sổ)</th><th>Các lớp ăn chung</th><th style="width:105px">Mã ghép lẻ</th><th style="width:120px"></th></tr></thead>
+      <tbody>${rows.join("")}</tbody></table>
+    <div class="d-flex gap-2 flex-wrap mb-2">
+      <button class="btn btn-outline-primary" id="mgAdd"><i class="bi bi-plus-lg"></i> Thêm dòng</button>
+      <button class="btn btn-outline-secondary" id="mgGap"><i class="bi bi-dash-lg"></i> Thêm dòng trống</button></div>
+    <div class="mb-2"><b>Ăn tại lớp:</b> ${free.map(esc).join(", ") || "—"}</div>
+    <div class="d-flex align-items-center gap-3 border-top pt-2 pb-2 flex-wrap">
+      ${MG.exists ? `<div class="form-check"><input class="form-check-input" type="checkbox" id="mgToday"><label class="form-check-label" for="mgToday">Dựng lại bảng suất ăn cả tờ ngày đang mở (tờ này đã có trong sổ)</label></div>`
+        : `<span class="text-muted">Áp dụng từ tờ ngày đang mở (chưa có trong sổ) và các ngày sau.</span>`}
+      <div class="ms-auto d-flex gap-2"><button class="btn btn-primary" id="mgSave"><i class="bi bi-check-lg"></i> Lưu cách ghép</button>
+        <button class="btn btn-outline-secondary" id="mgCancel">Hủy</button></div></div>`;
+  const E = $("#mealEditor");
+  $$("[data-lb]", E).forEach(x => x.oninput = () => { MG.groups[+x.dataset.lb].label = x.value; });
+  $$("[data-code]", E).forEach(x => x.oninput = () => { MG.groups[+x.dataset.code].code = x.value.trim(); });
+  $$("[data-mv]", E).forEach(b => b.onclick = () => {
+    const i = +b.dataset.mv, j = i + +b.dataset.d;
+    [MG.groups[i], MG.groups[j]] = [MG.groups[j], MG.groups[i]];
+    renderMealEditor();
+  });
+  $$("[data-del]", E).forEach(b => b.onclick = () => { MG.groups.splice(+b.dataset.del, 1); renderMealEditor(); });
+  $$("[data-cls]", E).forEach(b => b.onclick = () => pickMealClasses(+b.dataset.cls));
+  $("#mgAdd").onclick = () => { MG.groups.push({ label: "", classes: [], code: "", gap: false }); renderMealEditor(); };
+  $("#mgGap").onclick = () => { MG.groups.push({ label: "", classes: [], code: "", gap: true }); renderMealEditor(); };
+  $("#mgCancel").onclick = closeMealEditor;
+  $("#mgSave").onclick = saveMealGroups;
+}
+
+async function pickMealClasses(i) {
+  const g = MG.groups[i];
+  const used = {};
+  MG.groups.forEach((x, j) => x.classes.forEach(c => { used[c] = j; }));
+  await form(`Chọn lớp ăn chung dòng "${g.label || "mới"}"`, b => {
+    b.innerHTML = `<p class="text-muted mb-2">Bấm chọn các lớp ăn cả lớp ở dòng này. Lớp đang ở dòng khác hiện mờ; chọn thì lớp đó chuyển sang dòng này.</p><div class="cls-grid">` +
+      MG.classes.map(c => {
+        const o = used[c.code], other = o !== undefined && o !== i;
+        return `<label class="cls-pick ${other ? "other" : ""}"><input type="checkbox" class="form-check-input me-1" value="${esc(c.code)}" ${g.classes.includes(c.code) ? "checked" : ""}>${esc(c.code)}` +
+          (c.ma ? ` <span class="text-muted fw-normal small">(${esc(c.ma)})</span>` : "") +
+          (other ? `<div class="small text-muted fw-normal">đang ở: ${esc(MG.groups[o].label || "dòng " + (o + 1))}</div>` : "") + `</label>`;
+      }).join("") + `</div>`;
+  }, "Xong", async b => {
+    const pick = $$("input:checked", b).map(x => x.value);
+    MG.groups.forEach((x, j) => { if (j !== i) x.classes = x.classes.filter(c => !pick.includes(c)); });
+    g.classes = MG.classes.map(c => c.code).filter(c => pick.includes(c));
+    return true;
+  }, { size: "modal-xl" });
+  renderMealEditor();
+}
+
+async function saveMealGroups() {
+  const bad = MG.groups.findIndex(g => !g.gap && !g.label.trim() && !g.code);
+  const showErr = list => { $("#mgErr").innerHTML = `<div class="alert alert-danger py-2"><b>Chưa lưu được:</b><ul class="mb-0">${list.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>`; };
+  if (bad >= 0) return showErr([`Dòng ${bad + 1} chưa có tên ghép.`]);
+  const groups = MG.groups.map(g => g.gap ? { label: "", classes: [], code: "" } : { label: g.label, classes: g.classes, code: g.code });
+  const r = await api("save_meal_groups", groups, !!($("#mgToday") && $("#mgToday").checked));
+  if (r.errors) return showErr(r.errors);
+  closeMealEditor();
+  applyState(r.state);
+  toast(r.flash);
+  renderMeals();
 }
 
 // ------------------------------------------------------------------ Học sinh
@@ -596,7 +701,7 @@ async function noteSuggestions() {
 function showPage(p) {
   $$("#nav .nav-link").forEach(a => a.classList.toggle("active", a.dataset.page === p));
   $$(".page").forEach(s => s.classList.toggle("show", s.id === "page-" + p));
-  if (p === "sa") renderMeals();
+  if (p === "sa") { if (MG) closeMealEditor(); renderMeals(); }
   if (p === "hs") renderStudents();
   if (p === "lich") renderLich();
   if (p === "cd") renderSettings();
@@ -624,6 +729,24 @@ function wire() {
   $("#dayPick").onchange = e => { if (e.target.value && S && e.target.value !== S.date) gotoDay(f => api("open_day", e.target.value, f)); };
   $("#openBook").onclick = async () => { const r = await api("open_book"); if (r.error) info("Chưa có sổ", r.error); };
   $("#btnSave").onclick = doSave;
+  $("#btnReset").onclick = async () => {
+    const k = await ask("Đặt lại điểm danh ngày này?", `<p>Mọi lớp về <b>chưa báo</b>, bỏ hết tên vắng đã chọn. Ghi chú và sĩ số giữ nguyên.</p>
+      <p class="text-muted mb-0">Dùng khi sheet trong sổ đã tạo sẵn nên app hiểu nhầm là các lớp đã điểm danh. Sổ chỉ thay đổi khi bấm <b>Lưu vào sổ</b>; bấm <b>Hoàn tác</b> nếu nhầm.</p>`,
+      [{ key: "ok", label: "Đặt lại", cls: "btn-danger" }, { key: "no", label: "Thôi" }], { icon: "bi-arrow-repeat" });
+    if (k === "ok") handle(await api("reset_day"));
+  };
+  $("#mealEditBtn").onclick = editMeals;
+  const appEl = $(".app");
+  const setSide = min => {
+    appEl.classList.toggle("side-min", min);
+    $("#sideToggle").innerHTML = `<i class="bi ${min ? "bi-chevron-double-right" : "bi-chevron-double-left"}"></i>`;
+    $("#sideToggle").title = min ? "Mở rộng thanh bên" : "Thu gọn thanh bên";
+    try { localStorage.setItem("sideMin", min ? "1" : "0"); } catch { /* bỏ qua */ }
+  };
+  let sideMin = false;
+  try { sideMin = localStorage.getItem("sideMin") === "1"; } catch { /* bỏ qua */ }
+  setSide(sideMin);
+  $("#sideToggle").onclick = () => setSide(!appEl.classList.contains("side-min"));
   $("#btnUndo").onclick = async () => { handle(await api("undo")); };
   $("#saveState").onclick = async () => { if (S && S.unresolved) { const t = S.todo.find(x => x.code); if (t) openClass(t.code); } };
   document.addEventListener("keydown", e => {

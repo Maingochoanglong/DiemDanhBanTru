@@ -308,6 +308,13 @@ class Api:
         st.cd(code).reported = True
         return self._after(code)
 
+    def reset_day(self) -> dict:
+        """Đặt lại điểm danh ngày đang mở: mọi lớp về "chưa báo", bỏ tên vắng đã chọn."""
+        if self._ws.state is None:
+            return {"state": self.state()}
+        self._ws.reset_day()
+        return {"state": self.state(), "flash": "Đã đặt lại: các lớp về \"chưa báo\". Bấm Hoàn tác nếu nhầm."}
+
     def undo(self) -> dict:
         ok = self._ws.undo()
         return {"state": self.state(), "flash": "Đã hoàn tác." if ok else "Không còn gì để hoàn tác."}
@@ -397,7 +404,7 @@ class Api:
                         if g == r.code:
                             absent.append({"sid": s.id, "name": name(s), "picked": picked})
             lines.append({"label": r.label, "gom": gom, "meals": line.meals, "m": line.m or 0, "code": r.code or "",
-                          "absent": absent})
+                          "absent": absent, "row": r.row})
         self_line = None
         if layout.self_classes:
             self_line = {"label": "Tự ăn tại lớp", "gom": ", ".join(layout.self_classes), "meals": summary.self_meals}
@@ -413,6 +420,28 @@ class Api:
         return {"lines": lines, "self": self_line, "total": summary.total_meals, "present": summary.total_present,
                 "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask,
                 "ghep": ghep, "note": ws.meal_note, "config": bool(ws.data.meal_groups)}
+
+    def meal_groups(self) -> dict:
+        """Cách ghép (các dòng bảng suất ăn) để sửa ở trang Suất ăn."""
+        ws = self._ws
+        groups, saved = ws.meal_groups_current()
+        info = ws._src_info
+        codes = list(info.class_rows) if info else ws.roster.class_codes()
+        return {"groups": [{"label": g.label, "classes": g.classes, "code": g.code} for g in groups], "saved": saved,
+                "classes": [{"code": c, "ma": (ws.roster.classes.get(c).ma_ngan if ws.roster.classes.get(c) else "")}
+                            for c in codes],
+                "exists": ws._src_exists}
+
+    def save_meal_groups(self, groups: list, apply_today: bool = False) -> dict:
+        raw = [(str(g.get("label") or ""), [str(c) for c in g.get("classes") or []], str(g.get("code") or ""))
+               for g in groups]
+        try:
+            errors = self._ws.set_meal_groups(raw, bool(apply_today))
+        except Exception as e:  # noqa: BLE001
+            return {"errors": [f"Chưa lưu được: {e}"]}
+        if errors:
+            return {"errors": errors}
+        return {"meals": self.meals(), "state": self.state(), "flash": "Đã lưu cách ghép."}
 
     def pick_ghep(self, sid: str, group: str) -> dict:
         """Chọn nhóm ăn cho em ghép vắng (chỉ ngày đang mở); group rỗng = chọn lại."""
