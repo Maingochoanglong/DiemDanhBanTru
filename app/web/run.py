@@ -38,6 +38,18 @@ class WebviewDialogs:
             return None
         return res if isinstance(res, str) else res[0]
 
+    def choose_folder(self, title: str) -> str | None:
+        return _webview_folder(self.window)
+
+
+def _webview_folder(window) -> str | None:
+    import webview
+
+    res = window.create_file_dialog(webview.FOLDER_DIALOG)
+    if not res:
+        return None
+    return res[0] if isinstance(res, (list, tuple)) else str(res)
+
 
 class TkDialogs:
     """Hộp chọn file dự phòng khi chạy trong trình duyệt (máy không có WebView2)."""
@@ -67,6 +79,15 @@ class TkDialogs:
         try:
             return filedialog.asksaveasfilename(parent=root, title=title, initialfile=name, defaultextension=".xlsx",
                                                 filetypes=[("Excel", "*.xlsx")]) or None
+        finally:
+            root.destroy()
+
+    def choose_folder(self, title: str) -> str | None:
+        from tkinter import filedialog
+
+        root = self._root()
+        try:
+            return filedialog.askdirectory(parent=root, title=title) or None
         finally:
             root.destroy()
 

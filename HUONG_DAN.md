@@ -22,6 +22,13 @@ Máy cần Windows 10/11. In trực tiếp cần Microsoft Excel. Không cần c
 
 ## 2. Lần đầu sử dụng (khoảng 5 phút)
 
+**Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**, làm đủ 3 bước rồi bấm **Bắt đầu điểm danh**:
+1. **Nơi đặt file dữ liệu của app** — bấm *Dùng thư mục gợi ý* (`Documents\DiemDanhBanTru`) hoặc *Chọn thư mục…*. Chọn lại thư mục cũ thì lịch thêm/cắt, cách ghép, nhật ký vẫn còn.
+2. **Chọn sổ điểm danh** của tháng đang làm.
+3. **Nhập danh sách học sinh** (file Excel).
+
+Chưa làm đủ 3 bước thì chưa vào điểm danh được; app không tự dùng lại sổ / danh sách của bản cũ. Mở lại cùng bản thì không hỏi nữa.
+
 Mở app lần đầu, app **không hỏi chọn file**. Màn chính hiện dòng nhắc màu vàng; bạn tự làm khi sẵn sàng. Bấm **Cài đặt** ở thanh bên trái:
 
 1. **Nhập danh sách…**: chọn file Excel danh sách. Dùng được 2 dạng:

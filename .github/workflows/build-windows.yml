@@ -39,6 +39,9 @@ jobs:
         run: |
           python packaging/make_version_file.py build/version_info.txt
           if ($LASTEXITCODE -ne 0) { exit 1 }
+          # mã bản dựng: lần đầu mở một bản .exe mới, app bắt thiết lập lại (nơi đặt file, sổ, danh sách)
+          python -c "import os; open('app/_build.py', 'w').write('BUILD = %r\n' % os.environ['GITHUB_SHA'][:7])"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
           pyinstaller --noconfirm --onefile --windowed --noupx --name DiemDanhBanTru --version-file build/version_info.txt --add-data "app/web/static;app/web/static" run_app.py
 
       - name: Kiểm tra thông tin phiên bản trong file .exe
