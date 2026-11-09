@@ -210,6 +210,7 @@ class Api:
                     "ten": names if c.reported else "", "reported": c.reported,
                     "auto": names if not c.reported and n else "",  # chưa báo: chỉ có em nghỉ thứ 6 tự tính vắng
                     "note": note, "warn": warns[0] if warns else "",
+                    "not_bt": ", ".join(c.not_bt),
                     "sched": bool(st.scheduled_changes(code)),
                     "status": self._status(code),
                 })
@@ -295,6 +296,7 @@ class Api:
             "code": code, "ma": info.ma_ngan if info else "", "gvcn": info.gvcn if info else "",
             "si": st.si_so(code), "vang": st.absent_count(code), "hd": st.present(code),
             "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "extra": list(c.extra),
+            "not_bt": list(c.not_bt),
             "names": names, "others": others, "pending": pending, "upcoming": upcoming,
         }
 

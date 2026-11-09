@@ -86,7 +86,8 @@ class DayState:
 
     def absent_names(self, code: str) -> list[str]:
         names = [self.roster.display_name(s) for s in self.absent_students(code)]
-        return names + list(self.cd(code).extra)
+        c = self.cd(code)
+        return names + list(c.extra) + list(c.not_bt)  # tên không ăn BT đã ghi trong sổ: giữ nguyên khi lưu
 
     def absent_count(self, code: str) -> int:
         return len(self.absent_names(code))
@@ -141,7 +142,7 @@ class DayState:
         c = self.cd(code)
         c.sheet_si_so = si_so if isinstance(si_so, int) else None
         c.note = note or ""
-        c.manual, c.extra = [], []
+        c.manual, c.extra, c.not_bt = [], [], []
         results = []
         auto = self.auto_absent(code)
         names, notes = split_sheet_cell(names_text)
@@ -154,6 +155,8 @@ class DayState:
             if r.status == matcher.OK and r.student:
                 if r.student.id not in c.manual and r.student.id not in auto:
                     c.manual.append(r.student.id)
+            elif r.status == matcher.NOT_BT:
+                c.not_bt.append(q)  # em có trong lớp nhưng (nay) không ăn bán trú: giữ như sổ, không phải tên lạ
             else:
                 c.extra.append(q)
         # Em vắng tự động mà sổ không ghi thì coi như đã bỏ tích
