@@ -11,13 +11,16 @@
 <body>
 <div class="app d-flex">
   <aside class="sidebar">
-    <div class="brand">Điểm danh<br>bán trú</div>
+    <div class="d-flex align-items-start">
+      <div class="brand flex-grow-1">Điểm danh<br>bán trú</div>
+      <button class="btn btn-sm btn-light side-toggle" id="sideToggle" title="Thu gọn thanh bên"><i class="bi bi-chevron-double-left"></i></button>
+    </div>
     <nav class="nav flex-column nav-pills" id="nav">
-      <a class="nav-link active" data-page="dd" href="#"><i class="bi bi-clipboard-check"></i>Điểm danh</a>
-      <a class="nav-link" data-page="sa" href="#"><i class="bi bi-cup-hot"></i>Suất ăn</a>
-      <a class="nav-link" data-page="hs" href="#"><i class="bi bi-people"></i>Học sinh</a>
-      <a class="nav-link" data-page="lich" href="#"><i class="bi bi-calendar-event"></i>Lịch thêm/cắt</a>
-      <a class="nav-link" data-page="cd" href="#"><i class="bi bi-gear"></i>Cài đặt</a>
+      <a class="nav-link active" data-page="dd" href="#" title="Điểm danh"><i class="bi bi-clipboard-check"></i><span class="lbl">Điểm danh</span></a>
+      <a class="nav-link" data-page="sa" href="#" title="Suất ăn"><i class="bi bi-cup-hot"></i><span class="lbl">Suất ăn</span></a>
+      <a class="nav-link" data-page="hs" href="#" title="Học sinh"><i class="bi bi-people"></i><span class="lbl">Học sinh</span></a>
+      <a class="nav-link" data-page="lich" href="#" title="Lịch thêm/cắt"><i class="bi bi-calendar-event"></i><span class="lbl">Lịch thêm/cắt</span></a>
+      <a class="nav-link" data-page="cd" href="#" title="Cài đặt"><i class="bi bi-gear"></i><span class="lbl">Cài đặt</span></a>
     </nav>
     <div class="ver" id="ver"></div>
   </aside>
@@ -62,6 +65,7 @@
       </div>
       <div class="actionbar">
         <span class="state" id="saveState"></span>
+        <button class="btn btn-outline-danger" id="btnReset" title="Mọi lớp về &quot;chưa báo&quot;, bỏ hết tên vắng đã chọn (dùng khi sheet trong sổ đã tạo sẵn)"><i class="bi bi-arrow-repeat"></i> Đặt lại</button>
         <button class="btn btn-outline-secondary" id="btnUndo"><i class="bi bi-arrow-counterclockwise"></i> Hoàn tác</button>
         <button class="btn btn-primary" id="btnSave"><i class="bi bi-save"></i> Lưu vào sổ</button>
       </div>
@@ -70,11 +74,15 @@
     <!-- ===== Suất ăn ===== -->
     <section class="page" id="page-sa">
       <div class="card shadow-sm flex-grow-1 d-flex flex-column" style="min-height:0">
-        <div class="card-header bg-white"><div class="fs-5 fw-bold" id="mealTotal"></div><div class="small text-muted" id="mealSub"></div></div>
+        <div class="card-header bg-white d-flex align-items-center gap-3">
+          <div class="flex-grow-1"><div class="fs-5 fw-bold" id="mealTotal"></div><div class="small text-muted" id="mealSub"></div></div>
+          <button class="btn btn-outline-primary" id="mealEditBtn" title="Lớp nào ăn chung dòng nào trong bảng suất ăn của sổ"><i class="bi bi-diagram-3"></i> Sửa cách ghép</button>
+        </div>
         <div class="px-3 pt-2" id="mealAlerts"></div>
-        <div class="so-wrap"><table class="table table-sm table-hover mb-0 sticky-head meal">
-          <thead><tr><th style="width:200px">Nhóm</th><th>Gồm</th>
-            <th class="text-center" style="width:110px" title="Suất mỗi nhóm = hiện diện các lớp trong nhóm + em ghép − em ghép vắng (như công thức trong sổ)">Suất</th></tr></thead>
+        <div class="so-wrap px-3" id="mealEditor" hidden></div>
+        <div class="so-wrap" id="mealView"><table class="table table-sm table-hover mb-0 sticky-head meal">
+          <thead><tr><th class="text-center" style="width:90px" title="Suất mỗi dòng = hiện diện các lớp trong dòng + em ghép − em ghép vắng (như công thức trong sổ)">Suất</th>
+            <th style="width:220px">Tên ghép</th><th>Gồm</th></tr></thead>
           <tbody id="mealBody"></tbody></table></div>
         <div class="card-footer bg-white small" id="mealInfo"></div>
       </div>

@@ -183,7 +183,7 @@ def test_import_list_with_groups_then_new_day_rebuilds(wsp, tmp_path):
     assert AppData.load(wsp.data.path).meal_groups[4] == G("4.2 ghép 4.4", ["4D19"], "4.2")
 
     st = wsp.load_day(dt.date(2026, 10, 28))  # tờ đã có: giữ bảng của sổ, chỉ báo khác
-    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "4.2 ghép 4.4"] and "khác bảng Nhóm ăn" in wsp.meal_note
+    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "4.2 ghép 4.4"] and "khác cách ghép đã đặt" in wsp.meal_note
 
     st = wsp.load_day(dt.date(2026, 10, 29))  # tờ mới: tính theo bảng sẽ dựng
     assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "1.2 riêng", "4.2 ghép 4.4"]
@@ -235,3 +235,25 @@ def test_ghep_kid_can_eat_with_other_grade(roster):
     assert st.groups_for(layout, "1D19") == ["1.1", "2.1"]
     m = st.meals(layout)
     assert not m.ask and m.balanced and [(x.o, x.m) for x in m.lines] == [(3, 0), (1, 1)]
+
+
+def test_edit_groups_in_app_and_rebuild_open_sheet(wsp):
+    """Sửa cách ghép ở trang Suất ăn: lấy theo sổ khi chưa đặt; lưu; chọn dựng lại cả tờ đang mở."""
+    wsp.load_day(dt.date(2026, 10, 28))
+    groups, saved = wsp.meal_groups_current()
+    assert not saved and groups == same_as_book()
+    assert wsp.set_meal_groups([("cô Lan", ["2D17", "2D17"], "")], False) == [
+        "Lớp 2D17 nằm ở 2 dòng, dòng 1 (cô Lan) và dòng 1 (cô Lan)."]
+    raw = [("cô Lan", ["2D17", "1D16"], ""), ("", [], ""), ("1.1 ghép", ["1D15"], "1.1"), ("1.2 riêng", [], "1.2"),
+           ("4.2 ghép 4.4", ["4D19"], "4.2")]
+    for s in wsp.roster.students:
+        s.an_ghep = {"1D19": "1.1" if s.ho_ten in ("Châu Bảo Ngọc", "Phùng Gia Hân") else "1.2", "4D21": "4.2"}.get(s.lop, "")
+    assert wsp.set_meal_groups(raw, apply_today=True) == []
+    assert wsp.meal_groups_current()[1] and "Khi lưu" in wsp.meal_note
+    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "1.2 riêng", "4.2 ghép 4.4"]
+    assert wsp.meals().balanced
+    wsp.push_undo()
+    assert wsp.save() == "28"
+    ws = sobook.load_book(wsp.book_path)["28"]
+    assert (ws["I21"].value, ws["I24"].value, ws["G22"].value) == ("=F10+F7", "=L24", "=0")
+    assert wsp.meal_note == "" and wsp.meal_force is None
