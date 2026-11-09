@@ -71,24 +71,37 @@ class Roster:
     students: list[Student] = field(default_factory=list)
     classes: dict[str, ClassInfo] = field(default_factory=dict)
     _display: dict[str, str] | None = field(default=None, repr=False)
+    _by_class: dict[str, list[Student]] | None = field(default=None, repr=False, compare=False)
+    _by_id: dict[str, Student] | None = field(default=None, repr=False, compare=False)
+    _n: int = field(default=-1, repr=False, compare=False)
 
     # ----- truy vấn -----
     def invalidate(self) -> None:
+        """Gọi sau khi thêm/bớt em hoặc đổi lớp của em (các bảng tra nhanh được dựng lại)."""
         self._display = None
+        self._by_class = self._by_id = None
+
+    def _index(self) -> dict[str, list[Student]]:
+        """Bảng tra em theo lớp tính bán trú (dựng 1 lần; thêm/bớt em thì tự dựng lại)."""
+        if self._by_class is None or self._n != len(self.students):
+            idx: dict[str, list[Student]] = {}
+            for s in self.students:
+                idx.setdefault(s.lop_tinh, []).append(s)
+            self._by_class, self._by_id, self._n = idx, {s.id: s for s in self.students}, len(self.students)
+        return self._by_class
 
     def class_codes(self) -> list[str]:
         codes = set(self.classes) | {s.lop_tinh for s in self.students if s.ban_tru}
         return sorted((c for c in codes if c), key=class_sort_key)
 
     def by_id(self, sid: str) -> Student | None:
-        for s in self.students:
-            if s.id == sid:
-                return s
-        return None
+        self._index()
+        s = self._by_id.get(sid) if self._by_id is not None else None
+        return s if s is not None and s.id == sid else next((x for x in self.students if x.id == sid), None)
 
     def boarding(self, code: str, day: dt.date | None = None) -> list[Student]:
         """Các em ăn bán trú tính vào lớp `code` trong ngày `day`."""
-        return [s for s in self.students if s.lop_tinh == code and s.is_boarding(day)]
+        return [s for s in self._index().get(code, ()) if s.lop_tinh == code and s.is_boarding(day)]
 
     def in_class(self, code: str) -> list[Student]:
         """Mọi em liên quan tới lớp: học ở lớp đó hoặc tính bán trú vào lớp đó."""

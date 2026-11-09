@@ -142,9 +142,10 @@ def test_temp_book_autosaves_and_is_removed_after_save(api, tmp_path):
     ws.autosave_flush()
     assert temp.exists() and ws.temp_saved_at and not ws.temp_error
     wb = openpyxl.load_workbook(temp)
-    assert wb["TAMTHOI"].sheet_state == "hidden"
-    day_ws = wb[api.state()["sheet"]]
-    assert any("Tuấn Anh" in str(c.value) for row in day_ws.iter_rows() for c in row if c.value)
+    assert wb["TAMTHOI"].sheet_state == "hidden" and len(wb.sheetnames) == 2  # file gọn, không chép cả sổ
+    view = wb["Dang diem danh"]
+    assert any("Tuấn Anh" in str(c.value) for row in view.iter_rows() for c in row if c.value)
+    assert temp.stat().st_size < 20_000
     assert api.state()["temp_at"] == ws.temp_saved_at  # giao diện hiện giờ lưu tạm
     # sổ tạm không bị nhận nhầm là sổ tháng
     from app.excel import sobook
