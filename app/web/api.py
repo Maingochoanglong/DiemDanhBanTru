@@ -32,6 +32,9 @@ class NoDialogs:
     def save_file(self, title: str, name: str) -> str | None:
         return None
 
+    def choose_folder(self, title: str) -> str | None:
+        return None
+
 
 def _iso(d: dt.date | None) -> str:
     return d.isoformat() if d else ""
@@ -56,7 +59,9 @@ class Api:
 
     # ================================================================== ngày
     def boot(self) -> dict:
-        """Mở app: mở ngày học hôm nay (thứ 7/CN thì ngày học kế tiếp). Không hỏi chọn file."""
+        """Mở app: mở ngày học hôm nay (thứ 7/CN thì ngày học kế tiếp). Bản mới tải về: hiện màn Thiết lập."""
+        if self._ws.setup_needed:
+            return {"setup": self.setup_info(), "state": self.state()}
         today = dt.date.today()
         res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
         self._temp = self._ws.find_temp()
@@ -65,6 +70,38 @@ class Api:
         changed = self._ws.list_changed()
         if changed is not None:
             res["list_changed"] = {"file": changed.name, "path": str(changed)}
+        return res
+
+    # ================================================================== thiết lập (bản mới tải về)
+    def setup_info(self) -> dict:
+        ws = self._ws
+        st = ws.settings
+        steps = ws.setup_steps
+        return {"folder": str(ws.data.path.parent), "folder_done": "folder" in steps,
+                "book": Path(st.get("so_file") or "").name if "book" in steps else "", "book_done": "book" in steps,
+                "list": Path(st.get("cdhs_file") or "").name if "list" in steps else "", "list_done": "list" in steps,
+                "n": len(ws.roster.students) if "list" in steps else 0, "missing": ws.setup_missing()}
+
+    def setup_folder(self, path: str | None = None, use_default: bool = False) -> dict:
+        """Bước 1: chọn nơi đặt file dữ liệu của app (hoặc dùng thư mục gợi ý)."""
+        folder = str(self._ws.data.path.parent) if use_default else (
+            path or self._dlg.choose_folder("Chọn thư mục đặt file dữ liệu của app"))
+        if not folder:
+            return {"cancel": True, "setup": self.setup_info()}
+        try:
+            self._ws.setup_folder(folder)
+        except Exception as e:  # noqa: BLE001
+            return {"error": f"Không dùng được thư mục này:\n{e}", "setup": self.setup_info()}
+        return {"setup": self.setup_info()}
+
+    def finish_setup(self) -> dict:
+        try:
+            self._ws.finish_setup()
+        except ValueError as e:
+            return {"error": str(e), "setup": self.setup_info()}
+        today = dt.date.today()
+        res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
+        res["flash"] = "Đã thiết lập xong. Bắt đầu điểm danh."
         return res
 
     def restore_temp(self, yes: bool) -> dict:

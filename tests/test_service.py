@@ -183,3 +183,43 @@ def test_reset_day(ws):
     assert len(ws.state.unreported()) == len(ws.state.classes) and ws.state.absent_names("1D15") == []
     assert ws.state.cd("4D21").note.startswith("Vũ Khoa") and ws.dirty  # ghi chú giữ nguyên
     assert ws.undo() and ws.state.absent_names("1D15") == ["Tuấn Anh"]
+
+def test_new_download_must_set_up_again(tmp_path, monkeypatch, roster):
+    """Bản .exe mới tải về (mã bản dựng khác): chưa đụng file dữ liệu cũ, phải chọn nơi đặt file, sổ, danh sách."""
+    import openpyxl
+
+    from app import build_info
+    from app.service import load_config, save_config
+    from tests.conftest import FAKE
+
+    monkeypatch.setenv("APPDATA", str(tmp_path / "appdata"))
+    old = tmp_path / "cu" / "DuLieu_BanTru.xlsx"
+    old.parent.mkdir()
+    data = AppData(old, roster)
+    data.settings["so_file"] = "C:/so cu.xlsx"
+    data.save()
+    save_config({"data_path": str(old), "build": "aaaaaaa"})
+    monkeypatch.setattr(build_info, "BUILD", "bbbbbbb")
+
+    w = Workspace()
+    assert w.setup_needed and w.needs_setup and not w.roster.students
+    w.save_data()  # chưa chọn nơi đặt file: không ghi đè file cũ
+    assert AppData.load(old).roster.students and AppData.load(old).settings["so_file"] == "C:/so cu.xlsx"
+    with pytest.raises(ValueError, match="chọn nơi đặt file"):
+        w.finish_setup()
+
+    w.setup_folder(old.parent)  # chọn lại thư mục cũ: giữ dữ liệu, bỏ chọn sổ / danh sách
+    assert w.roster.students and w.settings["so_file"] == "" and w.setup_missing() == [
+        "chọn sổ điểm danh", "nhập danh sách học sinh"]
+    w.set_book(make_book(tmp_path / "SO DIEM DANH T10.xlsx"))
+    ds = tmp_path / "DS.xlsx"
+    wb = openpyxl.Workbook()
+    wb.active.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú"])
+    for lop, name, dob, bt in FAKE:
+        wb.active.append([lop, name, dob, "Có" if bt else "Không"])
+    wb.save(ds)
+    ch, _ = w.import_cdhs(ds)
+    w.apply_import(ch, ds)
+    w.finish_setup()
+    assert not w.setup_needed and load_config()["build"] == "bbbbbbb"
+    assert not Workspace().setup_needed  # mở lại cùng bản: không hỏi nữa

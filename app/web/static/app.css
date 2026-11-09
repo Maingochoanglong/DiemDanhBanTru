@@ -138,3 +138,17 @@ main { min-width: 0; padding: 12px 16px; gap: 12px; height: 100vh; }
   .names .nm .ck { font-size: 1.1rem; }
   .search-lg { font-size: 1.05rem; padding: .45rem .8rem; }
 }
+
+/* thiết lập lần đầu */
+#setup { position: fixed; inset: 0; z-index: 1040; background: rgba(33, 37, 41, .55); display: flex; align-items: center;
+         justify-content: center; padding: 16px; }
+#setup[hidden] { display: none; }
+.setup-card { width: min(760px, 100%); max-height: 100%; overflow: auto; }
+.setup-step { display: flex; gap: 14px; align-items: center; border: 1px solid #dee2e6; border-radius: .6rem; padding: .8rem 1rem; margin-bottom: 10px; }
+.setup-step.done { border-color: var(--bs-success); background: #f0faf3; }
+.setup-step.off { opacity: .55; }
+.setup-step .num { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
+                   background: #e9ecef; }
+.setup-step.done .num { background: var(--bs-success); color: #fff; }
+.setup-step .txt { flex: 1; min-width: 0; }
+.setup-step .path { color: #495057; font-size: .9rem; overflow-wrap: anywhere; }

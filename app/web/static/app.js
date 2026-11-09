@@ -835,10 +835,55 @@ async function askClose() {
   api("quit");
 }
 
+// ------------------------------------------------------------------ Thiết lập lần đầu (bản mới tải về)
+let SETUP = null;
+
+function renderSetup(s) {
+  SETUP = s;
+  const step = (n, key, title, desc, value, btns, off) => `<div class="setup-step ${s[key + "_done"] ? "done" : ""} ${off ? "off" : ""}">
+      <div class="num">${s[key + "_done"] ? '<i class="bi bi-check-lg"></i>' : n}</div>
+      <div class="txt"><div class="fw-semibold">${title}</div><div class="small text-muted">${desc}</div>
+        ${value ? `<div class="path"><i class="bi bi-check-circle-fill text-success me-1"></i>${esc(value)}</div>` : ""}</div>
+      <div class="d-flex gap-2 flex-shrink-0">${btns}</div></div>`;
+  const noFolder = !s.folder_done;
+  $("#setupSteps").innerHTML =
+    step(1, "folder", "Nơi đặt file dữ liệu của app", s.folder_done ? "" : `Gợi ý: ${esc(s.folder)}`, s.folder_done ? s.folder : "",
+      `<button class="btn btn-primary" data-setup="default">Dùng thư mục gợi ý</button>
+       <button class="btn btn-outline-primary" data-setup="folder">Chọn thư mục…</button>`, false) +
+    step(2, "book", "Sổ điểm danh tháng (Excel)", "Chọn file sổ của tháng đang điểm danh.", s.book,
+      `<button class="btn ${s.book_done ? "btn-outline-primary" : "btn-primary"}" data-setup="book" ${noFolder ? "disabled" : ""}>Chọn sổ…</button>`, noFolder) +
+    step(3, "list", "Danh sách học sinh (Excel)", "Chọn file danh sách để nhập.", s.list ? `${s.list} (${s.n} học sinh)` : "",
+      `<button class="btn ${s.list_done ? "btn-outline-primary" : "btn-primary"}" data-setup="list" ${noFolder ? "disabled" : ""}>Nhập danh sách…</button>`, noFolder);
+  $("#setupDone").disabled = s.missing.length > 0;
+  $("#setupErr").textContent = s.missing.length ? "Còn thiếu: " + s.missing.join(", ") + "." : "";
+  $("#setup").hidden = false;
+}
+
+async function setupStep(kind) {
+  if (kind === "default" || kind === "folder") {
+    const r = await api("setup_folder", null, kind === "default");
+    if (r.error) info("Chưa dùng được thư mục", r.error);
+    return renderSetup(r.setup);
+  }
+  if (kind === "book") { const r = await api("choose_book"); if (!r.cancel) handle(r); }
+  if (kind === "list") await importList();
+  renderSetup(await api("setup_info"));
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   wire();
   await apiReady();
   const r = handle(await api("boot"));
+  $("#setupSteps").onclick = e => { const b = e.target.closest("[data-setup]"); if (b && !b.disabled) setupStep(b.dataset.setup); };
+  $("#setupDone").onclick = async () => {
+    const res = await api("finish_setup");
+    if (res.error) { $("#setupErr").textContent = res.error; return renderSetup(res.setup); }
+    $("#setup").hidden = true;
+    SETUP = null;
+    handle(res);
+    renderSettings();
+  };
+  if (r && r.setup) return renderSetup(r.setup);
   renderSettings();
   if (r && r.restore) await askRestore(r.restore);
   if (r && r.list_changed) {  // file Excel danh sách đã được sửa sau lần nhập trước

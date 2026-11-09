@@ -9,6 +9,7 @@ import threading
 import time
 from pathlib import Path
 
+from . import build_info
 from .core import matcher
 from .core.day import DayState
 from .core.meals import MealGroup, MealLayout, MealSummary
@@ -68,7 +69,14 @@ class NeedMonthBook(Exception):
 class Workspace:
     def __init__(self, data_path: str | Path | None = None):
         cfg = load_config()
-        self.data = AppData.load(data_path or cfg.get("data_path") or default_data_path())
+        # Bản .exe mới tải về (mã bản dựng khác lần trước): bắt thiết lập lại từ đầu — chọn nơi đặt file,
+        # sổ điểm danh, danh sách học sinh. Chưa đọc / ghi file dữ liệu cũ cho tới khi chọn nơi đặt file.
+        self.setup_needed = data_path is None and build_info.BUILD != "dev" and cfg.get("build") != build_info.BUILD
+        self.setup_steps: set[str] = set()  # "folder", "book", "list" đã làm trong lần thiết lập này
+        if self.setup_needed:
+            self.data = AppData(Path(cfg.get("data_path") or default_data_path()))
+        else:
+            self.data = AppData.load(data_path or cfg.get("data_path") or default_data_path())
         self.day: dt.date = dt.date.today()
         self.book_path: Path | None = None
         self.state: DayState | None = None
@@ -110,14 +118,46 @@ class Workspace:
 
     @property
     def needs_setup(self) -> bool:
-        return not self.roster.students
+        return self.setup_needed or not self.roster.students
+
+    # ---------------------------------------------------------------- thiết lập lần đầu (bản mới tải về)
+    def setup_folder(self, folder: str | Path) -> None:
+        """Bước 1: nơi đặt file dữ liệu của app. Có sẵn file dữ liệu thì dùng lại (lịch, cách ghép…),
+        nhưng sổ điểm danh và file danh sách luôn phải chọn lại."""
+        folder = Path(folder)
+        folder.mkdir(parents=True, exist_ok=True)
+        self.data = AppData.load(folder / default_data_path().name)
+        for k in ("so_file", "so_folder", "cdhs_file", "cdhs_mtime"):
+            self.data.settings[k] = ""
+        self._wb_cache = None
+        self.book_path = None
+        self.setup_steps = {"folder"}
+        self.save_data()
+
+    def setup_missing(self) -> list[str]:
+        need = [("folder", "chọn nơi đặt file"), ("book", "chọn sổ điểm danh"), ("list", "nhập danh sách học sinh")]
+        return [text for key, text in need if key not in self.setup_steps]
+
+    def finish_setup(self) -> None:
+        missing = self.setup_missing()
+        if missing:
+            raise ValueError("Còn thiếu: " + ", ".join(missing) + ".")
+        cfg = load_config()
+        cfg["build"] = build_info.BUILD
+        cfg["data_path"] = str(self.data.path)
+        save_config(cfg)
+        self.setup_needed = False
 
     def remember_data_path(self) -> None:
+        if self.setup_needed and "folder" not in self.setup_steps:
+            return
         cfg = load_config()
         cfg["data_path"] = str(self.data.path)
         save_config(cfg)
 
     def save_data(self) -> None:
+        if self.setup_needed and "folder" not in self.setup_steps:
+            return  # chưa chọn nơi đặt file: không ghi đè file dữ liệu cũ
         self.roster.invalidate()
         self.data.save()
         self.remember_data_path()
@@ -158,6 +198,8 @@ class Workspace:
             self.settings["cdhs_mtime"] = ""
         self._ensure_classes()
         self.save_data()
+        if self.setup_needed and "folder" in self.setup_steps and self.roster.students:
+            self.setup_steps.add("list")
         return n
 
     def list_changed(self) -> Path | None:
@@ -188,6 +230,8 @@ class Workspace:
         self.settings["so_file"] = str(path)
         self.settings["so_folder"] = str(path.parent)
         self.save_data()
+        if self.setup_needed and "folder" in self.setup_steps:
+            self.setup_steps.add("book")
 
     def _book(self, path: str | Path):
         """Đọc sổ (dùng lại bản đã đọc nếu file chưa thay đổi). Chỉ để đọc, không sửa bản này."""
