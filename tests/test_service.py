@@ -223,3 +223,20 @@ def test_new_download_must_set_up_again(tmp_path, monkeypatch, roster):
     w.finish_setup()
     assert not w.setup_needed and load_config()["build"] == "bbbbbbb"
     assert not Workspace().setup_needed  # mở lại cùng bản: không hỏi nữa
+
+
+def test_old_sheet_name_of_kid_no_longer_boarding(ws):
+    """Sổ cũ ghi vắng em nay đã cắt bán trú (vd. Vũ Khoa 4D21): app báo "không ăn BT", không phải tên lạ."""
+    from app.web.api import Api
+
+    s = next(x for x in ws.roster.students if x.ho_ten == "Ninh Vũ Khoa")
+    s.ban_tru = False
+    ws.roster.invalidate()
+    st = ws.load_day(DAY28)
+    c = st.cd("4D21")
+    assert c.not_bt == ["Vũ Khoa"] and c.extra == [] and st.class_warnings("4D21") == []
+    assert st.absent_names("4D21") == ["Vũ Khoa"]  # giữ như sổ khi lưu lại
+    api = Api(ws)
+    row = next(r for r in api.state()["rows"] if r.get("code") == "4D21")
+    assert row["status"] != "err" and row["not_bt"] == "Vũ Khoa"
+    assert api.class_detail("4D21")["not_bt"] == ["Vũ Khoa"]

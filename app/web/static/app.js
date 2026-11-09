@@ -176,7 +176,7 @@ function renderDiemDanh() {
   const keep = r => ddFilter === "all" || (ddFilter === "unrep" ? !r.reported : r.vang > 0);
   const rows = st.rows.filter(r => r.kind === "class" ? keep(r) : ddFilter === "all").map(r => {
     if (r.kind === "khoi") return `<tr class="khoi"><td>${esc(r.code)}</td><td></td><td class="num">${r.si}</td><td class="num">${r.vang}</td><td class="num">${r.hd}</td><td></td><td></td></tr>`;
-    const note = [r.sched ? "[Lịch]" : "", r.warn, r.note].filter(Boolean).join(" · ");
+    const note = [r.sched ? "[Lịch]" : "", r.warn, r.not_bt ? `Không ăn BT: ${r.not_bt}` : "", r.note].filter(Boolean).join(" · ");
     const tip = (r.sched ? "[Lịch] = sĩ số đổi theo lịch thêm/cắt. " : "") + [r.warn, r.note].filter(Boolean).join(" · ");
     const ten = r.reported ? esc(r.ten) : `<span class="text-muted fst-italic">(chưa báo)</span>` +
       (r.auto ? ` <span class="text-muted small">· nghỉ T6: ${esc(r.auto)}</span>` : "");
@@ -225,6 +225,7 @@ function renderClass() {
     a += `<div class="alert alert-warning py-2 mb-2"><b>Tên trong sổ chưa khớp danh sách</b> — bấm vào tên để chọn em đúng:<div class="mt-2 d-flex gap-2 flex-wrap">` +
       d.pending.map(p => `<button class="btn btn-danger" data-pend="${p.idx}"><i class="bi bi-question-circle"></i> ${esc(p.query)}</button>`).join("") + `</div></div>`;
   }
+  if (d.not_bt.length) a += `<div class="alert alert-info py-2 mb-2"><i class="bi bi-info-circle-fill me-2"></i>Sổ có ghi tên em <b>không ăn bán trú</b> (theo danh sách hiện nay): ${esc(d.not_bt.join(", "))}. Giữ nguyên như sổ, không phải tên lạ.</div>`;
   if (d.extra.length) a += `<div class="alert alert-secondary py-2 mb-2">Giữ nguyên chữ đã ghi: ${esc(d.extra.join(", "))} <button class="btn btn-sm btn-outline-secondary ms-2" id="clsClearExtra">Xóa các tên này</button></div>`;
   if (d.upcoming.length) a += `<div class="text-muted small mb-2"><i class="bi bi-calendar-event"></i> Sắp tới: ${esc(d.upcoming.join("; "))}</div>`;
   $("#clsAlerts").innerHTML = a;
