@@ -35,7 +35,7 @@ def main(out: str) -> None:
     out_path = Path(out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(TEMPLATE.format(t=tuple(parts), v=__version__), encoding="utf-8")
-    print(f"Đã tạo {out_path} (phiên bản {__version__})")
+    print(f"version file: {out_path} ({__version__})")  # chữ ASCII: cửa sổ lệnh Windows có thể không in được dấu
 
 
 if __name__ == "__main__":
