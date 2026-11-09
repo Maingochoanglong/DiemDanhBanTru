@@ -469,8 +469,11 @@ class Workspace:
         if not self.book_path:
             raise FileNotFoundError("Chưa chọn sổ điểm danh tháng.")
         self.warning = ""
-        wb, ws = _render_day(self.book_path, self.state, self._rebuild_meal_table)
+        wb = self._book(self.book_path)  # bản đã đọc khi mở ngày (đọc lại nếu file đã bị sửa từ đó)
+        self._wb_cache = None  # bản này sắp bị sửa: lưu lỗi thì lần sau đọc lại từ file
+        wb, ws = _render_day(self.book_path, self.state, self._rebuild_meal_table, wb=wb)
         sobook.save_book(wb, self.book_path)
+        self._wb_cache = ((str(self.book_path), Path(self.book_path).stat().st_mtime_ns), wb)
         self.discard_temp()
         self.sheet_name = ws.title
         info = sobook.analyze(ws)
@@ -526,10 +529,7 @@ class Workspace:
             if gen != self._as_gen:
                 return
             try:
-                wb, _ = _render_day(book, state, lambda ws, d, existing=False: self._rebuild_meal_table(
-                    ws, d, quiet=True, existing=existing))
-                tamthoi.write_state_sheet(wb, state, book)
-                tamthoi.save(wb, tamthoi.temp_path(book))
+                tamthoi.save(tamthoi.build(state, book), tamthoi.temp_path(book))
                 self.temp_saved_at = time.strftime("%H:%M:%S")
                 self.temp_error = ""
             except Exception as e:  # noqa: BLE001 - lưu tạm lỗi thì báo nhẹ, không chặn công việc
@@ -658,10 +658,10 @@ class Workspace:
         return self.roster.sort_like_roster(self.roster.boarding(code, self.day))
 
 
-def _render_day(book: Path, state: DayState, on_new_sheet=None):
+def _render_day(book: Path, state: DayState, on_new_sheet=None, wb=None):
     """Đọc sổ và ghi ngày `state` vào sheet của ngày đó (tạo sheet từ mẫu nếu chưa có). Chưa lưu file.
     on_new_sheet(ws, ngày, existing=...): dựng lại bảng suất ăn (sheet vừa tạo; sheet có sẵn khi giáo vụ chọn)."""
-    wb = sobook.load_book(book)
+    wb = wb if wb is not None else sobook.load_book(book)
     ws = sobook.day_sheets(wb).get(state.date.day)
     if ws is None:
         tpl = sobook.template_sheet(wb, state.date)

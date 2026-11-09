@@ -1,8 +1,9 @@
 """Sổ tạm: bản sao sổ điểm danh tự lưu sau mỗi thao tác, phòng mất điện / tắt máy đột ngột.
 
 Tên file = tên sổ đang dùng + " tamthoi" (vd. "SO DIEM DANH T10 tamthoi.xlsx"), nằm cạnh sổ chính.
-- Sheet của ngày đang làm được ghi như khi bấm Lưu vào sổ (mở bằng Excel xem được ngay).
-- Sheet ẩn TAMTHOI ghi lại đủ thao tác của ngày đó để app khôi phục chính xác.
+File nhỏ (vài KB), không chép cả cuốn sổ, nên lưu tạm sau mỗi thao tác rất nhẹ:
+- sheet "Dang diem danh": lớp, đã báo, số vắng, tên vắng, ghi chú (mở bằng Excel xem được ngay);
+- sheet ẩn TAMTHOI ghi lại đủ thao tác của ngày đó để app khôi phục chính xác.
 Bấm Lưu vào sổ thì app ghi sổ chính rồi xóa sổ tạm.
 """
 
@@ -63,6 +64,23 @@ def write_state_sheet(wb, state, book: str | Path, now: dt.datetime | None = Non
     ws.append(["Em ghép vắng", "Ăn nhóm"])
     for sid, g in state.ghep_pick.items():
         ws.append([sid, g])
+
+
+def build(state, book: str | Path, now: dt.datetime | None = None):
+    """Sổ tạm gọn: 1 sheet dễ đọc + sheet ẩn TAMTHOI (không đọc/ghi cả cuốn sổ)."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Dang diem danh"
+    ws.append([f"Ngày {fmt_date(state.date)} — đang điểm danh, chưa lưu vào sổ {Path(book).name}"])
+    ws.append(["Lớp", "Đã báo", "Vắng", "Tên học sinh vắng", "Ghi chú"])
+    for code in state.classes:
+        names = state.absent_names(code)
+        c = state.cd(code)
+        ws.append([code, "x" if c.reported else "", len(names), ", ".join(names), c.note or None])
+    for col, w in zip("ABCDE", (8, 8, 7, 70, 40), strict=True):
+        ws.column_dimensions[col].width = w
+    write_state_sheet(wb, state, book, now)
+    return wb
 
 
 def save(wb, path: str | Path) -> None:

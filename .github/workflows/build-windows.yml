@@ -21,14 +21,32 @@ jobs:
           python-version: "3.12"
 
       - name: Cài thư viện
-        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+        env:
+          # Tự dựng phần khởi động (bootloader) của PyInstaller trên máy này thay vì dùng bản dựng sẵn:
+          # bản dựng sẵn dùng chung cho rất nhiều chương trình nên hay bị Windows Defender / phần mềm
+          # diệt virus nhận nhầm là mã độc.
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
+        run: |
+          python -m pip install --no-binary pyinstaller pyinstaller==6.11.1
+          python -m pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Chạy test
         run: python -m pytest -q
 
       - name: Dựng file .exe
-        # giao diện web (HTML/Bootstrap) nằm trong app/web/static: đóng kèm vào file .exe
-        run: pyinstaller --noconfirm --onefile --windowed --name DiemDanhBanTru --add-data "app/web/static;app/web/static" run_app.py
+        # giao diện web (HTML/Bootstrap) nằm trong app/web/static: đóng kèm vào file .exe.
+        # Kèm thông tin phiên bản (tên app, mô tả) và không nén UPX: Windows ít cảnh báo nhầm hơn.
+        run: |
+          python packaging/make_version_file.py build/version_info.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          pyinstaller --noconfirm --onefile --windowed --noupx --name DiemDanhBanTru --version-file build/version_info.txt --add-data "app/web/static;app/web/static" run_app.py
+
+      - name: Kiểm tra thông tin phiên bản trong file .exe
+        shell: pwsh
+        run: |
+          $v = (Get-Item dist\DiemDanhBanTru.exe).VersionInfo
+          Write-Host "ProductName=$($v.ProductName) FileVersion=$($v.FileVersion)"
+          if (-not $v.ProductName) { Write-Error "File .exe thiếu thông tin phiên bản"; exit 1 }
 
       - name: Kiểm tra file .exe chạy được
         shell: pwsh

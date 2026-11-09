@@ -154,17 +154,23 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 ## 8. An toàn dữ liệu & lỗi thường gặp
 
 - Trước mỗi lần ghi, app **sao lưu** file cũ vào thư mục `SaoLuu` cạnh file (giữ 30 bản gần nhất).
-- **Sổ tạm (phòng mất điện)**: sau mỗi thao tác, app tự lưu một bản sao của sổ, tên là tên sổ thêm chữ `tamthoi`, nằm cạnh sổ chính (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
+- **Sổ tạm (phòng mất điện)**: sau mỗi thao tác, app tự lưu một file nhỏ (vài KB, không chép cả cuốn sổ nên rất nhẹ), tên là tên sổ thêm chữ `tamthoi`, nằm cạnh sổ chính (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
   - Bấm **Lưu vào sổ** thì app ghi vào sổ chính và xóa sổ tạm.
   - Nếu máy tắt đột ngột khi chưa lưu, lần mở app sau sẽ hỏi **Khôi phục**. Chọn Khôi phục để làm tiếp, rồi nhớ bấm Lưu vào sổ.
   - Thoát app và chọn *Không lưu*, hoặc đổi ngày và chọn *Không lưu*, thì sổ tạm cũng bị xóa.
-  - Có thể mở sổ tạm bằng Excel để xem: sheet của ngày đang làm đã được điền sẵn.
+  - Có thể mở sổ tạm bằng Excel để xem: sheet *Dang diem danh* ghi từng lớp đã báo chưa, số vắng, tên vắng, ghi chú.
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
 - **Không in trực tiếp được**: app báo vùng in và mở sổ bằng Excel để bạn in tay. App tự tính vùng in theo mẫu sổ:
   - tờ 1: A1 tới hết phần chữ ký (thường là A1:G46);
   - tờ 2: bảng suất ăn (thường là G68:O80).
 - Khi app gặp lỗi, chi tiết được ghi vào `%APPDATA%\DiemDanhBanTru\loi.log`.
 - Máy chưa có **Microsoft Edge WebView2** (hiếm, Windows 11 có sẵn): app tự mở giao diện bằng trình duyệt Edge, vẫn dùng bình thường. Muốn mở trong cửa sổ riêng thì cài WebView2 Runtime miễn phí của Microsoft.
+- **Windows cảnh báo khi tải hoặc mở app**: app chưa có *chữ ký số* (chứng thư mua của hãng chứng thực) nên mỗi bản mới Windows chưa "quen", trình duyệt và SmartScreen sẽ hỏi lại. App không có gì nguy hiểm; làm một lần cho mỗi bản mới:
+  - **Edge**: ở danh sách tải về, rê chuột lên file → **…** → **Giữ lại** → **Hiện thêm** → **Vẫn giữ**. **Chrome**: bấm **Giữ lại**.
+  - Màn xanh **"Windows đã bảo vệ PC của bạn"**: bấm **Thông tin bổ sung** → **Vẫn chạy**.
+  - Hoặc trước khi mở: chuột phải file `DiemDanhBanTru.exe` → **Properties** → tích **Bỏ chặn (Unblock)** → **OK**.
+  - Nếu **Windows Defender** xóa / chặn file: mở **Bảo mật Windows → Bảo vệ khỏi vi-rút và mối đe dọa → Lịch sử bảo vệ**, chọn mục bị chặn → **Cho phép**. Có thể gửi file cho Microsoft xem lại (microsoft.com/wdsi/filesubmission, chọn *Software developer*/*Home customer*, ghi "false positive") để các máy khác không bị chặn nữa.
+  - Thông tin phiên bản của file: chuột phải → **Properties → Details** (tên *Điểm danh bán trú*, số phiên bản).
 - **Cập nhật app lên bản mới**: tải lại `DiemDanhBanTru.exe` trong thư mục `tai-ve` của repo, chép đè lên file cũ (đóng app trước). Danh sách học sinh, ghép lớp, lịch và cài đặt nằm trong file dữ liệu `DuLieu_BanTru.xlsx` nên vẫn giữ nguyên.
 
 ## 9. Phím tắt
