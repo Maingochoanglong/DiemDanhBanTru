@@ -7,9 +7,9 @@ from openpyxl.styles import Font
 from app.core.day import DayState
 from app.core.models import Student
 from app.excel import sobook
-from app.excel.database import AppData, short_codes
-from app.excel.files import FileLockedError, lock_file, safe_save
-from app.excel.roster_import import apply_changes, diff_roster, flag_mismatches, read_cdhs
+from app.excel.files import FileLockedError, safe_save
+from app.excel.roster_import import load_list, read_cdhs, short_codes
+from tests.conftest import write_list
 
 DAY28 = dt.date(2026, 10, 28)
 
@@ -103,7 +103,7 @@ def test_create_write_and_read_back(book, roster):
     assert summary.balanced, summary.warnings
     sobook.write_day(info, st, summary)
     sobook.select_only(wb, ws)
-    sobook.save_book(wb, book)
+    safe_save(wb, book)
 
     wb2 = sobook.load_book(book)
     ws2 = wb2["29"]
@@ -112,7 +112,7 @@ def test_create_write_and_read_back(book, roster):
     assert rec["1D19"].names == "Đức Anh"
     assert ws2["M24"].value == 1 and ws2["M23"].value is None and ws2["O24"].value == 2
     assert [s.sheet_view.tabSelected for s in wb2.worksheets] == [False, True]
-    assert (book.parent / "SaoLuu").is_dir()  # đã sao lưu bản cũ
+    assert not (book.parent / "SaoLuu").exists()  # không còn sao lưu: chỉ có sổ tạm khi chưa lưu
 
 
 def test_new_day_sheet_black_names_and_keeps_count_formula(book, roster):
@@ -123,7 +123,7 @@ def test_new_day_sheet_black_names_and_keeps_count_formula(book, roster):
     for r in (6, 7, 8):
         tpl[f"E{r}"] = count.format(r=r)
     tpl["G6"].font = Font(name="Times New Roman", color="FFFF0000")
-    sobook.save_book(wb, book)
+    safe_save(wb, book)
 
     wb = sobook.load_book(book)
     ws = sobook.create_day_sheet(wb, dt.date(2026, 10, 29), wb["28"])
@@ -149,31 +149,42 @@ def test_new_month_book(book, tmp_path):
     assert ws["A3"].value == "ĐIỂM DANH BÁN TRÚ NGÀY 02/11/2026"
     assert "tháng 11 năm 2026" in ws["G16"].value
     assert ws["G6"].value is None and ws["M25"].value is None
-    assert sobook.find_month_file(tmp_path, 11) == new
 
 
-def test_safe_save_refuses_when_open_in_excel(book):
-    lock_file(book).write_text("x")
-    wb = sobook.load_book(book)
+def test_safe_save_refuses_when_open_in_excel(book, monkeypatch):
+    """Excel đang mở sổ (Windows không cho mở để ghi): báo lỗi, không ghi, không tạo file nào khác."""
+    import builtins
+
+    real_open = builtins.open
+
+    def excel_holds(path, mode="r", *a, **k):
+        if str(path) == str(book) and mode == "r+b":
+            raise PermissionError(13, "đang mở trong Excel")
+        return real_open(path, mode, *a, **k)
+
+    monkeypatch.setattr(builtins, "open", excel_holds)
+    before = book.read_bytes()
     with pytest.raises(FileLockedError):
-        safe_save(wb, book)
+        safe_save(sobook.load_book(book), book)
+    assert book.read_bytes() == before and sorted(p.name for p in book.parent.iterdir()) == [book.name]
 
 
-def test_app_data_roundtrip(tmp_path, roster):
+def test_load_list_reads_note_column_and_keeps_ids(tmp_path, roster):
+    """File danh sách là nơi duy nhất về học sinh: cột Ghi chú cho cắt thứ 6 / cắt từ ngày / ăn từ ngày."""
     roster.students[0].cat_thu6 = True
     roster.students[0].cat_tu = dt.date(2026, 11, 1)
     roster.students[1].an_ghep = "1.2"
-    data = AppData(tmp_path / "DuLieu_BanTru.xlsx", roster)
-    data.settings["so_folder"] = str(tmp_path)
-    data.set_log(DAY28, "1D15", True, 6, ["Tuấn Anh"])
-    data.save()
-    back = AppData.load(tmp_path / "DuLieu_BanTru.xlsx")
-    s0, s1 = back.roster.students[0], back.roster.students[1]
+    roster.students[5].bt_tu = dt.date(2026, 11, 3)  # Mạc Trần Quỳnh Anh: chưa ăn BT, "ăn từ 03/11"
+    roster.students[5].ban_tru = True
+    p = write_list(tmp_path / "ds.xlsx", roster)
+    data = load_list(p, today=dt.date(2026, 10, 29))
+    s0, s1, s5 = (data.roster.students[i] for i in (0, 1, 5))
     assert (s0.ho_ten, s0.cat_thu6, s0.cat_tu, s0.ban_tru) == ("Kha Bảo Ngọc", True, dt.date(2026, 11, 1), True)
     assert s1.an_ghep == "1.2"
-    assert len(back.roster.students) == len(roster.students)
-    assert back.settings["so_folder"] == str(tmp_path)
-    assert back.reported_flags(DAY28) == {"1D15": True}
+    assert (s5.ban_tru, s5.bt_tu, s5.is_boarding(dt.date(2026, 11, 2)), s5.is_boarding(dt.date(2026, 11, 3))) == (
+        True, dt.date(2026, 11, 3), False, True)
+    assert s0.id == "1D15|Kha Bảo Ngọc|02/03/2020" and load_list(p).roster.students[0].id == s0.id  # đọc lại: mã không đổi
+    assert data.roster.classes["1D16"].ma_ngan == "1.2" and data.meal_groups is None
     assert short_codes(["1D16", "1D15", "2D17"]) == {"1D15": "1.1", "1D16": "1.2", "2D17": "2.1"}
 
 
@@ -203,62 +214,18 @@ def test_read_cdhs_xls_red_font(tmp_path):
     rows = read_cdhs(p)
     assert [(r.lop, r.ho_ten, r.red) for r in rows] == [
         ("1D15", "Kha Bảo Ngọc", True), ("1D15", "Mạc Trần Quỳnh Anh", False), ("1D16", "Lý Gia Hưng", True)]
-    assert [r.ho_ten for r in flag_mismatches(rows)] == ["Lý Gia Hưng"]
 
 
-def test_read_cdhs_xlsx_and_diff(tmp_path, roster):
+def test_read_cdhs_xlsx_red_font(tmp_path):
     p = tmp_path / "cdhs.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(["TT", "Tên lớp học", "Họ tên", "Ngày sinh"])
-    ws.append([1, "Lớp 1D15", "Kha Bảo Ngọc", "02/03/2020"])  # thôi ăn BT (không đỏ)
-    ws.append([2, "Lớp 1D16", "Mạc Trần Quỳnh Anh", "01/01/2020"])  # đổi lớp
-    ws.append([3, "Lớp 1D16", "Em Mới", "05/05/2020"])
-    ws["C4"].font = Font(color="FFFF0000")
+    ws.append([1, "Lớp 1D15", "Kha Bảo Ngọc", "02/03/2020"])
+    ws.append([2, "Lớp 1D16", "Em Mới", "05/05/2020"])
+    ws["C3"].font = Font(color="FFFF0000")
     wb.save(p)
-    rows = read_cdhs(p)
-    assert [r.red for r in rows] == [False, False, True]
-    changes = diff_roster(roster, rows)
-    kinds = sorted(c.kind for c in changes)
-    assert kinds.count("removed") == len(roster.students) - 2
-    assert {"new", "class", "boarding"} <= set(kinds)
-    n_before = len(roster.students)
-    apply_changes(roster, changes)  # mặc định không xóa HS vắng mặt trong file mới
-    assert len(roster.students) == n_before + 1
-    assert roster.students[0].ban_tru is False and roster.students[5].lop == "1D16"
-
-
-def test_old_data_file_with_removed_columns_still_loads(tmp_path):
-    """File dữ liệu bản cũ còn 2 cột vắng dài hạn: đọc theo tên cột nên không lệch."""
-    p = tmp_path / "cu.xlsx"
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "HocSinh"
-    ws.append(["Mã", "Lớp", "Họ tên", "Ngày sinh", "Bán trú (x)", "Tên ghi sổ (sửa tay)", "Lớp tính BT", "Ăn ghép tại",
-               "Cắt thứ 6 (x)", "Vắng dài hạn từ", "Vắng dài hạn đến", "Ăn BT từ ngày", "Cắt BT từ ngày", "Ghi chú"])
-    ws.append(["HS0001", "1D15", "Kha Bảo Ngọc", "02/03/2020", "x", "", "", "1.2", "x", "10/10/2026", "", "", "01/11/2026", "gc"])
-    wb.save(p)
-    s = AppData.load(p).roster.students[0]
-    assert (s.ban_tru, s.an_ghep, s.cat_thu6, s.cat_tu, s.ghi_chu) == (True, "1.2", True, dt.date(2026, 11, 1), "gc")
-
-
-def test_simple_list_reimport_keeps_cuts_and_ghep(tmp_path, roster):
-    """Nhập lại file danh sách đơn giản: em đã có lịch cắt thì không bị đổi; file không có cột ghép thì giữ ghép cũ."""
-    roster.students[13].an_ghep = "1.1"  # Châu Bảo Ngọc 1D19
-    roster.students[0].cat_tu = dt.date(2026, 11, 1)  # Kha Bảo Ngọc: tháng 11 cắt
-    p = tmp_path / "ds.xlsx"
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú"])
-    for s in roster.students:
-        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "có" if s.is_boarding(dt.date(2026, 11, 2)) else "không"])
-    wb.save(p)
-    rows = read_cdhs(p)
-    by = {r.ho_ten: r for r in rows}
-    assert by["Châu Bảo Ngọc"].red and by["Châu Bảo Ngọc"].ghep is None
-    assert not by["Kha Bảo Ngọc"].red and not by["Mạc Trần Quỳnh Anh"].red
-    changes = diff_roster(roster, rows)
-    assert not [c for c in changes if c.kind in ("boarding", "ghep", "new")]
+    assert [(r.lop, r.red) for r in read_cdhs(p)] == [("1D15", False), ("1D16", True)]
 
 
 def test_xls_file_with_wrong_extension_is_read(tmp_path):
@@ -288,51 +255,29 @@ def test_read_list_with_full_date_header_and_co_khong(tmp_path):
     ]
 
 
-def test_other_name_column_import_and_match(tmp_path, roster):
+def test_other_name_column_and_match(tmp_path):
     """Cột "Tên gọi khác": GV báo "Mi Mi" thì app nhận ra em có tên nước ngoài (tên bịa); sổ ghi "Mi Mi"."""
     from app.core import matcher
 
-    roster.students.append(Student("HS900", "1D16", "Smith Emily", "01/02/2020", True))
-    roster.invalidate()
-    assert matcher.match_name(roster, "1D16", "Mi Mi").status == matcher.NOT_FOUND
     p = tmp_path / "ds.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(["Lớp", "Họ và tên", "Ngày sinh", "Ăn bán trú", "Tên gọi khác"])
     ws.append(["1D16", "Smith Emily", "01/02/2020", "có", "Mi Mi, Emmy"])
-    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])  # ô trống: file Excel là gốc -> bỏ tên gọi cũ
+    ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])
     wb.save(p)
-    vy = next(s for s in roster.students if s.ho_ten == "Kiều Thanh Vy")
-    vy.ten_ghi_so = "Vy Vy"
-    rows = read_cdhs(p)
-    assert [r.ten_goi for r in rows] == ["Mi Mi, Emmy", ""]
-    changes = [c for c in diff_roster(roster, rows) if c.kind == "ten_goi"]
-    assert [c.text for c in changes] == ['Smith Emily (1D16): tên gọi khác "Mi Mi, Emmy"',
-                                         "Kiều Thanh Vy (1D16): bỏ tên gọi khác"]
-    apply_changes(roster, changes)
-    assert vy.ten_ghi_so == ""
-    sa = roster.by_id("HS900")
-    assert sa.aliases() == ["Mi Mi", "Emmy"] and roster.display_name(sa) == "Mi Mi"
+    roster = load_list(p).roster
+    sa, vy = roster.students
+    assert sa.aliases() == ["Mi Mi", "Emmy"] and roster.display_name(sa) == "Mi Mi" and vy.ten_ghi_so == ""
     for q in ("Mi Mi", "emmy", "MI MI"):
         r = matcher.match_name(roster, "1D16", q)
         assert r.status == matcher.OK and r.student is sa, q
-    # lưu / mở lại file dữ liệu
-    AppData(tmp_path / "DuLieu.xlsx", roster).save()
-    again = AppData.load(tmp_path / "DuLieu.xlsx").roster.by_id("HS900")
-    assert again.ten_ghi_so == "Mi Mi, Emmy"
 
 
-def test_same_full_name_letters_move_to_other_name_column(tmp_path):
-    """Em trùng cả họ tên: file mới ghi họ tên thật, chữ A/B ở cột Tên gọi khác (tên bịa).
-
-    App nhận ra đó là em cũ ("Lý Gia Hưng A" -> "Lý Gia Hưng"), không thêm em mới / bỏ em cũ."""
+def test_same_full_name_letters_in_other_name_column(tmp_path):
+    """Em trùng cả họ tên: file ghi họ tên thật, chữ A/B ở cột Tên gọi khác (tên bịa)."""
     from app.core import matcher
-    from app.core.models import Roster
 
-    roster = Roster()
-    roster.students += [Student("HS1", "1D16", "Lý Gia Hưng A", "13/03/2020", True),
-                        Student("HS2", "1D16", "Lý Gia Hưng B", "24/04/2020", True),
-                        Student("HS3", "1D16", "Kiều Thanh Vy", "15/05/2020", True)]
     p = tmp_path / "ds.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -341,11 +286,8 @@ def test_same_full_name_letters_move_to_other_name_column(tmp_path):
     ws.append(["1D16", "Lý Gia Hưng", "13/03/2020", "có", "Gia Hưng A"])
     ws.append(["1D16", "Kiều Thanh Vy", "15/05/2020", "có", None])
     wb.save(p)
-    changes = diff_roster(roster, read_cdhs(p))
-    assert sorted(c.kind for c in changes) == ["rename", "rename", "ten_goi", "ten_goi"]
-    apply_changes(roster, changes)
-    a, b = roster.by_id("HS1"), roster.by_id("HS2")
-    assert a.ho_ten == b.ho_ten == "Lý Gia Hưng"
+    roster = load_list(p).roster
+    b, a = roster.students[:2]
     assert (roster.display_name(a), roster.display_name(b)) == ("Gia Hưng A", "Gia Hưng B")
     for q, who in (("Gia Hưng A", a), ("Hưng A", a), ("Gia Hưng B", b), ("hưng B", b)):
         r = matcher.match_name(roster, "1D16", q)
@@ -364,24 +306,21 @@ def test_old_list_names_with_letter_still_match():
     assert matcher.match_name(roster, "5D19", "Quốc Bảo").status == matcher.AMBIGUOUS
 
 
-def _assert_plain(ws):
-    """Kiểu đơn giản: Times New Roman, chữ đen, viền đen, không tô nền, không cố định dòng, không lọc."""
-    assert ws.freeze_panes is None and ws.auto_filter.ref is None
-    for row in ws.iter_rows(max_row=min(ws.max_row, 6)):
-        for c in row:
-            assert c.font.name == "Times New Roman" and c.font.color.rgb == "FF000000"
-            assert c.border.left.style == "thin" and c.border.bottom.color.rgb == "FF000000"
-            assert c.fill.fill_type is None
-
-
-def test_data_file_is_plain_style(tmp_path, roster):
-    from app.excel.database import AppData
-
-    d = AppData(tmp_path / "DuLieu.xlsx", roster)
-    d.set_log(dt.date(2026, 10, 29), "1D15", True, 31, ["Tuấn Anh"])
-    d.save()
-    wb = openpyxl.load_workbook(tmp_path / "DuLieu.xlsx")
-    for name in ("HocSinh", "Lop", "NhatKy", "CaiDat"):
-        _assert_plain(wb[name])
-    again = AppData.load(tmp_path / "DuLieu.xlsx")
-    assert len(again.roster.students) == len(roster.students)
+def test_short_codes_and_lop_tinh_bt_column(tmp_path):
+    """Mã ngắn đánh theo mọi lớp trong file (giống sheet Nhóm ăn), kể cả lớp không có em ăn BT; cột "Lớp tính BT"."""
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Lớp tính BT"])
+    ws.append(["1D15", "Em Không Ăn", "01/01/2020", "Không", None])
+    ws.append(["1D16", "Em Ăn", "02/02/2020", "Có", None])
+    ws.append(["2D17", "Em Tính Lớp Khác", "03/03/2019", "Có", "1D16"])
+    g = wb.create_sheet("Nhóm ăn")
+    g.append(["Tên dòng", "Các lớp ăn chung", "Mã ghép lẻ"])
+    g.append(["cô Lan", "1.2", None])  # 1.2 = 1D16 (1.1 là 1D15 dù không có em ăn BT)
+    wb.save(p)
+    data = load_list(p)
+    assert data.roster.classes["1D16"].ma_ngan == "1.2" and "1D15" not in data.roster.classes
+    assert data.meal_groups[0].classes == ["1D16"] and not data.meal_errors
+    kid = data.roster.students[2]
+    assert kid.lop_bt == "1D16" and kid.lop_tinh == "1D16" and data.roster.si_so("1D16") == 2

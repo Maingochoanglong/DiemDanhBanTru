@@ -288,13 +288,14 @@ class DayState:
             return False
         return self.roster.si_so(code, self.template_date or self.date) != c.sheet_si_so
 
-    def scheduled_changes(self, code: str | None = None):
-        """Các em thêm/cắt có hiệu lực từ sau sheet mẫu tới hôm nay."""
-        from .schedule import changes_between
-
+    def scheduled_changes(self, code: str | None = None) -> list:
+        """Các em thêm/cắt bán trú (cột Ghi chú của file danh sách) có hiệu lực từ sau sheet mẫu tới hôm nay:
+        sĩ số đổi so với sổ hôm trước."""
         if self.exists_in_book or not self.template_date or self.template_date >= self.date:
             return []
-        return changes_between(self.roster, self.template_date, self.date, code)
+        after, until = self.template_date, self.date
+        return [s for s in self.roster.students if s.ban_tru and (not code or s.lop_tinh == code)
+                and any(d and after < d <= until for d in (s.cat_tu, s.bt_tu))]
 
     def unreported(self) -> list[str]:
         return [c for c, v in self.classes.items() if not v.reported]
@@ -322,8 +323,3 @@ def split_sheet_cell(text: str | None) -> tuple[list[str], list[str]]:
         else:
             names.extend(extract_names(chunk))
     return names, notes
-
-
-def split_names(text: str | None) -> list[str]:
-    """Tách ô tên vắng trong sổ: 'Tuấn Anh , Hồ Khánh Ngọc' -> 2 tên."""
-    return split_sheet_cell(text)[0]

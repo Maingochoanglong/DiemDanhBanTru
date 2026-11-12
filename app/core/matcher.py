@@ -14,6 +14,7 @@ import datetime as dt
 import difflib
 from dataclasses import dataclass, field
 
+from .. import config
 from .models import Roster, Student
 from .text import clean_spaces, fold, lower, parse_date, words
 
@@ -86,7 +87,7 @@ def _match_level(s: Student, initials: list[str], core: list[str]) -> float:
         if not fits(st[len(st) - n - k: len(st) - n]):
             if not fits(st[:k]):
                 return 0
-            penalty = 2.5
+            penalty = config.MATCH_INITIAL_PENALTY
     level = _tail_level(st, core, n, bool(initials))
     return level - penalty if level else 0
 
@@ -159,11 +160,11 @@ def match_name(roster: Roster, cls: str, query: str, day: dt.date | None = None)
 
     elsewhere = _find([s for s in roster.students if s.lop != cls and s.lop_tinh != cls], query)
     if elsewhere:
-        return MatchResult(query, OTHER_CLASS, None, elsewhere[:8])
+        return MatchResult(query, OTHER_CLASS, None, elsewhere[:config.OTHER_CLASS_MAX])
     return MatchResult(query, NOT_FOUND, None, suggest(roster, cls, query, day))
 
 
-def suggest(roster: Roster, cls: str, query: str, day: dt.date | None = None, n: int = 5) -> list[Student]:
+def suggest(roster: Roster, cls: str, query: str, day: dt.date | None = None, n: int = config.SUGGEST_MAX) -> list[Student]:
     """Gợi ý em bán trú có tên gần giống (gõ sai chính tả)."""
     q = fold(query)
     k = max(1, len(q.split(" ")))
@@ -172,7 +173,7 @@ def suggest(roster: Roster, cls: str, query: str, day: dt.date | None = None, n:
     for s in pool:
         tail = " ".join(fold(s.ho_ten).split(" ")[-k:])
         ratio = difflib.SequenceMatcher(None, q, tail).ratio()
-        if ratio >= 0.6:
+        if ratio >= config.FUZZY_MIN_RATIO:
             scored.append((ratio, s))
     scored.sort(key=lambda x: -x[0])
     return [s for _, s in scored[:n]]

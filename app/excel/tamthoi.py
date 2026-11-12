@@ -1,6 +1,6 @@
 """Sổ tạm: bản sao sổ điểm danh tự lưu sau mỗi thao tác, phòng mất điện / tắt máy đột ngột.
 
-Tên file = tên sổ đang dùng + " tamthoi" (vd. "SO DIEM DANH T10 tamthoi.xlsx"), nằm cạnh sổ chính.
+Tên file = tên sổ đang dùng + " " + config.TEMP_TAG (vd. "SO DIEM DANH T10 tamthoi.xlsx"), nằm cạnh sổ chính.
 File nhỏ (vài KB), không chép cả cuốn sổ, nên lưu tạm sau mỗi thao tác rất nhẹ:
 - sheet "Dang diem danh": lớp, đã báo, số vắng, tên vắng, ghi chú (mở bằng Excel xem được ngay);
 - sheet ẩn TAMTHOI ghi lại đủ thao tác của ngày đó để app khôi phục chính xác.
@@ -10,17 +10,15 @@ Bấm Lưu vào sổ thì app ghi sổ chính rồi xóa sổ tạm.
 from __future__ import annotations
 
 import datetime as dt
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
 
+from .. import config
 from ..core.text import fmt_date, parse_date
-from .files import FileLockedError, is_locked
 
 SHEET = "TAMTHOI"
-TAG = "tamthoi"
 COLS = ["Lớp", "Đã báo", "Vắng (mã HS)", "Tên ghi tay", "Bỏ vắng tự động (mã HS)", "Ghi chú",
         "Sĩ số trong sổ", "Giữ sĩ số sổ", "GV báo hiện diện", "GV báo sĩ số", "Tên không ăn BT"]
 SEP = "; "
@@ -28,11 +26,7 @@ SEP = "; "
 
 def temp_path(book: str | Path) -> Path:
     book = Path(book)
-    return book.with_name(f"{book.stem} {TAG}{book.suffix}")
-
-
-def is_temp(path: str | Path) -> bool:
-    return Path(path).stem.lower().endswith(TAG)
+    return book.with_name(f"{book.stem} {config.TEMP_TAG}{book.suffix}")
 
 
 def _join(items) -> str:
@@ -77,20 +71,10 @@ def build(state, book: str | Path, now: dt.datetime | None = None):
         names = state.absent_names(code)
         c = state.cd(code)
         ws.append([code, "x" if c.reported else "", len(names), ", ".join(names), c.note or None])
-    for col, w in zip("ABCDE", (8, 8, 7, 70, 40), strict=True):
+    for col, w in zip("ABCDE", config.TEMP_COL_WIDTHS, strict=True):
         ws.column_dimensions[col].width = w
     write_state_sheet(wb, state, book, now)
     return wb
-
-
-def save(wb, path: str | Path) -> None:
-    """Ghi sổ tạm (ghi ra file phụ rồi thay thế, không sao lưu bản cũ)."""
-    path = Path(path)
-    if is_locked(path):
-        raise FileLockedError(str(path))
-    tmp = path.with_name(f".{path.stem}.ghi{path.suffix}")
-    wb.save(str(tmp))
-    os.replace(tmp, path)
 
 
 @dataclass

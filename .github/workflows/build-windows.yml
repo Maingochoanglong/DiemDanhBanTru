@@ -34,7 +34,7 @@ jobs:
         run: python -m pytest -q
 
       - name: Dựng file .exe
-        # giao diện web (HTML/Bootstrap) nằm trong app/web/static: đóng kèm vào file .exe.
+        # giao diện web (Vue + PrimeVue, đóng kèm sẵn) nằm trong app/web/static: đóng kèm vào file .exe.
         # Kèm thông tin phiên bản (tên app, mô tả) và không nén UPX: Windows ít cảnh báo nhầm hơn.
         run: |
           python packaging/make_version_file.py build/version_info.txt

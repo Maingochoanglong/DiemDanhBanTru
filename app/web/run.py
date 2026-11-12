@@ -1,161 +1,145 @@
-"""Mở giao diện web trong cửa sổ app (pywebview; trên Windows dùng Microsoft Edge WebView2)."""
+"""Mở app: chạy máy chủ nội bộ (server.py) rồi mở giao diện trong trình duyệt (Edge/Chrome).
+
+App tự thoát khi đóng thẻ trình duyệt cuối cùng, hoặc bấm nút Thoát trong giao diện.
+Mở app lần nữa khi đang chạy: chỉ mở thêm thẻ trình duyệt.
+"""
 
 from __future__ import annotations
 
+import json
+import queue
 import sys
-from pathlib import Path
+import threading
+import time
+import urllib.request
+import webbrowser
 
+from .. import config, settings
+from ..build_info import BUILD
 from ..service import Workspace
 from .api import Api
-
-
-def static_dir() -> Path:
-    """Thư mục giao diện: cạnh mã nguồn, hoặc trong file .exe (PyInstaller giải nén vào sys._MEIPASS)."""
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        return Path(base) / "app" / "web" / "static"
-    return Path(__file__).with_name("static")
-
-
-class WebviewDialogs:
-    """Hộp chọn/lưu file của Windows, mở qua cửa sổ pywebview."""
-
-    def __init__(self):
-        self.window = None
-
-    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
-        import webview
-
-        res = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=types)
-        return res[0] if res else None
-
-    def save_file(self, title: str, name: str) -> str | None:
-        import webview
-
-        res = self.window.create_file_dialog(webview.SAVE_DIALOG, save_filename=name,
-                                             file_types=("Excel (*.xlsx)",))
-        if not res:
-            return None
-        return res if isinstance(res, str) else res[0]
-
-    def choose_folder(self, title: str) -> str | None:
-        return _webview_folder(self.window)
-
-
-def _webview_folder(window) -> str | None:
-    import webview
-
-    res = window.create_file_dialog(webview.FOLDER_DIALOG)
-    if not res:
-        return None
-    return res[0] if isinstance(res, (list, tuple)) else str(res)
+from .server import Clients, Server, create_app
 
 
 class TkDialogs:
-    """Hộp chọn file dự phòng khi chạy trong trình duyệt (máy không có WebView2)."""
+    """Hộp chọn/lưu file của Windows (tkinter). Chỉ gọi ở luồng chính (xem MainThreadDialogs)."""
 
     def _root(self):
         import tkinter as tk
 
         root = tk.Tk()
         root.withdraw()
-        root.attributes("-topmost", True)
+        root.attributes("-topmost", True)  # hiện trên cửa sổ trình duyệt
+        root.lift()
+        root.focus_force()
         return root
 
     def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
+        """types: vd. ("Excel (*.xlsx;*.xls)",) -> chỉ hiện các file đó."""
         from tkinter import filedialog
 
+        filetypes = [(t.split("(")[0].strip(), t[t.find("(") + 1:t.rfind(")")].replace(";", " ")) for t in types]
         root = self._root()
         try:
-            return filedialog.askopenfilename(parent=root, title=title,
-                                              filetypes=[("Excel", "*.xlsx *.xls"), ("Tất cả", "*.*")]) or None
-        finally:
-            root.destroy()
-
-    def save_file(self, title: str, name: str) -> str | None:
-        from tkinter import filedialog
-
-        root = self._root()
-        try:
-            return filedialog.asksaveasfilename(parent=root, title=title, initialfile=name, defaultextension=".xlsx",
-                                                filetypes=[("Excel", "*.xlsx")]) or None
-        finally:
-            root.destroy()
-
-    def choose_folder(self, title: str) -> str | None:
-        from tkinter import filedialog
-
-        root = self._root()
-        try:
-            return filedialog.askdirectory(parent=root, title=title) or None
+            return filedialog.askopenfilename(parent=root, title=title, filetypes=filetypes or [("Excel", "*.xlsx")]) or None
         finally:
             root.destroy()
 
 
-def has_webview2() -> bool:
-    """Máy Windows có Microsoft Edge WebView2 Runtime chưa (Windows 11 có sẵn, Windows 10 đa số có)."""
-    if sys.platform != "win32":
-        return True
-    import winreg
+class MainThreadDialogs:
+    """Hộp chọn file chạy ở luồng chính; máy chủ web (luồng khác) gửi việc sang và chờ kết quả."""
 
-    key = r"SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
-    for hive, path in ((winreg.HKEY_LOCAL_MACHINE, key.replace("SOFTWARE\\", "SOFTWARE\\WOW6432Node\\")),
-                       (winreg.HKEY_LOCAL_MACHINE, key), (winreg.HKEY_CURRENT_USER, key)):
-        try:
-            with winreg.OpenKey(hive, path) as k:
-                ver, _ = winreg.QueryValueEx(k, "pv")
-                if ver and ver != "0.0.0.0":
-                    return True
-        except OSError:
-            continue
-    return False
+    def __init__(self):
+        self._jobs: queue.Queue = queue.Queue()
+        self._tk = TkDialogs()
+
+    def _call(self, name: str, *args):
+        done, box = threading.Event(), {}
+        self._jobs.put((getattr(self._tk, name), args, box, done))
+        done.wait()
+        if "error" in box:
+            raise box["error"]
+        return box.get("result")
+
+    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
+        return self._call("open_file", title, types)
+
+    def loop(self, stop: threading.Event) -> None:
+        """Chạy ở luồng chính cho tới khi app thoát."""
+        while not stop.is_set():
+            try:
+                fn, args, box, done = self._jobs.get(timeout=config.DIALOG_POLL)
+            except queue.Empty:
+                continue
+            try:
+                box["result"] = fn(*args)
+            except Exception as e:  # noqa: BLE001
+                box["error"] = e
+            finally:
+                done.set()
 
 
-def run_in_browser(ws: Workspace) -> None:
-    """Dự phòng: mở giao diện bằng trình duyệt (Edge/Chrome) qua máy chủ nội bộ 127.0.0.1."""
-    import webbrowser
+class BrowserApi(Api):
+    """Api + nút Thoát (giao diện đã hỏi lưu trước): tắt máy chủ."""
 
-    from .devserver import make_server
-
-    srv = make_server(Api(ws, TkDialogs()), 0)
-    webbrowser.open(f"http://127.0.0.1:{srv.server_address[1]}/index.html")
-    srv.serve_forever()
-
-
-class AppApi(Api):
-    """Api + việc của cửa sổ: thoát app sau khi giao diện đã hỏi lưu."""
-
-    def __init__(self, ws: Workspace, dialogs: WebviewDialogs):
+    def __init__(self, ws: Workspace, dialogs, stop: threading.Event):
         super().__init__(ws, dialogs)
-        self._win_dialogs = dialogs
-        self._quitting = False
+        self._stop = stop
 
-    def quit(self) -> None:
-        self._quitting = True
-        self._win_dialogs.window.destroy()
+    def quit(self) -> dict:
+        threading.Timer(config.QUIT_DELAY, self._stop.set).start()  # trả lời giao diện xong mới tắt
+        return {"ok": ""}
 
 
-def run(ws: Workspace, debug: bool = False) -> None:
-    if not has_webview2():
-        run_in_browser(ws)
+def _open(req, timeout: float):
+    return urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=timeout)
+
+
+def running_app(port: int) -> dict | None:
+    """App đang chạy sẵn ở cổng này (mở app lần thứ hai): trả về {"app", "build"}."""
+    try:
+        with _open(f"http://{config.HOST}:{port}/ping", config.PING_TIMEOUT) as r:
+            info = json.loads(r.read())
+        return info if info.get("app") == config.APP_ID else None
+    except (OSError, ValueError):
+        return None
+
+
+def _ask_quit(port: int) -> None:
+    """Bản .exe khác còn chạy: bảo nó thoát (thay đổi chưa lưu vẫn còn trong sổ tạm)."""
+    req = urllib.request.Request(f"http://{config.HOST}:{port}/api/quit", data=b"[]", method="POST",
+                                 headers={config.API_HEADER: "1", "Content-Type": "application/json"})
+    try:
+        _open(req, config.QUIT_TIMEOUT).read()
+    except OSError:
         return
-    import webview
+    deadline = time.monotonic() + config.OLD_APP_WAIT
+    while running_app(port) is not None and time.monotonic() < deadline:
+        time.sleep(config.DIALOG_POLL)
 
-    dialogs = WebviewDialogs()
-    api = AppApi(ws, dialogs)
-    index = static_dir() / "index.html"
-    win = webview.create_window("Điểm danh bán trú", url=str(index), js_api=api,
-                                width=1366, height=800, min_size=(1000, 620), maximized=True,
-                                text_select=True)
-    dialogs.window = win
 
-    def on_closing():
-        # còn thay đổi chưa lưu: để giao diện hỏi (Lưu rồi thoát / Không lưu / Ở lại)
-        if api._quitting or not (ws.dirty or ws.data_dirty):
-            return True
-        win.evaluate_js("askClose()")
-        return False
+def run(ws: Workspace, port: int | None = None, open_browser: bool = True) -> None:
+    """port: mặc định lấy ở CaiDat.txt (khóa cong)."""
+    port = settings.port(ws.settings) if port is None else port
+    other = running_app(port)
+    if other is not None:
+        if other.get("build") == BUILD:
+            if open_browser:
+                webbrowser.open(f"http://{config.HOST}:{port}/")
+            return
+        _ask_quit(port)
 
-    win.events.closing += on_closing
-    webview.start(gui="edgechromium" if sys.platform == "win32" else None, http_server=True, debug=debug,
-                  private_mode=False)
+    stop = threading.Event()
+    dialogs = MainThreadDialogs()
+    srv = Server(create_app(BrowserApi(ws, dialogs, stop), Clients(on_empty=stop.set)), port).start()
+    if sys.stdout:
+        print(f"Điểm danh bán trú đang chạy tại {srv.url}  (đóng thẻ trình duyệt để thoát)", flush=True)
+    if open_browser:
+        webbrowser.open(srv.url)
+    try:
+        dialogs.loop(stop)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.stop()
+        ws.autosave()  # thay đổi chưa lưu vào sổ: chắc chắn đã có trong sổ tạm

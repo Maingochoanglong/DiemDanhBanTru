@@ -1,1 +1,1 @@
-"""Giao diện web (HTML + Bootstrap 5) chạy trong cửa sổ app nhờ pywebview."""
+"""Giao diện web: Vue 3 + PrimeVue (static/) chạy trong trình duyệt, máy chủ nội bộ FastAPI (server.py)."""

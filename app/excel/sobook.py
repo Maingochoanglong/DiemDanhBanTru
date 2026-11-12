@@ -20,6 +20,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from ..core.day import DayState
 from ..core.meals import MealGroup, MealLayout, MealRow, MealSummary
 from ..core.text import clean_spaces, fmt_date, fold, norm_class
+from .. import config
 from .files import safe_save
 
 _REF = re.compile(r"(?<![A-Z:$])\$?([A-Z]{1,3})\$?(\d+)(?!\s*:)(?![\d(])")
@@ -55,8 +56,8 @@ class ClassRecord:
 def analyze(ws: Worksheet) -> SheetInfo | None:
     header_row = None
     cols: dict[str, int] = {}
-    for r in range(1, min(ws.max_row, 20) + 1):
-        for c in range(1, min(ws.max_column, 30) + 1):
+    for r in range(1, min(ws.max_row, config.BOOK_HEADER_ROWS) + 1):
+        for c in range(1, min(ws.max_column, config.BOOK_SCAN_COLS) + 1):
             v = ws.cell(r, c).value
             if isinstance(v, str) and "ten hoc sinh vang" in fold(v):
                 header_row, cols["ten"] = r, c
@@ -99,12 +100,12 @@ def analyze(ws: Worksheet) -> SheetInfo | None:
 
     info = SheetInfo(ws, header_row, cols, class_rows, total_row)
     for r in range(1, header_row):
-        for c in range(1, min(ws.max_column, 30) + 1):
+        for c in range(1, min(ws.max_column, config.BOOK_SCAN_COLS) + 1):
             v = ws.cell(r, c).value
             if isinstance(v, str) and "ngay" in fold(v) and _TITLE_DATE.search(v):
                 info.title_cell = ws.cell(r, c).coordinate
-    for r in range(total_row + 1, min(ws.max_row, total_row + 6) + 1):
-        for c in range(1, min(ws.max_column, 30) + 1):
+    for r in range(total_row + 1, min(ws.max_row, total_row + config.BOOK_FOOTER_ROWS) + 1):
+        for c in range(1, min(ws.max_column, config.BOOK_SCAN_COLS) + 1):
             v = ws.cell(r, c).value
             if isinstance(v, str) and "thang" in fold(v) and "nam" in fold(v):
                 info.sign_cell = ws.cell(r, c).coordinate
@@ -217,7 +218,7 @@ def _ghep_cols(old: MealLayout, meal_col: int) -> tuple[str, str, str]:
         if r.l_cell and r.m_cell and r.o_cell:
             col = lambda a: re.match(r"[A-Z]+", a).group()  # noqa: E731
             return col(r.l_cell), col(r.m_cell), col(r.o_cell)
-    return tuple(get_column_letter(meal_col + k) for k in (3, 4, 6))  # như sổ mẫu: I -> L, M, O
+    return tuple(get_column_letter(meal_col + k) for k in config.MEAL_COL_OFFSETS)  # như sổ mẫu: I -> L, M, O
 
 
 def _strip_blanks(groups: list[MealGroup]) -> list[MealGroup]:
@@ -484,8 +485,20 @@ def load_book(path: str | Path):
     return openpyxl.load_workbook(str(path))
 
 
-def save_book(wb, path: str | Path, backup_dir: str | Path | None = None) -> None:
-    safe_save(wb, path, backup_dir)
+
+
+def saved_sheets(wb) -> set[str]:
+    p = next((p for p in wb.custom_doc_props.props if p.name == config.SAVED_PROP), None)
+    return set(str(p.value).split(",")) if p else set()
+
+
+def mark_saved(wb, title: str) -> None:
+    from openpyxl.packaging.custom import StringProperty
+
+    names = saved_sheets(wb) | {title}
+    if config.SAVED_PROP in wb.custom_doc_props.names:
+        del wb.custom_doc_props[config.SAVED_PROP]
+    wb.custom_doc_props.append(StringProperty(name=config.SAVED_PROP, value=",".join(sorted(names))))
 
 
 def month_file_name(prev: Path, month: int) -> Path:
@@ -520,27 +533,3 @@ def new_month_book(prev_path: str | Path, day: dt.date, new_path: str | Path) ->
         set_dates(info, day)
     select_only(wb, tpl)
     safe_save(wb, new_path)
-
-
-def find_month_file(folder: str | Path, month: int, year: int | None = None) -> Path | None:
-    folder = Path(folder)
-    if not folder.is_dir():
-        return None
-    cands = []
-    for p in folder.glob("*.xlsx"):
-        if p.name.startswith(("~$", ".")) or p.stem.lower().endswith("tamthoi"):
-            continue
-        if re.search(rf"T0?{month}(?!\d)", p.stem, re.IGNORECASE):
-            cands.append(p)
-    if not cands:
-        return None
-    if year and len(cands) > 1:
-        for p in cands:
-            try:
-                wb = openpyxl.load_workbook(str(p), read_only=False)
-                bm = book_month(wb, p)
-                if bm and bm == (month, year):
-                    return p
-            except Exception:  # noqa: BLE001 - file hỏng thì bỏ qua
-                continue
-    return sorted(cands, key=lambda p: p.stat().st_mtime)[-1]

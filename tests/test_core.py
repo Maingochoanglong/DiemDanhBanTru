@@ -1,7 +1,7 @@
 import datetime as dt
 
 from app.core import matcher
-from app.core.day import DayState, split_names
+from app.core.day import DayState, split_sheet_cell
 from app.core.models import Student
 from app.core.meals import MealLayout, MealRow
 from app.core.names import compute_display_names, short_name
@@ -118,7 +118,7 @@ def test_load_from_sheet_text(roster):
     res = st.load_class_from_sheet("1D16", 5, "Gia Hưng A, thư, Bé Xíu", "")
     assert [r.status for r in res] == [matcher.OK, matcher.OK, matcher.NOT_FOUND]
     assert st.absent_names("1D16") == ["Gia Hưng A", "Minh Thư", "Bé Xíu"]
-    assert split_names("Tuấn Anh , Hồ Khánh Ngọc") == ["Tuấn Anh", "Hồ Khánh Ngọc"]
+    assert split_sheet_cell("Tuấn Anh , Hồ Khánh Ngọc")[0] == ["Tuấn Anh", "Hồ Khánh Ngọc"]
 
 
 def test_meals_with_ghep(roster):
@@ -204,7 +204,6 @@ def test_match_partial_and_joined(roster):
     roster.students.append(roster.students[0].__class__("HSX1", "1D15", "Bạch Vi Vi", "01/01/2020", True))
     roster.students.append(roster.students[0].__class__("HSX2", "1D15", "Hà Bùi Minh Triết", "01/01/2020", True))
     roster.students.append(roster.students[0].__class__("HSX3", "1D15", "Lương Minh Triết", "01/01/2020", True))
-    roster.invalidate()
     m = lambda q: matcher.match_name(roster, "1D15", q, DAY)  # noqa: E731
     assert m("Bạch ViVi").student.id == "HSX1"  # viết dính
     assert m("Hà Triết").student.id == "HSX2"  # họ + tên, bỏ tên đệm
@@ -233,7 +232,6 @@ def test_initial_matches_family_name_and_asks_when_two_fit(roster):
     # 2 em chỉ khớp họ như nhau -> hỏi chọn em, không tự chọn
     for i, name in enumerate(("Hà Văn Bảo Ngọc", "Hà Thị Bảo Ngọc")):
         roster.students.append(Student(id=f"HS910{i}", lop="1D16", ho_ten=name, ngay_sinh="01/01/2020", ban_tru=True))
-    roster.invalidate()
     assert matcher.match_name(roster, "1D15", "K. Bảo Ngọc", day).student.ho_ten == "Kha Bảo Ngọc"
     r = matcher.match_name(roster, "1D16", "H. Bảo Ngọc", day)
     assert r.status == matcher.AMBIGUOUS and len(r.candidates) == 2
@@ -262,3 +260,29 @@ def test_names_that_look_like_stop_words():
     assert extract_names("vang Minh Anh, nghi phep Bao Ngoc") == ["Minh Anh", "Bao Ngoc"]
     assert extract_names("Vang Minh Anh") == ["Minh Anh"]
     assert extract_names("vắng: Duy kien, quỳnh anh") == ["Duy kien", "quỳnh anh"]
+
+
+THU, FRI = dt.date(2026, 10, 29), dt.date(2026, 10, 30)
+
+
+def test_scheduled_change_is_not_a_si_so_conflict(roster):
+    """Em "cắt từ 30/10" (cột Ghi chú): sĩ số hôm nay tự giảm, không hỏi sĩ số khác sổ."""
+    a = roster.students[0]
+    a.cat_tu = FRI
+    st = DayState.new(FRI, roster, roster.class_codes())
+    st.template_date = THU
+    st.cd("1D15").sheet_si_so = 6  # sổ hôm qua ghi 6 em
+    assert st.si_so("1D15") == 5 and not st.si_so_mismatch("1D15")
+    assert st.scheduled_changes("1D15") == [a]
+    st.cd("1D15").sheet_si_so = 7  # sổ lệch thật với danh sách
+    assert st.si_so_mismatch("1D15")
+
+
+def test_friday_half_day_absences(roster):
+    for kid in roster.students[1:3]:
+        kid.cat_thu6 = True  # "cắt thứ 6"
+    assert DayState.new(THU, roster, ["1D15"]).absent_count("1D15") == 0
+    fri = DayState.new(FRI, roster, ["1D15"])
+    assert fri.absent_count("1D15") == 2
+    fri.mark_full("1D15")  # GV báo "đủ" vẫn trừ các em nghỉ thứ 6
+    assert fri.absent_count("1D15") == 2
