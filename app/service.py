@@ -281,8 +281,8 @@ class Workspace:
                     m_book[mr.code] = int(v)
             if m_book:
                 st.picks_from_book(info.meal, m_book)
-        if ws is not None and any(rec.names for rec in recs.values()):
-            # ngày đã điểm danh trong sổ (sổ có tên vắng): coi như các lớp đã báo.
+        if ws is not None and (ws.title in sobook.saved_sheets(wb) or any(rec.names for rec in recs.values())):
+            # ngày app đã lưu (kể cả lớp nào cũng đủ), hoặc đã điểm danh tay trong sổ (có tên vắng): các lớp đã báo.
             # Sheet tạo sẵn còn trống thì các lớp vẫn "chưa báo": đủ hay vắng do giáo vụ bấm.
             for c in st.classes.values():
                 c.reported = True
@@ -359,6 +359,7 @@ class Workspace:
         wb = self._book(self.book_path)  # bản đã đọc khi mở ngày (đọc lại nếu file đã bị sửa từ đó)
         self._wb_cache = None  # bản này sắp bị sửa: lưu lỗi thì lần sau đọc lại từ file
         wb, ws = _render_day(self.book_path, self.state, self._rebuild_meal_table, wb=wb)
+        sobook.mark_saved(wb, ws.title)
         safe_save(wb, self.book_path)
         self._wb_cache = ((str(self.book_path), Path(self.book_path).stat().st_mtime_ns), wb)
         self.discard_temp()

@@ -36,12 +36,13 @@ class TkDialogs:
         return root
 
     def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
+        """types: vd. ("Excel (*.xlsx;*.xls)",) -> chỉ hiện các file đó."""
         from tkinter import filedialog
 
+        filetypes = [(t.split("(")[0].strip(), t[t.find("(") + 1:t.rfind(")")].replace(";", " ")) for t in types]
         root = self._root()
         try:
-            return filedialog.askopenfilename(parent=root, title=title,
-                                              filetypes=[("Excel", "*.xlsx *.xls"), ("Tất cả", "*.*")]) or None
+            return filedialog.askopenfilename(parent=root, title=title, filetypes=filetypes or [("Excel", "*.xlsx")]) or None
         finally:
             root.destroy()
 

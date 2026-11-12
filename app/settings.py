@@ -5,6 +5,7 @@ Mỗi dòng "khóa = giá trị"; dòng bắt đầu bằng # là chú thích. C
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -17,9 +18,23 @@ KEYS = {
 
 
 def default_path() -> Path:
-    """Cạnh file .exe; chạy từ mã nguồn thì ở thư mục gốc của repo."""
+    """Cạnh file .exe; chạy từ mã nguồn thì ở thư mục gốc của repo.
+    Thư mục đó không ghi được (vd. Program Files) thì dùng %APPDATA%\\DiemDanhBanTru."""
     base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
+    if not _writable(base):
+        base = Path(os.environ.get("APPDATA") or Path.home() / ".config") / "DiemDanhBanTru"
     return base / FILE_NAME
+
+
+def _writable(folder: Path) -> bool:
+    """Thử ghi thật (trên Windows os.access không xét quyền thư mục, vd. Program Files)."""
+    probe = folder / ".ghi_thu"
+    try:
+        probe.write_text("")
+        probe.unlink()
+        return True
+    except OSError:
+        return False
 
 
 def load(path: Path) -> dict[str, str]:

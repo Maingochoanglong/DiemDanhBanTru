@@ -46,9 +46,10 @@ Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh sổ, có khi đ
 - **Bán trú**: *Có* / *Không*. Dùng file danh sách học sinh toàn trường cũng được, khi đó **em tô chữ đỏ là có ăn bán trú**.
 - **Tên gọi khác**: tên GV hay báo khác tên thật (vd. *Mi Mi*). Nhiều tên thì cách nhau dấu phẩy, tên đầu được ghi vào sổ. Em **trùng cả họ và tên** trong cùng lớp thì ghi *Gia Hưng A*, *Gia Hưng B*; để trống thì app tự đặt A/B theo ngày sinh.
 - **Ăn ghép**: nhóm ăn của em lớp ghép (mục 5).
+- **Lớp tính BT** (cột tùy chọn): em học lớp này nhưng tính bán trú ở lớp khác thì ghi lớp đó (vd. *1D16*).
 - **Ghi chú**: lịch thêm / cắt bán trú, ghi ngắn, nhiều ý cách nhau dấu phẩy:
   - `cắt thứ 6`: mỗi thứ 6 em tự được tính vắng (kể cả khi GV báo "đủ");
-  - `cắt từ 30/10`: từ ngày 30/10 em thôi ăn, sĩ số tự giảm;
+  - `cắt từ 30/10` (hoặc `thôi ăn từ 30/10`, `nghỉ ăn từ 30/10`): từ ngày 30/10 em thôi ăn, sĩ số tự giảm;
   - `ăn từ 3/11`: từ ngày 3/11 em bắt đầu ăn, sĩ số tự tăng (cột Bán trú ghi *Không* cũng được).
 
   Ghi kiểu *T11 cắt*, *tháng 11 ăn BT*, *30/10/2026* hay không dấu đều được. Chữ khác (vd. *dị ứng tôm*) app bỏ qua. Trang **Học sinh**, cột **App hiểu là**, cho biết app đã hiểu ghi chú thế nào.

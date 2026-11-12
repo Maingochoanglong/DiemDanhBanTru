@@ -3,8 +3,8 @@
 Hai dạng file:
 - file danh sách học sinh toàn trường: em tô chữ đỏ là ăn bán trú;
 - file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2),
-  cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ)
-  và cột "Ghi chú" (vd. "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11": xem core/notes.py).
+  cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ), cột "Lớp tính BT" (em tính bán trú
+  ở lớp khác lớp học) và cột "Ghi chú" (vd. "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11": xem core/notes.py).
 
 File gọn có thể có thêm sheet "Nhóm ăn": mỗi dòng là một dòng bảng suất ăn trong sổ
 (Tên dòng | Các lớp ăn chung | Mã ghép lẻ). App dựng bảng suất ăn của tờ ngày mới theo sheet này.
@@ -34,6 +34,7 @@ class RosterRow:
     ghep: str | None = None  # None = file không có cột "Ghép lớp"
     ten_goi: str | None = None  # None = file không có cột "Tên gọi khác"
     ghi_chu: str = ""
+    lop_bt: str = ""
 
     @property
     def key(self) -> tuple[str, str]:
@@ -52,13 +53,15 @@ def _find_columns(header: list[str]) -> dict[str, int] | None:
     cols: dict[str, int] = {}
     for i, h in enumerate(header):
         f = fold(str(h or ""))
-        if "lop" not in cols and ("ten lop" in f or f in ("lop", "lop hoc")):
+        if "lop" not in cols and ("ten lop" in f or f in ("lop", "lop hoc")):  # (không nhận nhầm cột "Lớp tính BT")
             cols["lop"] = i
         elif f in ("ho ten", "ho va ten", "ho ten hoc sinh", "ho va ten hoc sinh") and "ten" not in cols:
             cols["ten"] = i
         elif (f.startswith("ngay sinh") or (f.startswith("ngay") and f.endswith("sinh"))) and "ns" not in cols:
             # "Ngày sinh", "Ngày tháng năm sinh"
             cols["ns"] = i
+        elif f in ("lop tinh bt", "lop tinh ban tru", "lop bt") and "lopbt" not in cols:  # em tính bán trú ở lớp khác
+            cols["lopbt"] = i
         elif f.startswith("ghi chu") and "gc" not in cols:
             cols["gc"] = i
         elif (f.startswith(("an ban tru", "ban tru")) or f in ("bt", "an bt")) and "bt" not in cols:
@@ -122,7 +125,8 @@ def _read_xls(path: Path) -> list[RosterRow]:
                 ghep = _fmt_ghep(sh.cell_value(r, cols["ghep"])) if "ghep" in cols else None
                 goi = clean_spaces(str(sh.cell_value(r, cols["goi"]))) if "goi" in cols else None
                 gc = clean_spaces(str(sh.cell_value(r, cols["gc"]))) if "gc" in cols else ""
-                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc))
+                lbt = norm_class(str(sh.cell_value(r, cols["lopbt"]))) if "lopbt" in cols else ""
+                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc, lbt))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -170,7 +174,8 @@ def _read_xlsx(path: Path) -> list[RosterRow]:
                 ghep = _fmt_ghep(ws.cell(r, cols["ghep"] + 1).value) if "ghep" in cols else None
                 goi = clean_spaces(str(ws.cell(r, cols["goi"] + 1).value or "")) if "goi" in cols else None
                 gc = clean_spaces(str(ws.cell(r, cols["gc"] + 1).value or "")) if "gc" in cols else ""
-                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc))
+                lbt = norm_class(str(ws.cell(r, cols["lopbt"] + 1).value or "")) if "lopbt" in cols else ""
+                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc, lbt))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -305,7 +310,7 @@ class ListData:
 
 def _student(row: RosterRow, sid: str, today: dt.date) -> Student:
     s = Student(sid, row.lop, row.ho_ten, row.ngay_sinh, ban_tru=row.red, ten_ghi_so=row.ten_goi or "",
-                an_ghep=row.ghep or "", ghi_chu=row.ghi_chu)
+                lop_bt=row.lop_bt if row.lop_bt != row.lop else "", an_ghep=row.ghep or "", ghi_chu=row.ghi_chu)
     for key, value in student_note(row.ghi_chu, today).items():  # "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11"
         setattr(s, key, value)
     return s
@@ -324,8 +329,9 @@ def load_list(path: str | Path, today: dt.date | None = None) -> ListData:
             sid, n = f"{row.lop}|{row.ho_ten}|{row.ngay_sinh}|{n}", n + 1
         seen.add(sid)
         roster.students.append(_student(row, sid, today))
-    codes = sorted({s.lop_tinh for s in roster.students if s.ban_tru}, key=class_sort_key)
-    roster.classes = {c: ClassInfo(c, ma_ngan=ma) for c, ma in short_codes(codes).items()}
+    # mã ngắn (1D16 -> 1.2) đánh theo mọi lớp trong file, giống cách đọc mã ở sheet Nhóm ăn (check_meal_groups)
+    short = short_codes(sorted({r.lop for r in rows} | {s.lop_tinh for s in roster.students}))
+    roster.classes = {c: ClassInfo(c, ma_ngan=short[c]) for c in {s.lop_tinh for s in roster.students if s.ban_tru}}
     data = ListData(roster)
     raw = read_meal_groups(path)
     if raw is not None:
@@ -333,7 +339,7 @@ def load_list(path: str | Path, today: dt.date | None = None) -> ListData:
         for s in roster.students:
             if s.ban_tru and s.an_ghep:
                 kid_codes.setdefault(s.lop_tinh, set()).add(s.an_ghep)
-        groups, data.meal_errors, data.meal_warnings = check_meal_groups(raw, sorted({r.lop for r in rows}), kid_codes)
+        groups, data.meal_errors, data.meal_warnings = check_meal_groups(raw, sorted(short), kid_codes)
         if not data.meal_errors and any(not g.blank for g in groups):
             data.meal_groups = groups
     return data

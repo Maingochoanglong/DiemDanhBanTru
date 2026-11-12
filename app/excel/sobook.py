@@ -484,6 +484,23 @@ def load_book(path: str | Path):
     return openpyxl.load_workbook(str(path))
 
 
+SAVED_PROP = "DiemDanhBanTru_DaLuu"  # thuộc tính ẩn của file sổ: các sheet app đã lưu (đã điểm danh xong)
+
+
+def saved_sheets(wb) -> set[str]:
+    p = next((p for p in wb.custom_doc_props.props if p.name == SAVED_PROP), None)
+    return set(str(p.value).split(",")) if p else set()
+
+
+def mark_saved(wb, title: str) -> None:
+    from openpyxl.packaging.custom import StringProperty
+
+    names = saved_sheets(wb) | {title}
+    if SAVED_PROP in wb.custom_doc_props.names:
+        del wb.custom_doc_props[SAVED_PROP]
+    wb.custom_doc_props.append(StringProperty(name=SAVED_PROP, value=",".join(sorted(names))))
+
+
 def month_file_name(prev: Path, month: int) -> Path:
     stem = prev.stem
     if re.search(r"T\d{1,2}(?!\d)", stem):

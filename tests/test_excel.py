@@ -294,3 +294,23 @@ def test_old_list_names_with_letter_still_match():
                         Student("HS2", "5D19", "Đinh Quốc Bảo B", "21/05/2016", True)]
     assert matcher.match_name(roster, "5D19", "Bảo B").student.id == "HS2"
     assert matcher.match_name(roster, "5D19", "Quốc Bảo").status == matcher.AMBIGUOUS
+
+
+def test_short_codes_and_lop_tinh_bt_column(tmp_path):
+    """Mã ngắn đánh theo mọi lớp trong file (giống sheet Nhóm ăn), kể cả lớp không có em ăn BT; cột "Lớp tính BT"."""
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Lớp tính BT"])
+    ws.append(["1D15", "Em Không Ăn", "01/01/2020", "Không", None])
+    ws.append(["1D16", "Em Ăn", "02/02/2020", "Có", None])
+    ws.append(["2D17", "Em Tính Lớp Khác", "03/03/2019", "Có", "1D16"])
+    g = wb.create_sheet("Nhóm ăn")
+    g.append(["Tên dòng", "Các lớp ăn chung", "Mã ghép lẻ"])
+    g.append(["cô Lan", "1.2", None])  # 1.2 = 1D16 (1.1 là 1D15 dù không có em ăn BT)
+    wb.save(p)
+    data = load_list(p)
+    assert data.roster.classes["1D16"].ma_ngan == "1.2" and "1D15" not in data.roster.classes
+    assert data.meal_groups[0].classes == ["1D16"] and not data.meal_errors
+    kid = data.roster.students[2]
+    assert kid.lop_bt == "1D16" and kid.lop_tinh == "1D16" and data.roster.si_so("1D16") == 2

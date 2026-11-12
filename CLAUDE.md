@@ -32,7 +32,7 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 | **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
 | **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
 
-- **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · **Ghi chú**.
+- **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · Lớp tính BT (tùy chọn) · **Ghi chú**.
   - Cột Ghi chú chứa lịch thêm/cắt: `cắt thứ 6`, `cắt từ 30/10`, `ăn từ 3/11` (bộ đọc ở `core/notes.py`).
   - Sheet **Nhóm ăn** (tùy chọn) quy định bảng suất ăn của tờ ngày mới.
 - **Mã học sinh** = `lớp|họ tên|ngày sinh`: không đổi giữa các lần đọc file.
@@ -40,7 +40,8 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
   - ghi **ngay sau mỗi thao tác**: `Api.state()` gọi `Workspace.autosave()`;
   - khi bấm Lưu: ghi sổ tạm, ghi sheet vào sổ, rồi xóa sổ tạm;
   - mất điện thì lần mở sau app hỏi khôi phục.
-- **Không có** file dữ liệu riêng, nhật ký, thư mục sao lưu.
+- **Không có** file dữ liệu riêng, nhật ký, thư mục sao lưu. Sổ tự nhớ các sheet app đã lưu bằng một thuộc tính ẩn của file (`sobook.saved_sheets`), để mở lại ngày mà lớp nào cũng đủ vẫn là "đã báo".
+- Ngày đang mở còn thay đổi chưa lưu thì không cho đổi sổ / file danh sách (`Api._unsaved_error`).
 
 ## Bản đồ mã nguồn
 

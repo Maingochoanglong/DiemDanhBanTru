@@ -21,6 +21,10 @@ TODAY = dt.date(2026, 10, 29)
     ("tháng 11 ăn BT", {"ban_tru": True, "bt_tu": dt.date(2026, 11, 1)}),
     ("ăn từ 5/1", {"ban_tru": True, "bt_tu": dt.date(2027, 1, 5)}),  # tháng 1 năm học này = năm sau
     ("cắt thứ 6, cắt từ 2/11", {"cat_thu6": True, "cat_tu": dt.date(2026, 11, 2)}),
+    ("thôi ăn từ 3/11", {"cat_tu": dt.date(2026, 11, 3)}),  # thôi / không / nghỉ ăn = cắt, không phải bắt đầu ăn
+    ("không ăn từ 3/11", {"cat_tu": dt.date(2026, 11, 3)}),
+    ("nghỉ ăn BT từ 3/11", {"cat_tu": dt.date(2026, 11, 3)}),
+    ("nghỉ thứ 6", {"cat_thu6": True}),
     ("dị ứng tôm", {}),
     ("cắt", {}),  # không ghi ngày: bỏ qua (thôi ăn hẳn thì ghi cột Bán trú = Không)
     ("", {}),

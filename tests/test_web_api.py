@@ -257,3 +257,35 @@ def test_friday_class_with_only_auto_absent_is_still_unreported(api):
     ck = api.save_check()
     assert "4D19" in ck["unreported"] and ck["unreported_auto"] == ["4D19"]
 
+
+
+def test_change_files_refused_while_day_unsaved(api, tmp_path):
+    """Đổi sổ / file danh sách khi còn thay đổi chưa lưu: không cho (tránh mất thay đổi, xóa nhầm sổ tạm)."""
+    api.set_absent("1D15", sid_of(api, "1D15", "Lâm Quốc Tuấn Anh"), True)
+    before = dict(api._ws.settings)
+    for r in (api.choose_book(str(tmp_path / "khac.xlsx")), api.choose_list(str(tmp_path / "khac.xlsx"))):
+        assert "chưa lưu" in r["error"]
+    assert api._ws.settings == before and api._ws.dirty and (tmp_path / "SO DIEM DANH T10 tamthoi.xlsx").exists()
+
+
+def test_book_must_be_xlsx(api, tmp_path):
+    assert ".xlsx" in api.choose_book(str(tmp_path / "SO T11.xls"))["error"]
+
+
+def test_reload_right_after_first_setup_keeps_unsaved_day(tmp_path, monkeypatch, roster):
+    """Bản .exe mới: thiết lập xong, điểm danh dở rồi tải lại trang (F5) — không mất thay đổi."""
+    from app import build_info, settings
+    from tests.conftest import write_list
+
+    cfg = tmp_path / "CaiDat.txt"
+    monkeypatch.setattr(settings, "default_path", lambda: cfg)
+    monkeypatch.setattr(build_info, "BUILD", "bbbbbbb")
+    a = Api(Workspace())
+    assert a.boot()["setup"]
+    a.choose_book(str(make_book(tmp_path / "SO DIEM DANH T10.xlsx")))
+    a.choose_list(str(write_list(tmp_path / "DS.xlsx", roster)))
+    a.finish_setup()
+    a.open_day("2026-10-29", True)
+    a.set_absent("1D15", sid_of(a, "1D15", "Lâm Quốc Tuấn Anh"), True)
+    r = a.boot()  # F5
+    assert r["state"]["dirty"] and r["state"]["date"] == "2026-10-29"

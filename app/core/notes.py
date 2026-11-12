@@ -2,7 +2,7 @@
 
 Giáo vụ ghi ngắn, nhiều ý cách nhau dấu phẩy / chấm phẩy / xuống dòng; viết hoa hay không dấu đều được:
     cắt thứ 6                       -> cat_thu6 = True (thứ 6 tự tính vắng)
-    cắt từ 30/10 | cắt BT 30/10/2026 | T11 cắt   -> cat_tu = ngày đó (từ ngày đó không ăn)
+    cắt từ 30/10 | thôi ăn từ 30/10 | T11 cắt  -> cat_tu = ngày đó (từ ngày đó không ăn; "không ăn", "nghỉ ăn" cũng vậy)
     ăn từ 3/11 | thêm từ 3/11 | tháng 11 ăn BT   -> ban_tru = True, bt_tu = ngày đó
 Chữ khác trong ô (vd. "dị ứng tôm") bỏ qua. Ngày không ghi năm: lấy theo năm học đang học (tháng 8 – tháng 7).
 """
@@ -47,7 +47,7 @@ def student_note(note: str, today: dt.date) -> dict:
     """Các trường của Student đọc được từ ghi chú (chỉ những gì ghi chú nói tới)."""
     out: dict = {}
     for part in re.split(r"[,;\n]", fold(note)):
-        cut = re.search(r"\bcat\b", part)
+        cut = re.search(r"\b(?:cat|thoi|nghi|khong)\b", part)  # cắt / thôi / nghỉ / không (ăn)
         if cut and _FRIDAY.search(part):
             out["cat_thu6"] = True
             continue

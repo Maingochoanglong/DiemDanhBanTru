@@ -212,3 +212,24 @@ def test_old_sheet_name_of_kid_no_longer_boarding(ws):
     row = next(r for r in api.state()["rows"] if r.get("code") == "4D21")
     assert row["status"] != "err" and row["not_bt"] == "Vũ Khoa"
     assert api.class_detail("4D21")["not_bt"] == ["Vũ Khoa"]
+
+
+def test_day_saved_with_every_class_full_reopens_as_reported(ws):
+    """Lưu ngày mà lớp nào cũng đủ (sổ không có tên vắng nào): mở lại vẫn là "đã báo" (sổ tự nhớ sheet app đã lưu)."""
+    day = dt.date(2026, 10, 29)
+    st = ws.load_day(day)
+    ws.push_undo()
+    for code in st.classes:
+        st.mark_full(code)
+    st.cd("4D21").note = ""
+    assert ws.save() == "29"
+    assert "29" in sobook.saved_sheets(sobook.load_book(ws.book_path))
+    assert not ws.load_day(day).unreported()
+
+
+def test_settings_fall_back_to_appdata_when_exe_folder_read_only(tmp_path, monkeypatch):
+    from app import settings
+
+    monkeypatch.setattr(settings, "_writable", lambda folder: False)
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    assert settings.default_path() == tmp_path / "DiemDanhBanTru" / "CaiDat.txt"

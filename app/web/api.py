@@ -76,6 +76,7 @@ class Api:
             self._ws.finish_setup()
         except ValueError as e:
             return {"error": str(e), "setup": self.setup_info()}
+        self._booted = True  # tải lại trang sau đó: giữ ngày đang làm dở
         today = dt.date.today()
         res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
         res["flash"] = "Đã thiết lập xong. Bắt đầu điểm danh."
@@ -475,10 +476,20 @@ class Api:
                 "version": __version__, "list_error": ws.list_error, "n": len(ws.roster.students),
                 "nhom_an": sum(1 for g in groups if not g.blank), "nhom_an_errors": ws.list.meal_errors + ws.list.meal_warnings}
 
+    def _unsaved_error(self) -> dict | None:
+        """Đổi sổ / file danh sách khi ngày đang mở còn thay đổi chưa lưu: không cho (tránh mất thay đổi)."""
+        if self._ws.dirty:
+            return {"error": f"Ngày {fmt_date(self._ws.day)} còn thay đổi chưa lưu vào sổ. Hãy Lưu vào sổ (hoặc Đặt lại) trước khi đổi file."}
+        return None
+
     def choose_book(self, path: str | None = None) -> dict:
+        if (err := self._unsaved_error()) is not None:
+            return err
         path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", ("Excel (*.xlsx)",))
         if not path:
             return {"cancel": True}
+        if Path(path).suffix.lower() not in (".xlsx", ".xlsm"):
+            return {"error": "Sổ điểm danh phải là file .xlsx (mở bằng Excel rồi Lưu thành .xlsx)."}
         self._ws.set_book(path)
         res = self.open_day(_iso(self._ws.day), True)
         res["flash"] = f"Đã chọn sổ {Path(path).name}."
@@ -486,6 +497,8 @@ class Api:
 
     def choose_list(self, path: str | None = None) -> dict:
         """Chọn file Excel danh sách học sinh (app đọc thẳng file này, sửa file thì app tự đọc lại)."""
+        if (err := self._unsaved_error()) is not None:
+            return err
         path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", ("Excel (*.xlsx;*.xls)",))
         if not path:
             return {"cancel": True}
@@ -495,7 +508,7 @@ class Api:
             return {"error": str(e)}
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không đọc được file:\n{e}"}
-        res = self.open_day(_iso(self._ws.day), True) if not self._ws.dirty else {"state": self.state()}
+        res = self.open_day(_iso(self._ws.day), True)
         res["flash"] = f"Đã chọn {Path(path).name}: {len(self._ws.roster.students)} học sinh."
         return res
 
