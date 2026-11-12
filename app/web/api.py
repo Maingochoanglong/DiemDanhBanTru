@@ -1,7 +1,6 @@
-"""Cầu nối giữa giao diện web (HTML/Bootstrap) và phần xử lý sổ (Workspace).
+"""Cầu nối giữa giao diện web và phần xử lý sổ (Workspace).
 
-Mọi hàm trả về dict/list đơn giản (JSON). Giao diện gọi qua máy chủ nội bộ: POST /api/<tên hàm>
-(chạy trong trình duyệt — mặc định), hoặc `window.pywebview.api.<tên hàm>(...)` (cửa sổ app, mở bằng --app).
+Mọi hàm công khai trả về dict/list đơn giản (JSON); giao diện gọi qua máy chủ nội bộ: POST /api/<tên hàm> (server.py).
 """
 
 from __future__ import annotations
@@ -24,7 +23,7 @@ PROBLEM = (matcher.AMBIGUOUS, matcher.OTHER_CLASS, matcher.NOT_FOUND)
 
 
 class NoDialogs:
-    """Hộp chọn file (app thật dùng hộp của Windows qua pywebview; máy chủ thử thì không có)."""
+    """Không có hộp chọn file (máy chủ chạy thử, test). App thật dùng hộp của Windows (run.py)."""
 
     def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
         return None
@@ -165,7 +164,7 @@ class Api:
         return res
 
     # ================================================================== màn chính
-    def setup_hint(self) -> str:
+    def _setup_hint(self) -> str:
         steps = []
         if not self._ws.roster.students:
             steps.append("nhập danh sách học sinh")
@@ -191,7 +190,7 @@ class Api:
             "date": _iso(ws.day), "date_text": fmt_date(ws.day), "weekday": WEEKDAYS[ws.day.weekday()],
             "book": bp.name if bp else "", "book_stem": bp.stem if bp else "",
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
-            "dirty": ws.dirty, "data_dirty": ws.data_dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self.setup_hint(),
+            "dirty": ws.dirty, "data_dirty": ws.data_dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
             "unreported": [],
         }

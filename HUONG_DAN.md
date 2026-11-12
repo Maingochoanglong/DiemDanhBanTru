@@ -21,7 +21,6 @@ Kết quả ghi vào **chính file sổ Excel đang dùng**, giữ y kiểu cũ:
    - **Thoát app**: bấm **Thoát** ở góc dưới thanh bên trái (app hỏi lưu nếu còn thay đổi), hoặc đóng thẻ trình duyệt đó (trình duyệt hỏi lại nếu còn thay đổi chưa lưu vào sổ).
    - Lỡ đóng thẻ khi đang làm dở: mở lại app, app hỏi **Khôi phục** từ sổ tạm (mục 8).
    - Bấm đúp mở app lần nữa khi app đang chạy: chỉ mở thêm thẻ trình duyệt, không chạy 2 app cùng lúc. Tải lại trang (F5) không làm mất thay đổi.
-   - Muốn mở trong cửa sổ riêng như bản cũ: tạo lối tắt (shortcut) tới `DiemDanhBanTru.exe`, thêm ` --app` vào cuối ô *Target* (cần Microsoft Edge WebView2).
 
 Máy cần Windows 10/11. In trực tiếp cần Microsoft Excel. Không cần cài Python.
 

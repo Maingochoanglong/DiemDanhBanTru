@@ -1,63 +1,71 @@
-"""Máy chủ nội bộ khi chạy giao diện trong trình duyệt (app/web/devserver.py, app/web/run.py)."""
+"""Máy chủ nội bộ (FastAPI, app/web/server.py) và cách mở app (app/web/run.py)."""
 
-import json
 import threading
 import time
-import urllib.error
-import urllib.request
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.web import run as webrun
-from app.web.devserver import HEADER, Clients, make_server
+from app.web.server import HEADER, Clients, Server, create_app
 from tests.test_web_api import api  # noqa: F401  (fixture)
 
-OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+APP = {HEADER: "1"}
 
 
 @pytest.fixture
-def server(api):  # noqa: F811
-    srv = make_server(api, 0, dev=False)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    yield f"http://127.0.0.1:{srv.server_address[1]}"
-    srv.shutdown()
-    srv.server_close()
+def client(api):  # noqa: F811
+    return TestClient(create_app(api), base_url="http://127.0.0.1")
 
 
-def call(base, name, *args, headers=None):
-    h = {HEADER: "1", "Content-Type": "application/json"} if headers is None else headers
-    req = urllib.request.Request(f"{base}/api/{name}", data=json.dumps(args).encode(), headers=h, method="POST")
-    with OPENER.open(req, timeout=5) as r:
-        return json.loads(r.read())
+def test_serves_page_config_and_ping(client):
+    r = client.get("/")
+    assert r.status_code == 200 and "Điểm danh bán trú" in r.text
+    assert r.headers["cache-control"] == "no-store"
+    assert client.get("/config.js").text == "window.APP_MODE = 'app';"
+    assert client.get("/js/main.js").headers["content-type"].startswith("text/javascript")
+    assert client.get("/ping").json()["app"] == "DiemDanhBanTru"
 
 
-def test_serves_page_and_marks_browser_mode(server):
-    with OPENER.open(server + "/", timeout=5) as r:
-        assert "Điểm danh bán trú" in r.read().decode("utf-8")
-    with OPENER.open(server + "/devmode.js", timeout=5) as r:
-        assert b"BROWSER_APP" in r.read()
-    with OPENER.open(server + "/ping", timeout=5) as r:
-        assert json.loads(r.read())["app"] == "DiemDanhBanTru"
+def test_api_call(client):
+    r = client.post("/api/close_check", json=[], headers=APP)
+    assert r.json()["day"] == "29/10/2026"
+    r = client.post("/api/class_detail", json=["1D15"], headers=APP)
+    assert r.json()["code"] == "1D15"
 
 
-def test_api_needs_app_header(server):
-    assert call(server, "close_check")["day"] == "29/10/2026"
-    with pytest.raises(urllib.error.HTTPError) as e:  # trang web lạ không gửi được header riêng
-        call(server, "close_check", headers={"Content-Type": "text/plain"})
-    assert e.value.code == 403
+def test_api_needs_app_header(client):
+    assert client.post("/api/close_check", json=[]).status_code == 403  # trang web lạ không gửi được header riêng
 
 
-def test_rejects_foreign_host(server):
-    req = urllib.request.Request(server + "/ping", headers={"Host": "evil.example:80"})
-    with pytest.raises(urllib.error.HTTPError) as e:
-        OPENER.open(req, timeout=5)
-    assert e.value.code == 403
+def test_rejects_foreign_host(api):  # noqa: F811
+    c = TestClient(create_app(api), base_url="http://evil.example")  # tên miền lạ trỏ về 127.0.0.1
+    assert c.get("/ping").status_code == 400
 
 
-def test_private_methods_not_reachable(server):
-    with pytest.raises(urllib.error.HTTPError) as e:
-        call(server, "_status", "1D15")
-    assert e.value.code == 404
+def test_private_or_unknown_functions_not_reachable(client):
+    assert client.post("/api/_status", json=["1D15"], headers=APP).status_code == 404
+    assert client.post("/api/khong_co", json=[], headers=APP).status_code == 404
+
+
+def test_python_error_is_reported_to_ui(client):
+    r = client.post("/api/class_detail", json=[], headers=APP)  # thiếu tham số
+    assert r.status_code == 200 and r.json()["error"].startswith("Lỗi")
+
+
+def test_docs_only_in_dev_mode(api):  # noqa: F811
+    assert TestClient(create_app(api), base_url="http://127.0.0.1").get("/docs").status_code == 404
+    dev = TestClient(create_app(api, dev=True), base_url="http://127.0.0.1")
+    assert dev.get("/docs").status_code == 200
+    assert dev.get("/config.js").text == "window.APP_MODE = 'dev';"
+
+
+def test_closing_tab_tracks_clients(api):  # noqa: F811
+    gone = threading.Event()
+    c = TestClient(create_app(api, Clients(on_empty=gone.set, grace=0.05)), base_url="http://127.0.0.1")
+    c.post("/api/close_check", json=[], headers={**APP, "X-Client": "tab1"})
+    c.post("/bye", content=b"tab1")
+    assert gone.wait(2)
 
 
 def test_last_tab_closed_stops_app():
@@ -102,18 +110,26 @@ def test_quit_stops_browser_app(api):  # noqa: F811
 
 
 def test_second_launch_reuses_running_app(api, monkeypatch):  # noqa: F811
-    srv = make_server(api, 0, dev=False)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    port = srv.server_address[1]
+    srv = Server(create_app(api), 0).start()
     opened = []
     monkeypatch.setattr(webrun.webbrowser, "open", opened.append)
     try:
-        assert webrun.running_app(port)["app"] == "DiemDanhBanTru"
-        webrun.run_in_browser(api._ws, port)  # đã có app chạy (cùng bản): chỉ mở thẻ trình duyệt rồi thôi
-        assert opened == [f"http://127.0.0.1:{port}/index.html"]
+        assert webrun.running_app(srv.port)["app"] == "DiemDanhBanTru"
+        webrun.run(api._ws, srv.port)  # đã có app chạy (cùng bản): chỉ mở thẻ trình duyệt rồi thôi
+        assert opened == [srv.url]
     finally:
-        srv.shutdown()
-        srv.server_close()
+        srv.stop()
+    assert webrun.running_app(srv.port) is None
+
+
+def test_busy_port_falls_back_to_free_port(api):  # noqa: F811
+    a = Server(create_app(api), 0).start()
+    try:
+        b = Server(create_app(api), a.port).start()  # cổng đã bị chiếm: lấy cổng khác
+        assert b.port != a.port
+        b.stop()
+    finally:
+        a.stop()
 
 
 def test_file_dialogs_run_on_main_thread():
