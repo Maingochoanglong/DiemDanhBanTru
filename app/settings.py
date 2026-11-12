@@ -1,44 +1,33 @@
 """Cài đặt của app: file CaiDat.txt cạnh DiemDanhBanTru.exe (mở bằng Notepad sửa được).
 
-Mỗi dòng "khóa = giá trị"; dòng bắt đầu bằng # là chú thích. Các khóa: xem KEYS.
+Mỗi dòng "khóa = giá trị"; dòng bắt đầu bằng # là chú thích. Các khóa và giá trị mặc định: xem KEYS.
 """
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
-FILE_NAME = "CaiDat.txt"
+from . import config
+
+# khóa -> (giá trị mặc định, chú thích ghi vào file)
 KEYS = {
-    "so_file": "Sổ điểm danh tháng đang dùng (.xlsx). Sang tháng mới app tìm sổ tháng đó cùng thư mục.",
-    "cdhs_file": "File Excel danh sách học sinh.",
-    "build": "Mã bản app đã thiết lập (app tự ghi; bản .exe mới thì bắt thiết lập lại).",
+    "so_file": ("", "Sổ điểm danh tháng đang dùng (.xlsx)."),
+    "cdhs_file": ("", "File Excel danh sách học sinh."),
+    "cong": (str(config.DEFAULT_PORT), f"Cổng của máy chủ nội bộ (http://{config.HOST}:cổng). Chỉ đổi khi trùng chương trình khác."),
+    "thanh_ben_thu_gon": ("", "x = thu gọn thanh bên trái (app tự ghi khi bấm nút « »)."),
+    "build": ("", "Mã bản app đã thiết lập (app tự ghi; bản .exe mới thì bắt thiết lập lại)."),
 }
 
 
 def default_path() -> Path:
-    """Cạnh file .exe; chạy từ mã nguồn thì ở thư mục gốc của repo.
-    Thư mục đó không ghi được (vd. Program Files) thì dùng %APPDATA%\\DiemDanhBanTru."""
+    """Cạnh file .exe; chạy từ mã nguồn thì ở thư mục gốc của repo."""
     base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
-    if not _writable(base):
-        base = Path(os.environ.get("APPDATA") or Path.home() / ".config") / "DiemDanhBanTru"
-    return base / FILE_NAME
-
-
-def _writable(folder: Path) -> bool:
-    """Thử ghi thật (trên Windows os.access không xét quyền thư mục, vd. Program Files)."""
-    probe = folder / ".ghi_thu"
-    try:
-        probe.write_text("")
-        probe.unlink()
-        return True
-    except OSError:
-        return False
+    return base / config.SETTINGS_FILE
 
 
 def load(path: Path) -> dict[str, str]:
-    out = dict.fromkeys(KEYS, "")
+    out = {k: default for k, (default, _) in KEYS.items()}
     try:
         lines = path.read_text(encoding="utf-8-sig").splitlines()
     except OSError:
@@ -52,7 +41,16 @@ def load(path: Path) -> dict[str, str]:
 
 def save(path: Path, values: dict[str, str]) -> None:
     lines = ["# Cài đặt app Điểm danh bán trú. Mỗi dòng: khóa = giá trị."]
-    for key, help_text in KEYS.items():
-        lines += [f"# {help_text}", f"{key} = {values.get(key, '')}"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    for key, (default, help_text) in KEYS.items():
+        lines += [f"# {help_text}", f"{key} = {values.get(key, default)}"]
+    try:
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except OSError as e:
+        raise OSError(f"Không ghi được {path}. Hãy chép {config.APP_ID}.exe vào thư mục ghi được (vd. Documents) rồi mở lại.") from e
+
+
+def port(values: dict[str, str]) -> int:
+    try:
+        return int(values.get("cong") or config.DEFAULT_PORT)
+    except ValueError:
+        return config.DEFAULT_PORT

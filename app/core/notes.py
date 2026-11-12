@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 
+from .. import config
 from .text import fold
 
 _DATE = re.compile(r"(\d{1,2})\s*/\s*(\d{1,2})(?:\s*/\s*(\d{2,4}))?")
@@ -21,8 +22,8 @@ _FRIDAY = re.compile(r"\b(?:thu\s*(?:6|sau)|t6)\b")
 
 def _date(day: int, month: int, today: dt.date) -> dt.date | None:
     """Ngày trong năm học chứa `today` (năm học: tháng 8 năm nay tới tháng 7 năm sau)."""
-    start = today.year if today.month >= 8 else today.year - 1
-    year = start if month >= 8 else start + 1
+    start = today.year if today.month >= config.SCHOOL_YEAR_START_MONTH else today.year - 1
+    year = start if month >= config.SCHOOL_YEAR_START_MONTH else start + 1
     try:
         return dt.date(year, month, day)
     except ValueError:

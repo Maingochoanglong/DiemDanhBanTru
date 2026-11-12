@@ -7,10 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.web import run as webrun
-from app.web.server import HEADER, Clients, Server, create_app
+from app import config
+from app.web.server import Clients, Server, create_app
 from tests.test_web_api import api  # noqa: F401  (fixture)
 
-APP = {HEADER: "1"}
+APP = {config.API_HEADER: "1"}
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def test_serves_page_config_and_ping(client):
     r = client.get("/")
     assert r.status_code == 200 and "Điểm danh bán trú" in r.text
     assert r.headers["cache-control"] == "no-store"
-    assert client.get("/config.js").text == "window.APP_MODE = 'app';"
+    assert '"mode": "app"' in client.get("/config.js").text and config.API_HEADER in client.get("/config.js").text
     assert client.get("/js/main.js").headers["content-type"].startswith("text/javascript")
     assert client.get("/ping").json()["app"] == "DiemDanhBanTru"
 
@@ -57,13 +58,13 @@ def test_docs_only_in_dev_mode(api):  # noqa: F811
     assert TestClient(create_app(api), base_url="http://127.0.0.1").get("/docs").status_code == 404
     dev = TestClient(create_app(api, dev=True), base_url="http://127.0.0.1")
     assert dev.get("/docs").status_code == 200
-    assert dev.get("/config.js").text == "window.APP_MODE = 'dev';"
+    assert '"mode": "dev"' in dev.get("/config.js").text
 
 
 def test_closing_tab_tracks_clients(api):  # noqa: F811
     gone = threading.Event()
     c = TestClient(create_app(api, Clients(on_empty=gone.set, grace=0.05)), base_url="http://127.0.0.1")
-    c.post("/api/close_check", json=[], headers={**APP, "X-Client": "tab1"})
+    c.post("/api/close_check", json=[], headers={**APP, config.CLIENT_HEADER: "tab1"})
     c.post("/bye", content=b"tab1")
     assert gone.wait(2)
 

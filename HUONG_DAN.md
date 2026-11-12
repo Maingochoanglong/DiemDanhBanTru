@@ -30,7 +30,7 @@ Máy cần Windows 10/11 và Microsoft Excel (để mở, in sổ). Không cần
 |---|---|---|
 | **Danh sách học sinh** (Excel) | biết em nào ăn bán trú, tên gọi khác, ăn ghép, lịch thêm/cắt (cột Ghi chú), cách ghép ăn (sheet Nhóm ăn) | **bạn, bằng Excel**. App chỉ đọc; sửa file xong, mở ngày là app đọc lại |
 | **Sổ điểm danh tháng** (Excel) | sổ như thường lệ, mỗi ngày 1 sheet, mỗi tháng 1 file | app ghi sheet của ngày khi bấm **Lưu vào sổ** |
-| **CaiDat.txt** (cạnh file `DiemDanhBanTru.exe`) | nhớ đang dùng sổ nào, file danh sách nào | app tự ghi; mở bằng Notepad sửa được |
+| **CaiDat.txt** (cạnh file `DiemDanhBanTru.exe`) | nhớ đang dùng sổ nào, file danh sách nào, cổng của app (`cong`, chỉ đổi khi trùng chương trình khác), thanh bên thu gọn | app tự ghi; mở bằng Notepad sửa được |
 
 Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh sổ, có khi đang làm dở và tự xóa khi đã lưu vào sổ.
 
@@ -144,7 +144,7 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 
 - Đổi ngày: gõ vào ô ngày (`dd/mm/yyyy`) rồi Enter, bấm nút lịch, 2 nút mũi tên hoặc **Hôm nay**. Ngày đang mở có thay đổi chưa lưu thì app hỏi **Lưu rồi chuyển ngày / Không lưu / Ở lại**.
 - Mở một ngày **đã có trong sổ**: app đọc lại và **kiểm tra mọi ô tên vắng** (kể cả gõ tay trong Excel), báo tên sai hoặc không ăn bán trú.
-- Sang tháng mới: app hỏi **Tạo sổ tháng mới**. Sổ mới (vd. `… T11.xlsx`) được làm từ sheet cuối của tháng trước, giữ nguyên mẫu, chữ ký, ghi chú.
+- Sang tháng mới (hoặc mở ngày của tháng khác sổ đang chọn): app hỏi **Tạo sổ tháng mới** hoặc **Chọn file sổ có sẵn**. Sổ mới (vd. `… T11.xlsx`) được làm từ sheet cuối của sổ đang chọn, giữ nguyên mẫu, chữ ký, ghi chú; đã có file cùng tên thì app dùng file đó. App không tự đi tìm sổ khác trong thư mục.
 
 ## 8. An toàn dữ liệu & lỗi thường gặp
 
@@ -156,7 +156,8 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
   - Có thể mở sổ tạm bằng Excel để xem: sheet *Dang diem danh* ghi từng lớp đã báo chưa, số vắng, tên vắng, ghi chú.
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
 - **In sổ**: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ.
-- Khi app gặp lỗi, chi tiết được ghi vào file `loi.log` cạnh `DiemDanhBanTru.exe`.
+- App **chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách học sinh, sổ đang chọn và sổ tạm của sổ đó. Không ghi file nhật ký, không tạo file nào khác, không tự mở các file khác trong thư mục. Lỗi hiện ngay trên màn hình (lỗi lúc mở app hiện hộp thông báo).
+- **Thư mục đặt app không ghi được** (vd. Program Files): app báo không ghi được CaiDat.txt; chép `DiemDanhBanTru.exe` vào thư mục khác (vd. Documents).
 - **Bấm mở app mà không thấy trình duyệt hiện lên**: mở Edge/Chrome rồi gõ địa chỉ `127.0.0.1:47615`.
 - Hộp **chọn file** (chọn sổ, chọn file danh sách) là cửa sổ riêng của app; nếu không thấy, tìm nó trên thanh tác vụ (taskbar).
 - **Windows cảnh báo khi tải hoặc mở app**: app chưa có *chữ ký số* (chứng thư mua của hãng chứng thực) nên mỗi bản mới Windows chưa "quen", trình duyệt và SmartScreen sẽ hỏi lại. App không có gì nguy hiểm; làm một lần cho mỗi bản mới:

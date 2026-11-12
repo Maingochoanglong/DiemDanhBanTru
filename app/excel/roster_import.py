@@ -19,6 +19,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .. import config
 from ..core.meals import CODE_RE, MealGroup
 from ..core.models import ClassInfo, Roster, Student
 from ..core.notes import student_note
@@ -46,7 +47,8 @@ class RosterFormatError(Exception):
 
 
 def _is_red_rgb(r: int, g: int, b: int) -> bool:
-    return r >= 180 and g <= 100 and b <= 100
+    min_r, max_g, max_b = config.RED_FONT
+    return r >= min_r and g <= max_g and b <= max_b
 
 
 def _find_columns(header: list[str]) -> dict[str, int] | None:
@@ -97,7 +99,7 @@ def _read_xls(path: Path) -> list[RosterRow]:
 
     book = xlrd.open_workbook(str(path), formatting_info=True)
     for sh in book.sheets():
-        for hr in range(min(10, sh.nrows)):
+        for hr in range(min(config.LIST_HEADER_ROWS, sh.nrows)):
             cols = _find_columns([str(v) for v in sh.row_values(hr)])
             if not cols:
                 continue
@@ -155,7 +157,7 @@ def _read_xlsx(path: Path) -> list[RosterRow]:
 
     wb = openpyxl.load_workbook(str(path), data_only=True)
     for ws in wb.worksheets:
-        for hr in range(1, min(10, ws.max_row) + 1):
+        for hr in range(1, min(config.LIST_HEADER_ROWS, ws.max_row) + 1):
             header = [c.value for c in ws[hr]]
             cols = _find_columns([str(v) if v is not None else "" for v in header])
             if not cols:
@@ -208,11 +210,11 @@ def read_meal_groups(path: str | Path) -> list[tuple[int, str, str, str]] | None
     if ws is None:
         return None
     hr, cols = 1, {"label": 0, "classes": 1, "code": 2}
-    for r in range(1, min(5, ws.max_row) + 1):
+    for r in range(1, min(config.MEAL_SHEET_HEADER_ROWS, ws.max_row) + 1):
         vals = [fold(str(c.value or "")) for c in ws[r]]
         if any("ten dong" in v for v in vals):
             hr = r
-            for i, v in enumerate(vals[:6]):
+            for i, v in enumerate(vals[:config.MEAL_SHEET_COLS]):
                 if "ten dong" in v:
                     cols["label"] = i
                 elif "lop" in v:

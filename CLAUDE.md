@@ -22,9 +22,11 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - mỗi file một việc, có docstring/chú thích đầu file nói file đó làm gì;
    - tên hàm rõ nghĩa; mỗi trang / hộp thoại là một file trong `js/components/`;
    - không viết lớp trừu tượng "để dành". Sửa chỗ nào thì sửa đúng file của việc đó (xem bản đồ dưới).
-5. **Dữ liệu thật của học sinh không bao giờ vào repo.** `.gitignore` chặn `*.xls`, `*.xlsx`, `CaiDat.txt`. Test chỉ dùng tên bịa (`tests/conftest.py`). File thật người dùng gửi chỉ để trong thư mục tạm của phiên.
+5. **Chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách, sổ đang chọn (CaiDat.txt) và sổ tạm của sổ đó. Không file nhật ký, không file phụ khi ghi (`files.safe_save` dựng file trong bộ nhớ rồi ghi đè 1 lần), không tự mở / liệt kê file khác trong thư mục, không lưu gì ở trình duyệt (localStorage…). `tests/test_rules.py` theo dõi mọi lần mở / xóa / đổi tên file / liệt kê thư mục bằng audit hook trong cả một ngày làm việc.
+6. **Không viết cứng giá trị**: mọi giá trị cố định đặt tên trong `app/config.py` (người dùng cần đổi thì thêm khóa vào `settings.KEYS`, đọc ở CaiDat.txt). JavaScript lấy qua `CONFIG` (`js/api.js` ← `/config.js`). `tests/test_rules.py` báo lỗi khi chuỗi / số cổng của config bị viết lại ở file khác, hoặc có số thực trần ngoài config.
+7. **Dữ liệu thật của học sinh không bao giờ vào repo.** `.gitignore` chặn `*.xls`, `*.xlsx`, `CaiDat.txt`. Test chỉ dùng tên bịa (`tests/conftest.py`). File thật người dùng gửi chỉ để trong thư mục tạm của phiên.
 
-## App chỉ làm việc với 3 file
+## App chỉ làm việc với 3 file (+ sổ tạm)
 
 | File | Ai sửa | Mã đọc/ghi |
 |---|---|---|
@@ -47,7 +49,8 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 
 ```
 run_app.py                điểm khởi chạy (PyInstaller)
-app/main.py               main(), --selftest (CI chạy trên file .exe), ghi loi.log
+app/main.py               main(), --selftest (CI chạy trên file .exe; Excel thử trong bộ nhớ), lỗi nặng hiện hộp thông báo
+app/config.py             MỌI giá trị cố định (cổng, tên file, thời gian chờ, ngưỡng, lịch học…); phần UI gửi qua /config.js
 app/settings.py           CaiDat.txt
 app/service.py            Workspace: điều phối (mở ngày, lưu, sổ tạm, sổ tháng mới, bảng suất ăn theo Nhóm ăn)
 app/core/                 xử lý thuần, không đụng file / giao diện

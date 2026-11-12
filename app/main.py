@@ -14,29 +14,31 @@ if __package__ in (None, ""):  # chạy trực tiếp file / bản đóng gói P
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     __package__ = "app"  # noqa: A001
 
+from app import config  # noqa: E402
 from app.service import Workspace  # noqa: E402
 
 
-def log_error(text: str) -> Path | None:
-    """Ghi lỗi vào file nhật ký (bản .exe không có cửa sổ dòng lệnh để in lỗi)."""
+def show_error(text: str) -> None:
+    """Lỗi nặng lúc mở app: hiện hộp thông báo (bản .exe không có cửa sổ dòng lệnh). Không ghi file nhật ký:
+    app chỉ đụng 3 file trong cài đặt và sổ tạm."""
     if sys.stderr:
         print(text, file=sys.stderr)
     try:
-        from app.settings import default_path
+        import tkinter
+        from tkinter import messagebox
 
-        p = default_path().with_name("loi.log")  # cạnh CaiDat.txt
-        p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(text + "\n")
-        return p
-    except OSError:
-        return None
+        root = tkinter.Tk()
+        root.withdraw()
+        messagebox.showerror("Điểm danh bán trú", text[-config.ERROR_TEXT_MAX:], parent=root)
+        root.destroy()
+    except Exception:  # noqa: BLE001 - không có giao diện (máy chủ CI): đã in ra stderr nếu có
+        pass
 
 
 def selftest() -> int:
     """Kiểm tra bản đóng gói: nạp đủ thư viện, có đủ file giao diện, máy chủ giao diện chạy được, đọc/ghi được Excel."""
     try:
-        import tempfile
+        import io
         import tkinter
         import urllib.request
 
@@ -53,18 +55,19 @@ def selftest() -> int:
         srv = Server(create_app(Api(None)), 0).start()  # FastAPI + uvicorn đóng gói đủ
         try:
             get = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
-            assert b"DiemDanhBanTru" in get(srv.url + "ping", timeout=10).read()
-            assert "Điểm danh".encode() in get(srv.url, timeout=10).read()
+            assert config.APP_ID.encode() in get(srv.url + "ping", timeout=config.PING_TIMEOUT).read()
+            assert "Điểm danh".encode() in get(srv.url, timeout=config.PING_TIMEOUT).read()
         finally:
             srv.stop()
-        with tempfile.TemporaryDirectory() as d:
-            wb = openpyxl.Workbook()
-            wb.active["A1"] = "Điểm danh"
-            wb.save(Path(d) / "t.xlsx")
-            assert openpyxl.load_workbook(Path(d) / "t.xlsx").active["A1"].value == "Điểm danh"
+        buf = io.BytesIO()  # đọc/ghi Excel trong bộ nhớ: tự kiểm tra cũng không tạo file nào
+        wb = openpyxl.Workbook()
+        wb.active["A1"] = "Điểm danh"
+        wb.save(buf)
+        assert openpyxl.load_workbook(io.BytesIO(buf.getvalue())).active["A1"].value == "Điểm danh"
         return 0
     except Exception:  # noqa: BLE001
-        log_error(traceback.format_exc())
+        if sys.stderr:
+            print(traceback.format_exc(), file=sys.stderr)
         return 1
 
 
@@ -78,7 +81,7 @@ def main(argv: list[str] | None = None) -> None:
     try:
         run(Workspace(args[0] if args else None), open_browser="--no-open" not in argv)
     except Exception:  # noqa: BLE001
-        log_error(traceback.format_exc())
+        show_error(traceback.format_exc())
         raise
 
 

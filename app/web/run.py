@@ -14,12 +14,11 @@ import time
 import urllib.request
 import webbrowser
 
+from .. import config, settings
 from ..build_info import BUILD
 from ..service import Workspace
 from .api import Api
-from .server import APP_ID, HEADER, Clients, Server, create_app
-
-APP_PORT = 47615  # cổng cố định: mở app lần nữa thì nhận ra app đang chạy
+from .server import Clients, Server, create_app
 
 
 class TkDialogs:
@@ -69,7 +68,7 @@ class MainThreadDialogs:
         """Chạy ở luồng chính cho tới khi app thoát."""
         while not stop.is_set():
             try:
-                fn, args, box, done = self._jobs.get(timeout=0.3)
+                fn, args, box, done = self._jobs.get(timeout=config.DIALOG_POLL)
             except queue.Empty:
                 continue
             try:
@@ -88,7 +87,7 @@ class BrowserApi(Api):
         self._stop = stop
 
     def quit(self) -> dict:
-        threading.Timer(0.5, self._stop.set).start()  # trả lời giao diện xong mới tắt
+        threading.Timer(config.QUIT_DELAY, self._stop.set).start()  # trả lời giao diện xong mới tắt
         return {"ok": ""}
 
 
@@ -99,33 +98,34 @@ def _open(req, timeout: float):
 def running_app(port: int) -> dict | None:
     """App đang chạy sẵn ở cổng này (mở app lần thứ hai): trả về {"app", "build"}."""
     try:
-        with _open(f"http://127.0.0.1:{port}/ping", 2) as r:
+        with _open(f"http://{config.HOST}:{port}/ping", config.PING_TIMEOUT) as r:
             info = json.loads(r.read())
-        return info if info.get("app") == APP_ID else None
+        return info if info.get("app") == config.APP_ID else None
     except (OSError, ValueError):
         return None
 
 
 def _ask_quit(port: int) -> None:
     """Bản .exe khác còn chạy: bảo nó thoát (thay đổi chưa lưu vẫn còn trong sổ tạm)."""
-    req = urllib.request.Request(f"http://127.0.0.1:{port}/api/quit", data=b"[]", method="POST",
-                                 headers={HEADER: "1", "Content-Type": "application/json"})
+    req = urllib.request.Request(f"http://{config.HOST}:{port}/api/quit", data=b"[]", method="POST",
+                                 headers={config.API_HEADER: "1", "Content-Type": "application/json"})
     try:
-        _open(req, 5).read()
+        _open(req, config.QUIT_TIMEOUT).read()
     except OSError:
         return
-    for _ in range(30):
-        time.sleep(0.2)
-        if running_app(port) is None:
-            return
+    deadline = time.monotonic() + config.OLD_APP_WAIT
+    while running_app(port) is not None and time.monotonic() < deadline:
+        time.sleep(config.DIALOG_POLL)
 
 
-def run(ws: Workspace, port: int = APP_PORT, open_browser: bool = True) -> None:
+def run(ws: Workspace, port: int | None = None, open_browser: bool = True) -> None:
+    """port: mặc định lấy ở CaiDat.txt (khóa cong)."""
+    port = settings.port(ws.settings) if port is None else port
     other = running_app(port)
     if other is not None:
         if other.get("build") == BUILD:
             if open_browser:
-                webbrowser.open(f"http://127.0.0.1:{port}/")
+                webbrowser.open(f"http://{config.HOST}:{port}/")
             return
         _ask_quit(port)
 

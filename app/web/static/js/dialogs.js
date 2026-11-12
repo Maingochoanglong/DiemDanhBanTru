@@ -1,5 +1,6 @@
 // Hộp hỏi / thông báo dùng dịch vụ của PrimeVue (DialogService, ToastService).
 import AskBody from "./components/AskBody.js";
+import { CONFIG } from "./api.js";
 import { esc } from "./util.js";
 
 const { h, markRaw } = Vue;
@@ -25,7 +26,7 @@ export const ask = (title, html, buttons, opts = {}) =>
 export const info = (title, msg) => ask(title, `<div class="pre-line">${esc(msg)}</div>`, [{ key: "ok", label: "Đóng" }]);
 
 export function toast(msg, severity = "success") {
-  if (msg) ui.toast.add({ severity, summary: msg, life: severity === "error" ? 12000 : 6000 });
+  if (msg) ui.toast.add({ severity, summary: msg, life: severity === "error" ? CONFIG.toast_life_error : CONFIG.toast_life });
 }
 
 // 3 lựa chọn hay dùng khi còn thay đổi chưa lưu

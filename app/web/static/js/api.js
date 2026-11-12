@@ -1,7 +1,8 @@
 // Gọi Python: POST /api/<tên hàm> (máy chủ FastAPI, app/web/server.py).
 const { reactive } = Vue;
 
-export const IS_APP = window.APP_MODE === "app";  // app thật (có nút Thoát); "dev" = máy chủ chạy thử
+export const CONFIG = window.APP_CONFIG;  // giá trị cố định do máy chủ gửi (app/config.py qua /config.js), không viết cứng ở đây
+export const IS_APP = CONFIG.mode === "app";  // app thật (có nút Thoát); "dev" = máy chủ chạy thử
 export const CLIENT = Math.random().toString(36).slice(2) + Date.now().toString(36);  // mã của thẻ trình duyệt này
 export const conn = reactive({ gone: false, quit: false });  // máy chủ đã tắt / đã bấm Thoát
 
@@ -12,7 +13,7 @@ export function api(name, ...args) {
     let r;
     try {
       r = await fetch("/api/" + name, { method: "POST", body: JSON.stringify(args),
-        headers: { "Content-Type": "application/json", "X-DDBT": "1", "X-Client": CLIENT } });
+        headers: { "Content-Type": "application/json", [CONFIG.apiHeader]: "1", [CONFIG.clientHeader]: CLIENT } });
     } catch (e) {
       conn.gone = true;
       throw e;

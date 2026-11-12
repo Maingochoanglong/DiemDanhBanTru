@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-from .. import __version__
+from .. import __version__, config
 from ..core import matcher
 from ..core.search import matches
 from ..core.text import class_sort_key, clean_spaces, fmt_date, parse_date
@@ -56,7 +56,7 @@ class Api:
             return {"state": self.state()}
         self._booted = True
         today = dt.date.today()
-        res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
+        res = self.open_day(_iso(today if today.weekday() < config.SCHOOL_DAYS else next_school_day(today)), True)
         self._temp = self._ws.find_temp()
         if self._temp is not None:
             res["restore"] = {"day": fmt_date(self._temp.day), "at": self._temp.saved_at, "file": self._temp.path.name}
@@ -78,7 +78,7 @@ class Api:
             return {"error": str(e), "setup": self.setup_info()}
         self._booted = True  # tải lại trang sau đó: giữ ngày đang làm dở
         today = dt.date.today()
-        res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
+        res = self.open_day(_iso(today if today.weekday() < config.SCHOOL_DAYS else next_school_day(today)), True)
         res["flash"] = "Đã thiết lập xong. Bắt đầu điểm danh."
         return res
 
@@ -114,7 +114,7 @@ class Api:
             self._ws.load_day(day)
         except NeedMonthBook as e:
             if e.prev is not None:
-                return {"need_month": {"month": e.month, "year": e.year, "folder": str(e.prev.parent),
+                return {"need_month": {"month": e.month, "year": e.year,
                                        "prev": e.prev.name, "target": _iso(day)}, "state": self.state()}
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không mở được sổ điểm danh:\n{e}", "state": self.state()}
@@ -474,7 +474,14 @@ class Api:
         groups = ws.list.meal_groups or []
         return {"so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", ""), "settings_file": str(ws.settings_path),
                 "version": __version__, "list_error": ws.list_error, "n": len(ws.roster.students),
-                "nhom_an": sum(1 for g in groups if not g.blank), "nhom_an_errors": ws.list.meal_errors + ws.list.meal_warnings}
+                "nhom_an": sum(1 for g in groups if not g.blank), "nhom_an_errors": ws.list.meal_errors + ws.list.meal_warnings,
+                "side_min": st.get("thanh_ben_thu_gon") == "x"}
+
+    def set_side_min(self, value: bool) -> dict:
+        """Thu gọn / mở rộng thanh bên: nhớ trong CaiDat.txt (app không lưu gì ở trình duyệt)."""
+        self._ws.settings["thanh_ben_thu_gon"] = "x" if value else ""
+        self._ws.save_settings()
+        return {"ok": ""}
 
     def _unsaved_error(self) -> dict | None:
         """Đổi sổ / file danh sách khi ngày đang mở còn thay đổi chưa lưu: không cho (tránh mất thay đổi)."""
@@ -485,10 +492,10 @@ class Api:
     def choose_book(self, path: str | None = None) -> dict:
         if (err := self._unsaved_error()) is not None:
             return err
-        path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", ("Excel (*.xlsx)",))
+        path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", config.BOOK_FILE_TYPES)
         if not path:
             return {"cancel": True}
-        if Path(path).suffix.lower() not in (".xlsx", ".xlsm"):
+        if Path(path).suffix.lower() not in config.BOOK_SUFFIXES:
             return {"error": "Sổ điểm danh phải là file .xlsx (mở bằng Excel rồi Lưu thành .xlsx)."}
         self._ws.set_book(path)
         res = self.open_day(_iso(self._ws.day), True)
@@ -499,7 +506,7 @@ class Api:
         """Chọn file Excel danh sách học sinh (app đọc thẳng file này, sửa file thì app tự đọc lại)."""
         if (err := self._unsaved_error()) is not None:
             return err
-        path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", ("Excel (*.xlsx;*.xls)",))
+        path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", config.LIST_FILE_TYPES)
         if not path:
             return {"cancel": True}
         try:

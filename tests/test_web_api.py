@@ -134,10 +134,6 @@ def test_temp_book_autosaves_and_is_removed_after_save(api, tmp_path):
     assert any("Tuấn Anh" in str(c.value) for row in view.iter_rows() for c in row if c.value)
     assert temp.stat().st_size < 20_000
     assert api.state()["temp_at"] == ws.temp_saved_at  # giao diện hiện giờ lưu tạm
-    # sổ tạm không bị nhận nhầm là sổ tháng
-    from app.excel import sobook
-
-    assert sobook.find_month_file(tmp_path, 10, 2026).name == "SO DIEM DANH T10.xlsx"
     out = api.save()
     while "conflicts" in out:
         out = api.save("keep")

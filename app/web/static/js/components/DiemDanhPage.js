@@ -1,5 +1,5 @@
 // Trang Điểm danh: bảng như tờ sổ (lớp, sĩ số, vắng, hiện diện, tên vắng, ghi chú) + thanh lưu.
-import { api } from "../api.js";
+import { api, CONFIG } from "../api.js";
 import { ask } from "../dialogs.js";
 import { doSave, handle, openClass, store } from "../store.js";
 import { mealDiff } from "../util.js";
@@ -47,7 +47,8 @@ export default {
       if (k === "ok") handle(await api("reset_day"));
     }
     const undo = async () => handle(await api("undo"));
-    return { store, S, filter, filters, rows, empty, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave };
+    const shown = CONFIG.unreported_shown;  // số mã lớp "Chưa báo" hiện trên thanh
+    return { store, shown, S, filter, filters, rows, empty, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave };
   },
   template: /* html */`
   <section class="page" id="page-dd">
@@ -59,8 +60,8 @@ export default {
       <span v-if="!S.unreported.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
       <template v-else>
         <span class="text-muted"><i class="pi pi-hourglass me-1"></i>Chưa báo ({{ S.unreported.length }}):</span>
-        <Button v-for="c in S.unreported.slice(0, 12)" :key="c" :label="c" size="small" severity="secondary" outlined class="py-0" @click="openClass(c)" />
-        <span v-if="S.unreported.length > 12" class="text-muted small">và {{ S.unreported.length - 12 }} lớp khác</span>
+        <Button v-for="c in S.unreported.slice(0, shown)" :key="c" :label="c" size="small" severity="secondary" outlined class="py-0" @click="openClass(c)" />
+        <span v-if="S.unreported.length > shown" class="text-muted small">và {{ S.unreported.length - shown }} lớp khác</span>
       </template>
       <SelectButton v-model="filter" :options="filters" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="ms-auto" />
     </div>

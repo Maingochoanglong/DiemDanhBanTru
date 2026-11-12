@@ -43,6 +43,7 @@ Cấu trúc mã:
 | `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), tách tên trong ô sổ (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`), đọc cột Ghi chú của file danh sách (`notes.py`). |
 | `app/excel/` | Đọc file danh sách học sinh + sheet Nhóm ăn (`roster_import.py`), sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu, dựng lại bảng suất ăn theo Nhóm ăn), sổ tạm `… tamthoi.xlsx` (`tamthoi.py`), ghi file an toàn / mở file (`files.py`). |
 | `app/settings.py` | CaiDat.txt (cạnh file .exe). |
+| `app/config.py` | Mọi giá trị cố định (cổng, tên file, thời gian chờ, lịch học…), không viết cứng ở chỗ khác. |
 | `app/service.py` | Điều phối các thao tác (mở ngày, lưu, sổ tạm, tạo sổ tháng mới). |
 | `app/web/` | `api.py` (các hàm giao diện gọi: mở ngày, chọn em vắng, lưu sổ…), `server.py` (máy chủ FastAPI: trả giao diện, nhận lời gọi `POST /api/<tên hàm>`), `run.py` (mở trình duyệt, hộp chọn file của Windows, tự thoát khi đóng thẻ), `static/` (giao diện: `index.html`, `app.css`, `js/main.js` khởi động Vue + PrimeVue, `js/store.js` trạng thái và thao tác chung, `js/components/` mỗi trang / hộp thoại một file, `vendor/` thư viện đóng kèm). |
 | `tests/` | Test với dữ liệu giả (không chứa thông tin thật của học sinh). |

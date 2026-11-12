@@ -1,4 +1,5 @@
 import datetime as dt
+from pathlib import Path
 
 import pytest
 
@@ -227,9 +228,13 @@ def test_day_saved_with_every_class_full_reopens_as_reported(ws):
     assert not ws.load_day(day).unreported()
 
 
-def test_settings_fall_back_to_appdata_when_exe_folder_read_only(tmp_path, monkeypatch):
+def test_settings_not_writable_gives_clear_message(tmp_path, monkeypatch):
+    """Thư mục cạnh .exe không ghi được: báo rõ cách sửa (không ghi CaiDat.txt ở chỗ khác)."""
     from app import settings
 
-    monkeypatch.setattr(settings, "_writable", lambda folder: False)
-    monkeypatch.setenv("APPDATA", str(tmp_path))
-    assert settings.default_path() == tmp_path / "DiemDanhBanTru" / "CaiDat.txt"
+    def denied(self, *a, **k):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(Path, "write_text", denied)
+    with pytest.raises(OSError, match="thư mục ghi được"):
+        settings.save(tmp_path / "CaiDat.txt", {})

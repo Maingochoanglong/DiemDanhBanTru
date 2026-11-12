@@ -1,7 +1,8 @@
-"""Làm việc với file: ghi Excel an toàn (ghi ra file phụ rồi thay thế, báo khi file đang mở), mở file / thư mục."""
+"""Làm việc với file: ghi Excel an toàn (không tạo file phụ), báo khi file đang mở trong Excel, mở file / thư mục."""
 
 from __future__ import annotations
 
+import io
 import os
 import subprocess
 import sys
@@ -13,32 +14,26 @@ class FileLockedError(Exception):
 
 
 def is_locked(path: str | Path) -> bool:
-    path = Path(path)
-    if not path.exists():
-        return False
-    if path.with_name("~$" + path.name).exists():  # file khóa Excel tạo khi đang mở
-        return True
+    """Excel giữ file đang mở (không cho ghi): thử mở để ghi là biết, không đụng file nào khác."""
     try:
         with open(path, "r+b"):
-            pass
+            return False
+    except FileNotFoundError:
+        return False
     except PermissionError:
         return True
-    except OSError:
-        return False
-    return False
 
 
 def safe_save(wb, path: str | Path) -> None:
-    path = Path(path)
+    """Dựng file Excel trong bộ nhớ trước (lỗi lúc dựng thì file cũ còn nguyên), xong mới ghi đè 1 lần.
+    Không tạo file phụ: app chỉ đụng sổ, sổ tạm, file danh sách, CaiDat.txt."""
     if is_locked(path):
         raise FileLockedError(str(path))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.stem}.ghi{path.suffix}")
-    wb.save(str(tmp))
+    buf = io.BytesIO()
+    wb.save(buf)
     try:
-        os.replace(tmp, path)
+        Path(path).write_bytes(buf.getvalue())
     except PermissionError as e:
-        tmp.unlink(missing_ok=True)
         raise FileLockedError(str(path)) from e
 
 

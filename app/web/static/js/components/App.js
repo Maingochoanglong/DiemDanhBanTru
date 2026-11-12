@@ -10,10 +10,8 @@ import SetupDialog from "./SetupDialog.js";
 import SuatAnPage from "./SuatAnPage.js";
 import TopBar from "./TopBar.js";
 
-const { computed, onMounted, ref, watch } = Vue;
+const { computed, onMounted } = Vue;
 const PAGES = { dd: DiemDanhPage, sa: SuatAnPage, hs: HocSinhPage, cd: CaiDatPage };
-
-function readSide() { try { return localStorage.getItem("sideMin") === "1"; } catch { return false; } }
 
 export default {
   components: { ClassDialog, SetupDialog, TopBar },
@@ -24,8 +22,9 @@ export default {
       ["cd", "Cài đặt", "pi-cog"]]
       .map(([page, label, icon]) => ({ page, label, icon: "pi " + icon, command: () => { store.page = page; } }));
     const page = computed(() => PAGES[store.page]);
-    const sideMin = ref(readSide());
-    watch(sideMin, v => { try { localStorage.setItem("sideMin", v ? "1" : "0"); } catch { /* bỏ qua */ } });
+    // thu gọn thanh bên: nhớ trong CaiDat.txt (app không lưu gì ở trình duyệt)
+    const sideMin = computed(() => !!store.settings?.side_min);
+    function toggleSide() { store.settings.side_min = !sideMin.value; api("set_side_min", store.settings.side_min); }
 
     document.addEventListener("keydown", e => {
       if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); doSave(); }
@@ -49,7 +48,7 @@ export default {
       loadSettings();
       if (r?.restore) await askRestore(r.restore);
     });
-    return { store, conn, IS_APP, nav, page, sideMin, askClose };
+    return { store, conn, IS_APP, nav, page, sideMin, toggleSide, askClose };
   },
   template: /* html */`
   <div :class="['app', { 'side-min': sideMin }]">
@@ -57,7 +56,7 @@ export default {
       <div class="brand-row">
         <div class="brand">Điểm danh<br>bán trú</div>
         <Button :icon="sideMin ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'" text rounded severity="secondary"
-          :title="sideMin ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" @click="sideMin = !sideMin" />
+          :title="sideMin ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" @click="toggleSide" />
       </div>
       <Menu :model="nav" class="nav">
         <template #item="{ item, props }">

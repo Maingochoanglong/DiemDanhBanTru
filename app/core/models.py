@@ -6,6 +6,7 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 
+from .. import config
 from .names import compute_display_names
 from .text import class_sort_key, clean_spaces, fold
 
@@ -47,7 +48,7 @@ class Student:
 
     def auto_absent_reason(self, day: dt.date) -> str:
         """Lý do vắng tự động trong ngày, '' nếu không có."""
-        if self.cat_thu6 and day.weekday() == 4:
+        if self.cat_thu6 and day.weekday() == config.FRIDAY:
             return "cắt thứ 6"
         return ""
 

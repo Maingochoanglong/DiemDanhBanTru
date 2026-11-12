@@ -13,7 +13,7 @@ import datetime as dt
 import time
 from pathlib import Path
 
-from . import build_info
+from . import build_info, config
 from . import settings as cfg
 from .core import matcher
 from .core.day import DayState
@@ -26,7 +26,7 @@ from .excel.roster_import import ListData, load_list
 
 def next_school_day(day: dt.date, step: int = 1) -> dt.date:
     day += dt.timedelta(days=step)
-    while day.weekday() >= 5:
+    while day.weekday() >= config.SCHOOL_DAYS:
         day += dt.timedelta(days=step)
     return day
 
@@ -145,17 +145,14 @@ class Workspace:
         return wb
 
     def book_for(self, day: dt.date) -> Path | None:
+        """Sổ đang chọn (CaiDat.txt) nếu đúng tháng của ngày; không thì None (app hỏi tạo sổ tháng mới / chọn sổ).
+        App không tự mở các file khác trong thư mục."""
         cur = self.settings.get("so_file")
         if cur and Path(cur).exists():
             wb = self._book(cur)
             bm = sobook.book_month(wb, cur)
             if bm is None or bm == (day.month, day.year):
                 return Path(cur)
-        if cur:  # sổ tháng khác: tìm cùng thư mục với sổ đang dùng
-            found = sobook.find_month_file(Path(cur).parent, day.month, day.year)
-            if found:
-                self.settings["so_file"] = str(found)
-                return found
         return None
 
     def create_month_book(self, day: dt.date) -> Path:
@@ -303,7 +300,7 @@ class Workspace:
     def push_undo(self) -> None:
         if self.state is not None:
             self._undo.append(self.state.snapshot())
-            del self._undo[:-50]
+            del self._undo[:-config.UNDO_DEPTH]
         self.dirty = True
         self.version += 1
 
@@ -404,23 +401,13 @@ class Workspace:
 
     def find_temp(self) -> tamthoi.TempInfo | None:
         """Sổ tạm còn lại từ lần trước (app bị tắt khi chưa lưu vào sổ)."""
-        cands: list[Path] = []
-        if self.settings.get("so_file"):
-            book = Path(self.settings["so_file"])
-            cands.append(tamthoi.temp_path(book))
-            if book.parent.is_dir():  # sổ tạm của sổ tháng khác cùng thư mục
-                cands += sorted(book.parent.glob(f"* {tamthoi.TAG}.xls*"))
-        for p in cands:
-            if p.exists():
-                info = tamthoi.read(p)
-                if info is not None:
-                    return info
-        return None
+        if not self.settings.get("so_file"):
+            return None
+        p = tamthoi.temp_path(self.settings["so_file"])  # chỉ sổ tạm của sổ đang chọn
+        return tamthoi.read(p) if p.exists() else None
 
     def restore_temp(self, info: tamthoi.TempInfo) -> None:
         """Mở lại ngày trong sổ tạm và đưa các thao tác đã làm vào."""
-        if info.book.exists():
-            self.settings["so_file"] = str(info.book)
         self.dirty = False
         self.load_day(info.day)
         tamthoi.apply(info, self.state)

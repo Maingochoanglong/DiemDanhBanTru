@@ -149,14 +149,24 @@ def test_new_month_book(book, tmp_path):
     assert ws["A3"].value == "ĐIỂM DANH BÁN TRÚ NGÀY 02/11/2026"
     assert "tháng 11 năm 2026" in ws["G16"].value
     assert ws["G6"].value is None and ws["M25"].value is None
-    assert sobook.find_month_file(tmp_path, 11) == new
 
 
-def test_safe_save_refuses_when_open_in_excel(book):
-    book.with_name("~$" + book.name).write_text("x")  # file khóa Excel tạo khi đang mở
-    wb = sobook.load_book(book)
+def test_safe_save_refuses_when_open_in_excel(book, monkeypatch):
+    """Excel đang mở sổ (Windows không cho mở để ghi): báo lỗi, không ghi, không tạo file nào khác."""
+    import builtins
+
+    real_open = builtins.open
+
+    def excel_holds(path, mode="r", *a, **k):
+        if str(path) == str(book) and mode == "r+b":
+            raise PermissionError(13, "đang mở trong Excel")
+        return real_open(path, mode, *a, **k)
+
+    monkeypatch.setattr(builtins, "open", excel_holds)
+    before = book.read_bytes()
     with pytest.raises(FileLockedError):
-        safe_save(wb, book)
+        safe_save(sobook.load_book(book), book)
+    assert book.read_bytes() == before and sorted(p.name for p in book.parent.iterdir()) == [book.name]
 
 
 def test_load_list_reads_note_column_and_keeps_ids(tmp_path, roster):

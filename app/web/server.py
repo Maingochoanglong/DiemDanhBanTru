@@ -1,15 +1,16 @@
-"""Máy chủ web nội bộ (FastAPI + uvicorn) chỉ nghe ở 127.0.0.1.
+"""Máy chủ web nội bộ (FastAPI + uvicorn) chỉ nghe ở config.HOST (chính máy này).
 
 Phục vụ giao diện (static/) và nhận lời gọi của giao diện: POST /api/<tên hàm> với thân là mảng JSON tham số,
 gọi sang hàm cùng tên của Api (api.py).
 
 Chạy thử với dữ liệu có sẵn (không hộp chọn file, không nút Thoát):
-python -m app.web.server [cổng] [file dữ liệu]   → mở http://127.0.0.1:8765, tài liệu API ở /docs
+python -m app.web.server [cổng] [CaiDat.txt]   → mở http://127.0.0.1:<cổng> (mặc định config.DEV_PORT), tài liệu API ở /docs
 """
 
 from __future__ import annotations
 
 import inspect
+import json
 import mimetypes
 import socket
 import sys
@@ -19,7 +20,7 @@ from pathlib import Path
 from typing import Annotated
 
 import uvicorn
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -28,12 +29,9 @@ import uvicorn.lifespan.off  # noqa: F401
 import uvicorn.loops.asyncio  # noqa: F401
 import uvicorn.protocols.http.h11_impl  # noqa: F401
 
+from .. import config
 from ..build_info import BUILD
 from .api import Api
-
-APP_ID = "DiemDanhBanTru"
-HEADER = "X-DDBT"  # giao diện gửi kèm mọi lời gọi /api: trang web lạ không gửi được (trình duyệt chặn)
-HOSTS = ["127.0.0.1", "localhost"]
 
 # Windows có thể khai báo sai kiểu file .js trong registry (text/plain) → trình duyệt không chạy module
 mimetypes.add_type("text/javascript", ".js")
@@ -57,7 +55,7 @@ def api_methods(api: Api) -> set[str]:
 class Clients:
     """Các thẻ trình duyệt đang mở giao diện. Thẻ cuối cùng đóng (không mở lại trong vài giây) thì gọi on_empty."""
 
-    def __init__(self, on_empty=None, grace: float = 6.0):
+    def __init__(self, on_empty=None, grace: float = config.TAB_CLOSE_GRACE):
         self.on_empty = on_empty
         self.grace = grace
         self._ids: set[str] = set()
@@ -68,7 +66,7 @@ class Clients:
         if not cid:
             return
         with self._lock:
-            self._ids.add(cid[:64])
+            self._ids.add(cid[:config.CLIENT_ID_MAX])
             if self._timer is not None:
                 self._timer.cancel()
                 self._timer = None
@@ -102,7 +100,7 @@ def create_app(api: Api, clients: Clients | None = None, dev: bool = False) -> F
     app = FastAPI(title="Điểm danh bán trú", version=BUILD,
                   docs_url="/docs" if dev else None, redoc_url=None, openapi_url="/openapi.json" if dev else None)
     # chặn trang web lạ trỏ tên miền về 127.0.0.1 (DNS rebinding)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=config.HOST_NAMES)
 
     @app.middleware("http")
     async def no_cache(request: Request, call_next):
@@ -110,10 +108,10 @@ def create_app(api: Api, clients: Clients | None = None, dev: bool = False) -> F
         resp.headers["Cache-Control"] = "no-store"  # bản app mới: trình duyệt không dùng file giao diện cũ
         return resp
 
-    def from_app(x_ddbt: str | None = Header(default=None), x_client: str | None = Header(default=None)) -> None:
-        if x_ddbt != "1":
+    def from_app(request: Request) -> None:
+        if request.headers.get(config.API_HEADER) != "1":  # trang web lạ không gửi được header riêng (trình duyệt chặn)
             raise HTTPException(403, "Chỉ giao diện của app được gọi.")
-        clients.seen(x_client or "")
+        clients.seen(request.headers.get(config.CLIENT_HEADER) or "")
 
     @app.post("/api/{name}", dependencies=[Depends(from_app)])
     def call(name: str, args: Annotated[list, Body(default_factory=list)]):
@@ -134,24 +132,26 @@ def create_app(api: Api, clients: Clients | None = None, dev: bool = False) -> F
     @app.get("/ping")
     def ping() -> dict:
         """Lần mở app sau nhận ra app đang chạy sẵn."""
-        return {"app": APP_ID, "build": BUILD}
+        return {"app": config.APP_ID, "build": BUILD}
 
     @app.get("/config.js")
-    def config() -> Response:
-        return Response(f"window.APP_MODE = {'dev' if dev else 'app'!r};", media_type="text/javascript")
+    def ui_config() -> Response:
+        """Giá trị giao diện cần (từ config.py), để JavaScript không viết cứng."""
+        cfg = {"mode": "dev" if dev else "app", "apiHeader": config.API_HEADER, "clientHeader": config.CLIENT_HEADER, **config.UI}
+        return Response(f"window.APP_CONFIG = {json.dumps(cfg)};", media_type="text/javascript")
 
     app.mount("/", StaticFiles(directory=static_dir(), html=True), name="static")
     return app
 
 
 def bind(port: int) -> socket.socket:
-    """Mở cổng ở 127.0.0.1; cổng đang bị chương trình khác dùng thì lấy cổng trống bất kỳ."""
+    """Mở cổng ở config.HOST; cổng đang bị chương trình khác dùng thì lấy cổng trống bất kỳ."""
     def make(p: int) -> socket.socket:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if sys.platform != "win32":  # Windows: SO_REUSEADDR cho 2 chương trình chiếm chung 1 cổng
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            s.bind(("127.0.0.1", p))
+            s.bind((config.HOST, p))
         except OSError:
             s.close()
             raise
@@ -171,7 +171,7 @@ class Server:
     def __init__(self, app: FastAPI, port: int = 0):
         self.sock = bind(port)
         self.port = self.sock.getsockname()[1]
-        self.url = f"http://127.0.0.1:{self.port}/"
+        self.url = f"http://{config.HOST}:{self.port}/"
         cfg = uvicorn.Config(app, log_config=None, log_level="warning", access_log=False,
                              loop="asyncio", http="h11", ws="none", lifespan="off")
         self._uv = uvicorn.Server(cfg)
@@ -179,17 +179,16 @@ class Server:
 
     def start(self) -> Server:
         self._thread.start()
-        for _ in range(200):
-            if self._uv.started or not self._thread.is_alive():
-                break
-            time.sleep(0.025)
+        deadline = time.monotonic() + config.SERVER_START_TIMEOUT
+        while not self._uv.started and self._thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(config.POLL_INTERVAL)
         if not self._uv.started:
             raise RuntimeError("Không khởi động được máy chủ giao diện.")
         return self
 
     def stop(self) -> None:
         self._uv.should_exit = True
-        self._thread.join(5)
+        self._thread.join(config.SERVER_STOP_TIMEOUT)
         self.sock.close()
 
 
@@ -197,7 +196,7 @@ if __name__ == "__main__":
     from ..service import Workspace
 
     srv = Server(create_app(Api(Workspace(sys.argv[2] if len(sys.argv) > 2 else None)), dev=True),
-                 int(sys.argv[1]) if len(sys.argv) > 1 else 8765).start()
+                 int(sys.argv[1]) if len(sys.argv) > 1 else config.DEV_PORT).start()
     print(srv.url)
     try:
         while True:
