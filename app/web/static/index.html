@@ -22,6 +22,7 @@
       <a class="nav-link" data-page="lich" href="#" title="Lịch thêm/cắt"><i class="bi bi-calendar-event"></i><span class="lbl">Lịch thêm/cắt</span></a>
       <a class="nav-link" data-page="cd" href="#" title="Cài đặt"><i class="bi bi-gear"></i><span class="lbl">Cài đặt</span></a>
     </nav>
+    <a class="nav-link quit" id="quitBtn" href="#" title="Thoát app (hỏi lưu trước nếu còn thay đổi)" hidden><i class="bi bi-box-arrow-right"></i><span class="lbl">Thoát</span></a>
     <div class="ver" id="ver"></div>
   </aside>
 
@@ -198,7 +199,16 @@
 </div></div></div>
 
 <div id="toasts"></div>
-<script src="devmode.js"></script><!-- chỉ có ở máy chủ thử; trong app thì không có file này -->
+
+<!-- chạy trong trình duyệt: app đã thoát / bị tắt -->
+<div id="gone" hidden>
+  <div class="card shadow text-center p-4">
+    <i class="bi bi-power display-4 text-secondary"></i>
+    <h4 class="gone-title mt-2">App đã tắt</h4>
+    <p class="text-muted mb-0">Có thể đóng thẻ trình duyệt này.<br>Muốn dùng tiếp: mở lại <b>DiemDanhBanTru.exe</b>.</p>
+  </div>
+</div>
+<script src="devmode.js"></script><!-- máy chủ nội bộ trả về file này (chạy trong trình duyệt); cửa sổ pywebview thì không có -->
 <script src="vendor/bootstrap.bundle.min.js"></script>
 <script src="app.js"></script>
 </body>

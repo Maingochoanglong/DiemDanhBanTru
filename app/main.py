@@ -1,6 +1,7 @@
 """Chạy app: python -m app.main
 
-Giao diện là trang web (HTML + Bootstrap 5) mở trong cửa sổ app nhờ pywebview (Microsoft Edge WebView2).
+Giao diện là trang web (HTML + Bootstrap 5) mở trong trình duyệt (Edge/Chrome) qua máy chủ nội bộ 127.0.0.1.
+Thêm --app để mở trong cửa sổ app riêng (pywebview, Microsoft Edge WebView2) như bản cũ.
 Phần xử lý sổ Excel, danh sách, lịch, ghép lớp vẫn là Python (app/service.py, app/core, app/excel).
 """
 
@@ -38,6 +39,8 @@ def selftest() -> int:
     try:
         import tempfile
 
+        import tkinter
+
         import openpyxl
         import webview  # noqa: F401
         import xlrd  # noqa: F401
@@ -51,6 +54,7 @@ def selftest() -> int:
         for f in ("index.html", "app.js", "app.css", "vendor/bootstrap.min.css", "vendor/bootstrap.bundle.min.js",
                   "vendor/bootstrap-icons.min.css", "vendor/fonts/bootstrap-icons.woff2"):
             assert (static_dir() / f).exists(), f"thiếu file giao diện {f}"
+        tkinter.Tcl().eval("info patchlevel")  # hộp chọn file khi chạy trong trình duyệt (cần Tcl/Tk đóng kèm)
         with tempfile.TemporaryDirectory() as d:
             wb = openpyxl.Workbook()
             wb.active["A1"] = "Điểm danh"
@@ -72,17 +76,20 @@ def main(argv: list[str] | None = None) -> None:
     except Exception:  # noqa: BLE001
         log_error(traceback.format_exc())
         ws = Workspace(Path.home() / "Documents" / "DiemDanhBanTru" / "DuLieu_BanTru_moi.xlsx")
-    from app.web.run import run, run_in_browser
+    from app.web.run import run_in_browser, run_window
 
-    if "--browser" in argv:
-        run_in_browser(ws)
-        return
+    if "--app" in argv:
+        try:
+            run_window(ws, debug="--debug" in argv)
+            return
+        except Exception:  # noqa: BLE001
+            # cửa sổ app không mở được (thiếu thành phần Windows…): mở bằng trình duyệt để vẫn dùng được
+            log_error(traceback.format_exc())
     try:
-        run(ws, debug="--debug" in argv)
+        run_in_browser(ws, open_browser="--no-open" not in argv)
     except Exception:  # noqa: BLE001
-        # cửa sổ app không mở được (thiếu thành phần Windows…): mở bằng trình duyệt để vẫn dùng được
         log_error(traceback.format_exc())
-        run_in_browser(ws)
+        raise
 
 
 if __name__ == "__main__":

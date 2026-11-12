@@ -17,12 +17,13 @@ File được GitHub Actions (`.github/workflows/build-windows.yml`) dựng trê
 
 ## Chạy từ mã nguồn (cho người phát triển)
 
-Cần Python 3.10 trở lên. Giao diện là trang web (HTML + Bootstrap 5) mở trong cửa sổ app nhờ pywebview (trên Windows dùng Microsoft Edge WebView2).
+Cần Python 3.10 trở lên. Giao diện là trang web (HTML + Bootstrap 5) mở trong **trình duyệt** (Edge/Chrome) qua máy chủ nội bộ `http://127.0.0.1:47615` (chỉ nhận kết nối từ chính máy này). App tự thoát khi đóng thẻ trình duyệt cuối cùng hoặc bấm *Thoát*; mở app lần nữa khi đang chạy thì chỉ mở thêm thẻ. Vẫn có thể mở trong cửa sổ app riêng nhờ pywebview (Microsoft Edge WebView2) bằng `--app`.
 
 ```bash
 pip install -r requirements.txt -r requirements-dev.txt
-python run_app.py            # mở app (cửa sổ pywebview)
-python run_app.py --browser  # mở bằng trình duyệt (máy không có WebView2)
+python run_app.py            # mở app trong trình duyệt
+python run_app.py --no-open  # chạy máy chủ, không tự mở trình duyệt (tự vào http://127.0.0.1:47615)
+python run_app.py --app      # mở trong cửa sổ app riêng (pywebview)
 python -m app.web.devserver  # máy chủ thử: mở http://127.0.0.1:8765/index.html để xem/chụp giao diện
 python -m pytest             # chạy test
 pyinstaller --onefile --windowed --name DiemDanhBanTru --add-data "app/web/static;app/web/static" run_app.py   # dựng .exe (trên Windows)
@@ -35,7 +36,7 @@ Cấu trúc mã:
 | `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), tách tên trong ô sổ / ghi chú (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`), đọc ghi chú sổ (`notes.py`). |
 | `app/excel/` | Đọc file danh sách học sinh (chữ đỏ hoặc cột Bán trú), file dữ liệu của app, sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu, dựng lại bảng suất ăn theo bảng Nhóm ăn), sổ tạm tự lưu `… tamthoi.xlsx` (`tamthoi.py`), sao lưu, in qua Excel. |
 | `app/service.py` | Điều phối các thao tác (mở ngày, dán tin, lưu, tạo sổ tháng mới). |
-| `app/web/` | Giao diện web: `api.py` (cầu nối giao diện ↔ xử lý sổ), `static/` (HTML, JavaScript, Bootstrap 5 + Bootstrap Icons đóng kèm, chạy không cần mạng), `run.py` (mở cửa sổ pywebview), `devserver.py` (máy chủ thử). |
+| `app/web/` | Giao diện web: `api.py` (cầu nối giao diện ↔ xử lý sổ), `static/` (HTML, JavaScript, Bootstrap 5 + Bootstrap Icons đóng kèm, chạy không cần mạng), `devserver.py` (máy chủ nội bộ 127.0.0.1: phục vụ giao diện, nhận lời gọi `/api/…`), `run.py` (mở trình duyệt, hộp chọn file, tự thoát khi đóng thẻ; hoặc cửa sổ pywebview với `--app`). |
 | `tests/` | Test với dữ liệu giả (không chứa thông tin thật của học sinh). |
 
 > Không đưa file Excel thật (danh sách học sinh, sổ điểm danh) lên repo. `.gitignore` đã chặn `*.xls`, `*.xlsx`.

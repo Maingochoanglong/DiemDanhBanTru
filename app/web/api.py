@@ -1,7 +1,7 @@
 """Cầu nối giữa giao diện web (HTML/Bootstrap) và phần xử lý sổ (Workspace).
 
-Mọi hàm trả về dict/list đơn giản (JSON). Giao diện gọi qua `window.pywebview.api.<tên hàm>(...)`
-(app thật) hoặc POST /api/<tên hàm> (máy chủ thử, dùng để test và chụp ảnh).
+Mọi hàm trả về dict/list đơn giản (JSON). Giao diện gọi qua máy chủ nội bộ: POST /api/<tên hàm>
+(chạy trong trình duyệt — mặc định), hoặc `window.pywebview.api.<tên hàm>(...)` (cửa sổ app, mở bằng --app).
 """
 
 from __future__ import annotations
@@ -56,12 +56,17 @@ class Api:
         self._pending_import = None  # (changes, path) chờ giáo vụ duyệt
         self._pending_notes = None
         self._temp = None  # sổ tạm tìm thấy lúc mở app (chờ hỏi khôi phục)
+        self._booted = False
 
     # ================================================================== ngày
     def boot(self) -> dict:
         """Mở app: mở ngày học hôm nay (thứ 7/CN thì ngày học kế tiếp). Bản mới tải về: hiện màn Thiết lập."""
         if self._ws.setup_needed:
             return {"setup": self.setup_info(), "state": self.state()}
+        if self._booted and self._ws.state is not None and (self._ws.dirty or self._ws.data_dirty):
+            # trình duyệt tải lại trang / mở thêm thẻ khi đang làm dở: giữ nguyên ngày đang mở, không mất thay đổi
+            return {"state": self.state()}
+        self._booted = True
         today = dt.date.today()
         res = self.open_day(_iso(today if today.weekday() < 5 else next_school_day(today)), True)
         self._temp = self._ws.find_temp()

@@ -17,6 +17,11 @@ Kết quả ghi vào **chính file sổ Excel đang dùng**, giữ y kiểu cũ:
 1. Trên trang repo GitHub, mở thư mục **`tai-ve`** → bấm **`DiemDanhBanTru.exe`** → nút **Download** (hoặc tải ở trang **Releases**).
 2. Chép file vào một thư mục cố định (ví dụ `Documents\DiemDanhBanTru`), rồi bấm đúp để mở.
 3. Lần đầu mở, Windows có thể báo *"Windows protected your PC"*. Bấm **More info → Run anyway**. Lý do: app không mua chữ ký số, file vẫn an toàn.
+4. App mở giao diện trong **trình duyệt** của máy (Edge/Chrome), ở địa chỉ `http://127.0.0.1:47615`. Mọi thứ vẫn chạy trên máy này, không cần mạng, không gửi dữ liệu đi đâu.
+   - **Thoát app**: bấm **Thoát** ở góc dưới thanh bên trái (app hỏi lưu nếu còn thay đổi), hoặc đóng thẻ trình duyệt đó (trình duyệt hỏi lại nếu còn thay đổi chưa lưu vào sổ).
+   - Lỡ đóng thẻ khi đang làm dở: mở lại app, app hỏi **Khôi phục** từ sổ tạm (mục 8).
+   - Bấm đúp mở app lần nữa khi app đang chạy: chỉ mở thêm thẻ trình duyệt, không chạy 2 app cùng lúc. Tải lại trang (F5) không làm mất thay đổi.
+   - Muốn mở trong cửa sổ riêng như bản cũ: tạo lối tắt (shortcut) tới `DiemDanhBanTru.exe`, thêm ` --app` vào cuối ô *Target* (cần Microsoft Edge WebView2).
 
 Máy cần Windows 10/11. In trực tiếp cần Microsoft Excel. Không cần cài Python.
 
@@ -171,14 +176,15 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
   - tờ 1: A1 tới hết phần chữ ký (thường là A1:G46);
   - tờ 2: bảng suất ăn (thường là G68:O80).
 - Khi app gặp lỗi, chi tiết được ghi vào `%APPDATA%\DiemDanhBanTru\loi.log`.
-- Máy chưa có **Microsoft Edge WebView2** (hiếm, Windows 11 có sẵn): app tự mở giao diện bằng trình duyệt Edge, vẫn dùng bình thường. Muốn mở trong cửa sổ riêng thì cài WebView2 Runtime miễn phí của Microsoft.
+- **Bấm mở app mà không thấy trình duyệt hiện lên**: mở Edge/Chrome rồi gõ địa chỉ `127.0.0.1:47615`.
+- Hộp **chọn file / chọn thư mục** (chọn sổ, nhập danh sách…) là cửa sổ riêng của app; nếu không thấy, tìm nó trên thanh tác vụ (taskbar).
 - **Windows cảnh báo khi tải hoặc mở app**: app chưa có *chữ ký số* (chứng thư mua của hãng chứng thực) nên mỗi bản mới Windows chưa "quen", trình duyệt và SmartScreen sẽ hỏi lại. App không có gì nguy hiểm; làm một lần cho mỗi bản mới:
   - **Edge**: ở danh sách tải về, rê chuột lên file → **…** → **Giữ lại** → **Hiện thêm** → **Vẫn giữ**. **Chrome**: bấm **Giữ lại**.
   - Màn xanh **"Windows đã bảo vệ PC của bạn"**: bấm **Thông tin bổ sung** → **Vẫn chạy**.
   - Hoặc trước khi mở: chuột phải file `DiemDanhBanTru.exe` → **Properties** → tích **Bỏ chặn (Unblock)** → **OK**.
   - Nếu **Windows Defender** xóa / chặn file: mở **Bảo mật Windows → Bảo vệ khỏi vi-rút và mối đe dọa → Lịch sử bảo vệ**, chọn mục bị chặn → **Cho phép**. Có thể gửi file cho Microsoft xem lại (microsoft.com/wdsi/filesubmission, chọn *Software developer*/*Home customer*, ghi "false positive") để các máy khác không bị chặn nữa.
   - Thông tin phiên bản của file: chuột phải → **Properties → Details** (tên *Điểm danh bán trú*, số phiên bản).
-- **Cập nhật app lên bản mới**: tải lại `DiemDanhBanTru.exe` trong thư mục `tai-ve` của repo, chép đè lên file cũ (đóng app trước). Danh sách học sinh, ghép lớp, lịch và cài đặt nằm trong file dữ liệu `DuLieu_BanTru.xlsx` nên vẫn giữ nguyên.
+- **Cập nhật app lên bản mới**: tải lại `DiemDanhBanTru.exe` trong thư mục `tai-ve` của repo, chép đè lên file cũ (thoát app trước: bấm **Thoát** trong giao diện). Danh sách học sinh, ghép lớp, lịch và cài đặt nằm trong file dữ liệu `DuLieu_BanTru.xlsx` nên vẫn giữ nguyên.
 
 ## 9. Phím tắt
 

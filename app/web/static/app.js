@@ -2,7 +2,12 @@
 "use strict";
 
 // ------------------------------------------------------------------ gọi Python
-const IN_APP = !window.DEV_SERVER;  // máy chủ thử (devserver.py) đặt DEV_SERVER; trong app thì gọi qua pywebview
+// Mặc định giao diện chạy trong trình duyệt: gọi Python qua máy chủ nội bộ (devmode.js đặt BROWSER_APP,
+// máy chủ thử đặt DEV_SERVER). Mở bằng "--app" thì chạy trong cửa sổ pywebview.
+const IN_BROWSER = !!(window.BROWSER_APP || window.DEV_SERVER);
+const IN_APP = !IN_BROWSER;
+const CLIENT = Math.random().toString(36).slice(2) + Date.now().toString(36);  // mã của thẻ trình duyệt này
+let APP_GONE = false;  // máy chủ đã tắt (bấm Thoát, hoặc app bị đóng)
 function apiReady() {
   if (!IN_APP) return Promise.resolve();
   if (window.pywebview && window.pywebview.api) return Promise.resolve();
@@ -13,12 +18,37 @@ let chain = Promise.resolve();
 function api(name, ...args) {
   const run = async () => {
     if (IN_APP) return await window.pywebview.api[name](...args);
-    const r = await fetch("/api/" + name, { method: "POST", body: JSON.stringify(args) });
+    let r;
+    try {
+      r = await fetch("/api/" + name, { method: "POST", body: JSON.stringify(args),
+        headers: { "Content-Type": "application/json", "X-DDBT": "1", "X-Client": CLIENT } });
+    } catch (e) {
+      appGone();
+      throw e;
+    }
+    if (!r.ok) return { error: `Lỗi máy chủ (${r.status}).` };
     return await r.json();
   };
   const p = chain.then(run, run);
   chain = p.catch(() => {});
   return p;
+}
+// app (máy chủ) đã tắt: che giao diện, hướng dẫn mở lại
+function appGone(quit = false) {
+  APP_GONE = true;
+  const el = document.getElementById("gone");
+  if (!el) return;
+  el.querySelector(".gone-title").textContent = quit ? "Đã thoát app" : "App đã tắt";
+  el.hidden = false;
+}
+if (IN_BROWSER) {
+  // đóng thẻ: báo máy chủ (thẻ cuối cùng đóng thì app tự thoát)
+  window.addEventListener("pagehide", () => { if (!APP_GONE) navigator.sendBeacon("/bye", CLIENT); });
+  window.addEventListener("pageshow", e => { if (e.persisted && !APP_GONE) api("close_check").catch(() => {}); });
+  // còn thay đổi chưa lưu: trình duyệt hỏi trước khi đóng thẻ / tải lại
+  window.addEventListener("beforeunload", e => {
+    if (!APP_GONE && S && (S.dirty || S.data_dirty)) { e.preventDefault(); e.returnValue = ""; }
+  });
 }
 
 // ------------------------------------------------------------------ tiện ích
@@ -833,7 +863,10 @@ async function askClose() {
       [{ key: "save", label: "Lưu rồi thoát" }, { key: "discard", label: "Không lưu", cls: "btn-outline-danger" }, { key: "stay", label: "Ở lại", cls: "btn-outline-secondary" }]);
     if (k === "save") { const r = await api("save_data"); if (r.error) return info("Lỗi khi lưu", r.error); } else if (k !== "discard") return;
   }
-  api("quit");
+  if (IN_APP) return api("quit");
+  await api("quit");
+  appGone(true);
+  window.close();  // trình duyệt chỉ cho đóng thẻ do chính trang mở; không đóng được thì hiện thông báo
 }
 
 // ------------------------------------------------------------------ Thiết lập lần đầu (bản mới tải về)
@@ -873,6 +906,7 @@ async function setupStep(kind) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   wire();
+  if (IN_BROWSER) { $("#quitBtn").hidden = false; $("#quitBtn").onclick = e => { e.preventDefault(); askClose(); }; }
   await apiReady();
   const r = handle(await api("boot"));
   $("#setupSteps").onclick = e => { const b = e.target.closest("[data-setup]"); if (b && !b.disabled) setupStep(b.dataset.setup); };
