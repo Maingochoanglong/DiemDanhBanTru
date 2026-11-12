@@ -1,23 +1,28 @@
-"""Đọc danh sách học sinh (.xls hoặc .xlsx).
+"""Đọc file Excel danh sách học sinh (.xls hoặc .xlsx) — nguồn duy nhất về học sinh của app (app chỉ đọc, không ghi).
 
 Hai dạng file:
 - file danh sách học sinh toàn trường: em tô chữ đỏ là ăn bán trú;
-- file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2)
-  và cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ).
+- file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2),
+  cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ)
+  và cột "Ghi chú" (vd. "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11": xem core/notes.py).
 
 File gọn có thể có thêm sheet "Nhóm ăn": mỗi dòng là một dòng bảng suất ăn trong sổ
 (Tên dòng | Các lớp ăn chung | Mã ghép lẻ). App dựng bảng suất ăn của tờ ngày mới theo sheet này.
+
+Hàm chính: load_list(path) -> ListData.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..core.meals import CODE_RE, MealGroup
-from ..core.models import Roster, Student
-from ..core.text import clean_spaces, fmt_date, fold, norm_class, parse_date
+from ..core.models import ClassInfo, Roster, Student
+from ..core.notes import student_note
+from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, norm_class, parse_date
 
 
 @dataclass
@@ -26,9 +31,9 @@ class RosterRow:
     ho_ten: str
     ngay_sinh: str
     red: bool  # ăn bán trú (chữ đỏ hoặc X)
-    phan_loai: str = ""
     ghep: str | None = None  # None = file không có cột "Ghép lớp"
     ten_goi: str | None = None  # None = file không có cột "Tên gọi khác"
+    ghi_chu: str = ""
 
     @property
     def key(self) -> tuple[str, str]:
@@ -54,8 +59,8 @@ def _find_columns(header: list[str]) -> dict[str, int] | None:
         elif (f.startswith("ngay sinh") or (f.startswith("ngay") and f.endswith("sinh"))) and "ns" not in cols:
             # "Ngày sinh", "Ngày tháng năm sinh"
             cols["ns"] = i
-        elif f.startswith("phan loai") and "pl" not in cols:
-            cols["pl"] = i
+        elif f.startswith("ghi chu") and "gc" not in cols:
+            cols["gc"] = i
         elif (f.startswith(("an ban tru", "ban tru")) or f in ("bt", "an bt")) and "bt" not in cols:
             # cột đánh X; không nhận nhầm cột "Loại bán trú" (ghi "Thường") của file danh sách học sinh toàn trường
             cols["bt"] = i
@@ -112,12 +117,12 @@ def _read_xls(path: Path) -> list[RosterRow]:
                         dob = fmt_date(xlrd.xldate_as_datetime(cell.value, book.datemode).date())
                     else:
                         dob = _fmt_dob(cell.value)
-                pl = clean_spaces(str(sh.cell_value(r, cols["pl"]))) if "pl" in cols else ""
                 if "bt" in cols:
                     red = _is_x(sh.cell_value(r, cols["bt"]))
                 ghep = _fmt_ghep(sh.cell_value(r, cols["ghep"])) if "ghep" in cols else None
                 goi = clean_spaces(str(sh.cell_value(r, cols["goi"]))) if "goi" in cols else None
-                rows.append(RosterRow(lop, name, dob, red, pl, ghep, goi))
+                gc = clean_spaces(str(sh.cell_value(r, cols["gc"]))) if "gc" in cols else ""
+                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -161,11 +166,11 @@ def _read_xlsx(path: Path) -> list[RosterRow]:
                 dob = ""
                 if "ns" in cols:
                     dob = _fmt_dob(ws.cell(r, cols["ns"] + 1).value)
-                pl = clean_spaces(str(ws.cell(r, cols["pl"] + 1).value or "")) if "pl" in cols else ""
                 red = _is_x(ws.cell(r, cols["bt"] + 1).value) if "bt" in cols else _openpyxl_red(name_cell)
                 ghep = _fmt_ghep(ws.cell(r, cols["ghep"] + 1).value) if "ghep" in cols else None
                 goi = clean_spaces(str(ws.cell(r, cols["goi"] + 1).value or "")) if "goi" in cols else None
-                rows.append(RosterRow(lop, name, dob, red, pl, ghep, goi))
+                gc = clean_spaces(str(ws.cell(r, cols["gc"] + 1).value or "")) if "gc" in cols else ""
+                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -224,8 +229,6 @@ def check_meal_groups(raw: list[tuple[int, str, str, str]], class_codes: list[st
                       kid_codes: dict[str, set[str]]) -> tuple[list[MealGroup], list[str], list[str]]:
     """Kiểm tra bảng Nhóm ăn. class_codes: các lớp trong danh sách; kid_codes: lớp -> mã Ăn ghép của các em ăn BT.
     Trả về (các dòng, lỗi, lưu ý). Có lỗi thì không dùng bảng này."""
-    from .database import short_codes
-
     short = {v: k for k, v in short_codes(class_codes).items()}  # "1.2" -> "1D16"
     groups: list[MealGroup] = []
     errors: list[str] = []
@@ -279,125 +282,58 @@ def check_meal_groups(raw: list[tuple[int, str, str, str]], class_codes: list[st
     return groups, errors, warnings
 
 
-def describe_meal_change(old: list[MealGroup] | None, new: list[MealGroup]) -> str | None:
-    """Câu báo thay đổi bảng Nhóm ăn trong hộp Nhập danh sách; None = không đổi."""
-    key = lambda gs: [(g.label, list(g.classes), g.code) for g in gs]  # noqa: E731
-    if old is not None and key(old) == key(new):
-        return None
-    head = "Bảng Nhóm ăn: từ tờ ngày mới, app dựng bảng suất ăn trong sổ theo bảng này"
-    if old is None:
-        return f"{head} ({sum(1 for g in new if not g.blank)} dòng)."
-
-    def desc(g: MealGroup) -> str:
-        return " + ".join([x for x in (", ".join(g.classes), f"em ghép {g.code}" if g.code else "") if x]) or "—"
-
-    old_by = {g.label: g for g in old if not g.blank}
-    new_by = {g.label: g for g in new if not g.blank}
-    gone = [label for label in old_by if label not in new_by]
-    parts = []
-    for g in new_by.values():
-        o = old_by.get(g.label)
-        renamed = next((x for x in gone if g.code and old_by[x].code == g.code), None)  # cùng mã ghép lẻ: đổi tên dòng
-        if renamed:
-            gone.remove(renamed)
-            parts.append(f"dòng \"{renamed}\" → \"{g.label}\": {desc(old_by[renamed])} → {desc(g)}")
-        elif o is None:
-            parts.append(f"thêm dòng \"{g.label}\" ({desc(g)})")
-        elif desc(o) != desc(g):
-            parts.append(f"dòng \"{g.label}\": {desc(o)} → {desc(g)}")
-    parts += [f"bỏ dòng \"{label}\"" for label in gone]
-    return f"{head}: " + ("; ".join(parts) if parts else "đổi thứ tự dòng") + "."
-
-
-def flag_mismatches(rows: list[RosterRow]) -> list[RosterRow]:
-    """Em có màu chữ đỏ không khớp cột 'Phân loại HS'."""
-    out = []
-    for r in rows:
-        if not r.phan_loai:
-            continue
-        bt = fold(r.phan_loai).startswith("ban tru")
-        if bt != r.red:
-            out.append(r)
+def short_codes(codes: list[str]) -> dict[str, str]:
+    """Mã ngắn theo thứ tự trong khối: 1D15 -> 1.1, 1D16 -> 1.2…"""
+    out: dict[str, str] = {}
+    by_khoi: dict[str, list[str]] = {}
+    for c in sorted(codes, key=class_sort_key):
+        by_khoi.setdefault(c[0], []).append(c)
+    for k, lst in by_khoi.items():
+        for i, c in enumerate(lst, 1):
+            out[c] = f"{k}.{i}"
     return out
 
 
-# ---------------- so sánh với danh sách đang có ----------------
+# ---------------- đọc cả file cho app ----------------
 @dataclass
-class Change:
-    kind: str  # new | removed | rename | class | boarding | ghep | ten_goi
-    text: str
-    row: RosterRow | None = None
-    student: Student | None = None
-    apply: bool = True
-    data: object = None  # kind "nhom_an": bảng Nhóm ăn mới (list[MealGroup])
+class ListData:
+    roster: Roster
+    meal_groups: list[MealGroup] | None = None  # sheet Nhóm ăn (None = không có / có lỗi: giữ bảng suất ăn của sổ)
+    meal_errors: list[str] = field(default_factory=list)
+    meal_warnings: list[str] = field(default_factory=list)
 
 
-def _base_key(name: str, dob: str) -> tuple[str, str]:
-    """Họ tên bỏ chữ A/B ở cuối (file cũ ghi "Lý Gia Hưng A", file mới ghi A/B ở cột Tên gọi khác)."""
-    return fold(re.sub(r"\s+[A-Z]$", "", clean_spaces(name))), dob
+def _student(row: RosterRow, sid: str, today: dt.date) -> Student:
+    s = Student(sid, row.lop, row.ho_ten, row.ngay_sinh, ban_tru=row.red, ten_ghi_so=row.ten_goi or "",
+                an_ghep=row.ghep or "", ghi_chu=row.ghi_chu)
+    for key, value in student_note(row.ghi_chu, today).items():  # "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11"
+        setattr(s, key, value)
+    return s
 
 
-def diff_roster(roster: Roster, rows: list[RosterRow]) -> list[Change]:
-    existing = {s.key(): s for s in roster.students}
-    by_base: dict[tuple[str, str], list[Student]] = {}
-    for st in roster.students:
-        by_base.setdefault(_base_key(st.ho_ten, st.ngay_sinh), []).append(st)
-    row_keys = {r.key for r in rows}
-    seen = set()
-    changes: list[Change] = []
+def load_list(path: str | Path, today: dt.date | None = None) -> ListData:
+    """Đọc file danh sách học sinh thành danh sách cho app. Mã học sinh = lớp|họ tên|ngày sinh
+    (không đổi giữa các lần đọc, nên sổ tạm vẫn khớp khi file danh sách được sửa chỗ khác)."""
+    today = today or dt.date.today()
+    rows = read_cdhs(path)
+    roster, seen = Roster(), set()
     for row in rows:
-        s = existing.get(row.key)
-        seen.add(row.key)
-        if s is None:  # cùng em, chỉ khác chữ A/B ở cuối họ tên
-            same = [x for x in by_base.get(_base_key(row.ho_ten, row.ngay_sinh), [])
-                    if x.key() not in row_keys and x.key() not in seen]
-            if len(same) == 1:
-                s = same[0]
-                seen.add(s.key())
-                changes.append(Change("rename", f"Sửa họ tên: {s.ho_ten} → {row.ho_ten} ({row.lop})", row, s))
-        if s is None:
-            bt = "ăn BT" if row.red else "không ăn BT"
-            changes.append(Change("new", f"Thêm HS mới: {row.ho_ten} ({row.lop}, {bt})", row))
-            continue
-        if s.lop != row.lop:
-            changes.append(Change("class", f"Đổi lớp: {s.ho_ten} {s.lop} → {row.lop}", row, s))
-        if s.ban_tru != row.red and not (not row.red and s.cat_tu):  # em đã có lịch cắt thì giữ nguyên
-            what = "bắt đầu ăn BT" if row.red else "thôi ăn BT"
-            changes.append(Change("boarding", f"{s.ho_ten} ({row.lop}) {what}", row, s))
-        if row.ghep is not None and row.ghep != s.an_ghep:
-            what = f"ăn ghép {row.ghep}" if row.ghep else "bỏ ăn ghép"
-            changes.append(Change("ghep", f"{s.ho_ten} ({row.lop}) {what}", row, s))
-        if row.ten_goi is not None and row.ten_goi != s.ten_ghi_so:  # tên gọi khác lấy theo file Excel
-            what = f'tên gọi khác "{row.ten_goi}"' if row.ten_goi else "bỏ tên gọi khác"
-            changes.append(Change("ten_goi", f"{s.ho_ten} ({row.lop}): {what}", row, s))
-    for key, s in existing.items():
-        if key not in seen:
-            changes.append(Change("removed", f"Không còn trong danh sách: {s.ho_ten} ({s.lop})", None, s, apply=False))
-    return changes
-
-
-def apply_changes(roster: Roster, changes: list[Change]) -> int:
-    n = 0
-    for c in changes:
-        if not c.apply:
-            continue
-        if c.kind == "new" and c.row:
-            roster.students.append(
-                Student(roster.next_id(), c.row.lop, c.row.ho_ten, c.row.ngay_sinh, c.row.red,
-                        ten_ghi_so=c.row.ten_goi or "", an_ghep=c.row.ghep or "")
-            )
-        elif c.kind == "rename" and c.student and c.row:
-            c.student.ho_ten = c.row.ho_ten
-        elif c.kind == "class" and c.student and c.row:
-            c.student.lop = c.row.lop
-        elif c.kind == "boarding" and c.student and c.row:
-            c.student.ban_tru = c.row.red
-        elif c.kind == "ghep" and c.student and c.row:
-            c.student.an_ghep = c.row.ghep or ""
-        elif c.kind == "ten_goi" and c.student and c.row:
-            c.student.ten_ghi_so = c.row.ten_goi or ""
-        elif c.kind == "removed" and c.student:
-            roster.students.remove(c.student)
-        n += 1
-    roster.invalidate()
-    return n
+        sid = f"{row.lop}|{row.ho_ten}|{row.ngay_sinh}"
+        n = 2
+        while sid in seen:  # trùng cả lớp, họ tên, ngày sinh (hiếm)
+            sid, n = f"{row.lop}|{row.ho_ten}|{row.ngay_sinh}|{n}", n + 1
+        seen.add(sid)
+        roster.students.append(_student(row, sid, today))
+    codes = sorted({s.lop_tinh for s in roster.students if s.ban_tru}, key=class_sort_key)
+    roster.classes = {c: ClassInfo(c, ma_ngan=ma) for c, ma in short_codes(codes).items()}
+    data = ListData(roster)
+    raw = read_meal_groups(path)
+    if raw is not None:
+        kid_codes: dict[str, set[str]] = {}
+        for s in roster.students:
+            if s.ban_tru and s.an_ghep:
+                kid_codes.setdefault(s.lop_tinh, set()).add(s.an_ghep)
+        groups, data.meal_errors, data.meal_warnings = check_meal_groups(raw, sorted({r.lop for r in rows}), kid_codes)
+        if not data.meal_errors and any(not g.blank for g in groups):
+            data.meal_groups = groups
+    return data

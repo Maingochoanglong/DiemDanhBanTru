@@ -48,3 +48,5 @@ def test_components_used_in_templates_are_registered():
         used = set(re.findall(r"<([A-Z]\w+)", src)) - {"KeepAlive"}
         missing = used - registered - local
         assert not missing, f"{path.name} dùng thành phần chưa đăng ký: {missing}"
+    used_anywhere = set(re.findall(r"<([A-Z]\w+)", ALL))
+    assert registered <= used_anywhere, f"Đăng ký mà không dùng (code thừa): {registered - used_anywhere}"

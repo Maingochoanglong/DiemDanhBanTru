@@ -1,7 +1,7 @@
 // Bảng chọn tên của 1 lớp: bấm tên em để đánh vắng; ô tìm (gõ không dấu, dán nhiều tên) chỉ để lọc.
 import { api } from "../api.js";
 import { openDialog } from "../dialogs.js";
-import { applyClass, scheduleDialog, store } from "../store.js";
+import { applyClass, store } from "../store.js";
 import { matches, matchLevel, searchTerms, tailMatch } from "../util.js";
 import ResolveDialog from "./ResolveDialog.js";
 
@@ -10,7 +10,7 @@ const { computed, nextTick, ref, watch } = Vue;
 export default {
   setup() {
     const cls = store.cls;
-    const q = ref(""), note = ref(""), search = ref(null), menu = ref(null);
+    const q = ref(""), note = ref(""), search = ref(null);
     watch(() => cls.D, D => { note.value = D ? D.note : ""; });
     watch(() => cls.open, open => { if (open) q.value = ""; });
 
@@ -52,13 +52,8 @@ export default {
       el.setRangeText(t.trim().replace(/\s*[\r\n]+\s*/g, ", "), el.selectionStart, el.selectionEnd, "end");
       q.value = el.value;
     }
-    const schedItems = [
-      { label: "Cắt bán trú từ ngày…", icon: "pi pi-minus-circle", command: () => scheduleDialog("cat", cls.code) },
-      { label: "Thêm em vào bán trú…", icon: "pi pi-user-plus", command: () => scheduleDialog("them", cls.code) },
-      { label: "Cắt thứ 6 hàng tuần…", icon: "pi pi-calendar-minus", command: () => scheduleDialog("thu6", cls.code) },
-    ];
     const focus = () => nextTick(() => search.value?.$el.focus());
-    return { cls, q, note, search, menu, view, friday, toggle, full, clearExtra, saveNote, resolve, paste, schedItems, focus };
+    return { cls, q, note, search, view, friday, toggle, full, clearExtra, saveNote, resolve, paste, focus };
   },
   template: /* html */`
   <Dialog v-model:visible="cls.open" modal maximizable :draggable="false" class="cls-dialog" @show="focus">
@@ -113,8 +108,6 @@ export default {
       <div class="row-gap w-100">
         <label for="clsNote" class="text-nowrap">Ghi chú (cột H):</label>
         <InputText id="clsNote" v-model="note" class="grow" @change="saveNote" />
-        <Button label="Thêm/cắt bán trú" icon="pi pi-calendar" severity="secondary" outlined @click="menu.toggle($event)" />
-        <Menu ref="menu" :model="schedItems" popup />
         <Button label="Xong" size="large" class="px-4" @click="cls.open = false" />
       </div>
     </template>

@@ -44,12 +44,6 @@ class MealLayout:
             codes = [c for c in codes if c.startswith(f"{khoi}.")]
         return codes
 
-    def row_for_code(self, code: str) -> MealRow | None:
-        for r in self.rows:
-            if r.code == code:
-                return r
-        return None
-
     @property
     def is_empty(self) -> bool:
         return not self.rows

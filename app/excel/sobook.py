@@ -484,10 +484,6 @@ def load_book(path: str | Path):
     return openpyxl.load_workbook(str(path))
 
 
-def save_book(wb, path: str | Path, backup_dir: str | Path | None = None) -> None:
-    safe_save(wb, path, backup_dir)
-
-
 def month_file_name(prev: Path, month: int) -> Path:
     stem = prev.stem
     if re.search(r"T\d{1,2}(?!\d)", stem):

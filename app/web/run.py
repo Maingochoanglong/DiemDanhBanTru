@@ -45,25 +45,6 @@ class TkDialogs:
         finally:
             root.destroy()
 
-    def save_file(self, title: str, name: str) -> str | None:
-        from tkinter import filedialog
-
-        root = self._root()
-        try:
-            return filedialog.asksaveasfilename(parent=root, title=title, initialfile=name, defaultextension=".xlsx",
-                                                filetypes=[("Excel", "*.xlsx")]) or None
-        finally:
-            root.destroy()
-
-    def choose_folder(self, title: str) -> str | None:
-        from tkinter import filedialog
-
-        root = self._root()
-        try:
-            return filedialog.askdirectory(parent=root, title=title) or None
-        finally:
-            root.destroy()
-
 
 class MainThreadDialogs:
     """Hộp chọn file chạy ở luồng chính; máy chủ web (luồng khác) gửi việc sang và chờ kết quả."""
@@ -82,12 +63,6 @@ class MainThreadDialogs:
 
     def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
         return self._call("open_file", title, types)
-
-    def save_file(self, title: str, name: str) -> str | None:
-        return self._call("save_file", title, name)
-
-    def choose_folder(self, title: str) -> str | None:
-        return self._call("choose_folder", title)
 
     def loop(self, stop: threading.Event) -> None:
         """Chạy ở luồng chính cho tới khi app thoát."""
@@ -166,4 +141,4 @@ def run(ws: Workspace, port: int = APP_PORT, open_browser: bool = True) -> None:
         pass
     finally:
         srv.stop()
-        ws.autosave_flush()  # thay đổi chưa lưu vào sổ: ghi nốt sổ tạm
+        ws.autosave()  # thay đổi chưa lưu vào sổ: chắc chắn đã có trong sổ tạm

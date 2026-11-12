@@ -1,20 +1,17 @@
 // Trạng thái chung của giao diện và các thao tác dùng ở nhiều trang. Mọi xử lý sổ nằm ở Python (app/web/api.py).
 import { api, conn, IS_APP } from "./api.js";
-import { ask, info, openDialog, SAVE_CHOICES, toast } from "./dialogs.js";
+import { ask, info, SAVE_CHOICES, toast } from "./dialogs.js";
 import { esc, mealDiff } from "./util.js";
-import ImportDialog from "./components/ImportDialog.js";
-import ScheduleDialog from "./components/ScheduleDialog.js";
 
 const { reactive } = Vue;
 
 export const store = reactive({
   S: null,              // trạng thái màn chính (api.state)
-  page: "dd",           // dd | sa | hs | lich | cd
+  page: "dd",           // dd | sa | hs | cd
   cls: { open: false, code: null, D: null },  // bảng chọn tên của lớp đang mở
   settings: null,       // api.settings (file đang dùng, phiên bản)
   setup: null,          // màn Thiết lập (bản mới tải về)
   hsPreset: null,       // mở trang Học sinh lọc sẵn 1 lớp
-  schedTick: 0,         // tăng khi lịch thêm/cắt đổi: trang Lịch tải lại
 });
 
 export function handle(r) {  // kết quả chung từ Python: lỗi, thông báo, trạng thái
@@ -39,10 +36,6 @@ export async function openClass(code) {
   const d = await api("class_detail", code);
   if (d.error) return info("Có lỗi", d.error);
   Object.assign(store.cls, { code, D: d, open: true });
-}
-
-export async function reloadClass() {
-  if (store.cls.open) store.cls.D = await api("class_detail", store.cls.code);
 }
 
 // ------------------------------------------------------------------ ngày, lưu
@@ -118,32 +111,20 @@ export async function doSave() {
   return true;
 }
 
-// ------------------------------------------------------------------ lịch, danh sách, ghi chú sổ
-export async function scheduleDialog(kind, code, ids = []) {
-  code = code || store.cls.code || (store.S?.rows.find(r => r.kind === "class") || {}).code || "";
-  const ok = await openDialog(ScheduleDialog, { header: "Lên lịch thêm / cắt bán trú", width: "46rem", data: { kind, code, ids } });
-  if (ok) { store.schedTick++; await reloadClass(); }
-}
-
-export async function importList(path) {
-  const p = await api("import_list", path || null);
-  if (p.cancel) return;
-  if (p.error) return info("Không đọc được file", p.error);
-  const sel = await openDialog(ImportDialog, { header: "Nhập danh sách học sinh", width: "46rem", data: { kind: "import", p } });
-  if (sel) handle(await api("apply_import", sel));
-}
-
-export async function noteSuggestions() {
-  const p = await api("note_suggestions");
-  if (p.error) return info("Không đọc được sổ", p.error);
-  if (!p.items.length) return info("Ghi chú trong sổ", "Không có gợi ý mới nào từ ghi chú trong sổ.");
-  const sel = await openDialog(ImportDialog, { header: "Gợi ý từ ghi chú trong sổ", width: "60rem", data: { kind: "notes", p } });
-  if (sel) handle(await api("apply_notes", sel));
-}
-
+// ------------------------------------------------------------------ chọn file (hộp chọn file của Windows)
 export async function chooseBook() {
   const r = await api("choose_book");
   if (!r.cancel) { handle(r); await loadSettings(); }
+}
+
+export async function chooseList() {
+  const r = await api("choose_list");
+  if (!r.cancel) { handle(r); await loadSettings(); }
+}
+
+export async function openPath(kind) {
+  const r = await api("open_path", kind);
+  if (r.error) info("Chưa mở được", r.error);
 }
 
 // ------------------------------------------------------------------ mở / thoát app
@@ -162,10 +143,6 @@ export async function askClose() {
     const k = await ask("Chưa lưu", `Ngày ${esc(c.day)} có thay đổi chưa lưu vào sổ.`, SAVE_CHOICES("thoát"));
     if (k === "save") { if (!(await doSave())) return; } else if (k === "discard") await api("discard_temp"); else return;
   }
-  if (c.data_dirty) {
-    const k = await ask("Chưa lưu", "Danh sách học sinh / ghép lớp có thay đổi chưa lưu.", SAVE_CHOICES("thoát"));
-    if (k === "save") { const r = await api("save_data"); if (r.error) return info("Lỗi khi lưu", r.error); } else if (k !== "discard") return;
-  }
   await api("quit");
   conn.quit = conn.gone = true;
   window.close();  // trình duyệt chỉ cho đóng thẻ do chính trang mở; không đóng được thì hiện thông báo
@@ -174,6 +151,6 @@ export async function askClose() {
 if (IS_APP) {
   // còn thay đổi chưa lưu: trình duyệt hỏi trước khi đóng thẻ / tải lại
   window.addEventListener("beforeunload", e => {
-    if (!conn.gone && store.S && (store.S.dirty || store.S.data_dirty)) { e.preventDefault(); e.returnValue = ""; }
+    if (!conn.gone && store.S?.dirty) { e.preventDefault(); e.returnValue = ""; }
   });
 }

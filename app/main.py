@@ -22,9 +22,9 @@ def log_error(text: str) -> Path | None:
     if sys.stderr:
         print(text, file=sys.stderr)
     try:
-        from app.service import config_path
+        from app.settings import default_path
 
-        p = config_path().with_name("loi.log")
+        p = default_path().with_name("loi.log")  # cạnh CaiDat.txt
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(p, "a", encoding="utf-8") as f:
             f.write(text + "\n")
@@ -46,9 +46,6 @@ def selftest() -> int:
         from app.web.api import Api
         from app.web.server import Server, create_app, static_dir
 
-        if sys.platform == "win32":
-            import pythoncom  # noqa: F401
-            import win32com.client  # noqa: F401
         for f in ("index.html", "app.css", "js/main.js", "vendor/vue.global.prod.js", "vendor/primevue.min.js",
                   "vendor/primevue-aura.js", "vendor/primeicons.css", "vendor/fonts/primeicons.woff2"):
             assert (static_dir() / f).exists(), f"thiếu file giao diện {f}"
@@ -75,16 +72,11 @@ def main(argv: list[str] | None = None) -> None:
     argv = argv if argv is not None else sys.argv[1:]
     if "--selftest" in argv:
         sys.exit(selftest())
-    args = [a for a in argv if not a.startswith("--")]
-    try:
-        ws = Workspace(args[0] if args else None)
-    except Exception:  # noqa: BLE001
-        log_error(traceback.format_exc())
-        ws = Workspace(Path.home() / "Documents" / "DiemDanhBanTru" / "DuLieu_BanTru_moi.xlsx")
+    args = [a for a in argv if not a.startswith("--")]  # tham số: đường dẫn CaiDat.txt khác (chạy thử)
     from app.web.run import run
 
     try:
-        run(ws, open_browser="--no-open" not in argv)
+        run(Workspace(args[0] if args else None), open_browser="--no-open" not in argv)
     except Exception:  # noqa: BLE001
         log_error(traceback.format_exc())
         raise

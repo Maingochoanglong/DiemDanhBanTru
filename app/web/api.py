@@ -10,28 +10,19 @@ from pathlib import Path
 
 from .. import __version__
 from ..core import matcher
-from ..core import schedule as sch
 from ..core.search import matches
 from ..core.text import class_sort_key, clean_spaces, fmt_date, parse_date
-from ..excel import printing
-from ..excel.files import FileLockedError
-from ..excel.roster_import import RosterFormatError, flag_mismatches
+from ..excel.files import FileLockedError, open_file, open_folder
+from ..excel.roster_import import RosterFormatError
 from ..service import NeedMonthBook, Workspace, next_school_day, search_students
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
-PROBLEM = (matcher.AMBIGUOUS, matcher.OTHER_CLASS, matcher.NOT_FOUND)
 
 
 class NoDialogs:
     """Không có hộp chọn file (máy chủ chạy thử, test). App thật dùng hộp của Windows (run.py)."""
 
     def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
-        return None
-
-    def save_file(self, title: str, name: str) -> str | None:
-        return None
-
-    def choose_folder(self, title: str) -> str | None:
         return None
 
 
@@ -52,8 +43,6 @@ class Api:
     def __init__(self, ws: Workspace, dialogs=None):
         self._ws = ws
         self._dlg = dialogs or NoDialogs()
-        self._pending_import = None  # (changes, path) chờ giáo vụ duyệt
-        self._pending_notes = None
         self._temp = None  # sổ tạm tìm thấy lúc mở app (chờ hỏi khôi phục)
         self._booted = False
 
@@ -62,7 +51,7 @@ class Api:
         """Mở app: mở ngày học hôm nay (thứ 7/CN thì ngày học kế tiếp). Bản mới tải về: hiện màn Thiết lập."""
         if self._ws.setup_needed:
             return {"setup": self.setup_info(), "state": self.state()}
-        if self._booted and self._ws.state is not None and (self._ws.dirty or self._ws.data_dirty):
+        if self._booted and self._ws.state is not None and self._ws.dirty:
             # trình duyệt tải lại trang / mở thêm thẻ khi đang làm dở: giữ nguyên ngày đang mở, không mất thay đổi
             return {"state": self.state()}
         self._booted = True
@@ -71,9 +60,6 @@ class Api:
         self._temp = self._ws.find_temp()
         if self._temp is not None:
             res["restore"] = {"day": fmt_date(self._temp.day), "at": self._temp.saved_at, "file": self._temp.path.name}
-        changed = self._ws.list_changed()
-        if changed is not None:
-            res["list_changed"] = {"file": changed.name, "path": str(changed)}
         return res
 
     # ================================================================== thiết lập (bản mới tải về)
@@ -81,22 +67,9 @@ class Api:
         ws = self._ws
         st = ws.settings
         steps = ws.setup_steps
-        return {"folder": str(ws.data.path.parent), "folder_done": "folder" in steps,
-                "book": Path(st.get("so_file") or "").name if "book" in steps else "", "book_done": "book" in steps,
+        return {"book": Path(st.get("so_file") or "").name if "book" in steps else "", "book_done": "book" in steps,
                 "list": Path(st.get("cdhs_file") or "").name if "list" in steps else "", "list_done": "list" in steps,
                 "n": len(ws.roster.students) if "list" in steps else 0, "missing": ws.setup_missing()}
-
-    def setup_folder(self, path: str | None = None, use_default: bool = False) -> dict:
-        """Bước 1: chọn nơi đặt file dữ liệu của app (hoặc dùng thư mục gợi ý)."""
-        folder = str(self._ws.data.path.parent) if use_default else (
-            path or self._dlg.choose_folder("Chọn thư mục đặt file dữ liệu của app"))
-        if not folder:
-            return {"cancel": True, "setup": self.setup_info()}
-        try:
-            self._ws.setup_folder(folder)
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"Không dùng được thư mục này:\n{e}", "setup": self.setup_info()}
-        return {"setup": self.setup_info()}
 
     def finish_setup(self) -> dict:
         try:
@@ -165,9 +138,11 @@ class Api:
 
     # ================================================================== màn chính
     def _setup_hint(self) -> str:
+        if self._ws.list_error:
+            return self._ws.list_error + " Vào Cài đặt để chọn lại file."
         steps = []
         if not self._ws.roster.students:
-            steps.append("nhập danh sách học sinh")
+            steps.append("chọn file danh sách học sinh")
         if not self._ws.book_path:
             steps.append("chọn sổ điểm danh tháng này")
         return ("Vào Cài đặt để " + " và ".join(steps) + ".") if steps else ""
@@ -184,13 +159,13 @@ class Api:
 
     def state(self) -> dict:
         ws, st = self._ws, self._ws.state
-        ws.autosave_request()  # có thay đổi mới thì ghi sổ tạm (chạy nền)
+        ws.autosave()  # mọi thao tác đều trả về state(): có thay đổi mới thì ghi ngay vào sổ tạm
         bp = ws.book_path
         out = {
             "date": _iso(ws.day), "date_text": fmt_date(ws.day), "weekday": WEEKDAYS[ws.day.weekday()],
             "book": bp.name if bp else "", "book_stem": bp.stem if bp else "",
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
-            "dirty": ws.dirty, "data_dirty": ws.data_dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(),
+            "dirty": ws.dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
             "unreported": [],
         }
@@ -412,12 +387,12 @@ class Api:
             return {"locked": f"File đang mở trong Excel nên chưa ghi được:\n{e}\n\nHãy đóng file đó trong Excel rồi bấm Thử lại."}
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không lưu được:\n{e}"}
-        msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Bản cũ đã sao lưu trong thư mục SaoLuu."
+        msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Đã xóa sổ tạm."
         return {"ok": msg, "state": self.state()}
 
     def open_book(self) -> dict:
         if self._ws.book_path:
-            printing.open_file(self._ws.book_path)
+            open_file(self._ws.book_path)
             return {"ok": ""}
         return {"error": "Chưa chọn sổ. Vào Cài đặt → Chọn sổ."}
 
@@ -462,29 +437,7 @@ class Api:
                          "done": sum(1 for s in kids if s.an_ghep in groups)})
         return {"lines": lines, "self": self_line, "total": summary.total_meals, "present": summary.total_present,
                 "groups_total": summary.group_meals, "ok": summary.balanced, "warnings": summary.warnings, "ask": ask,
-                "ghep": ghep, "note": ws.meal_note, "config": bool(ws.data.meal_groups)}
-
-    def meal_groups(self) -> dict:
-        """Cách ghép (các dòng bảng suất ăn) để sửa ở trang Suất ăn."""
-        ws = self._ws
-        groups, saved = ws.meal_groups_current()
-        info = ws._src_info
-        codes = list(info.class_rows) if info else ws.roster.class_codes()
-        return {"groups": [{"label": g.label, "classes": g.classes, "code": g.code} for g in groups], "saved": saved,
-                "classes": [{"code": c, "ma": (ws.roster.classes.get(c).ma_ngan if ws.roster.classes.get(c) else "")}
-                            for c in codes],
-                "exists": ws._src_exists}
-
-    def save_meal_groups(self, groups: list, apply_today: bool = False) -> dict:
-        raw = [(str(g.get("label") or ""), [str(c) for c in g.get("classes") or []], str(g.get("code") or ""))
-               for g in groups]
-        try:
-            errors = self._ws.set_meal_groups(raw, bool(apply_today))
-        except Exception as e:  # noqa: BLE001
-            return {"errors": [f"Chưa lưu được: {e}"]}
-        if errors:
-            return {"errors": errors}
-        return {"meals": self.meals(), "state": self.state(), "flash": "Đã lưu cách ghép."}
+                "ghep": ghep, "note": ws.meal_note}
 
     def pick_ghep(self, sid: str, group: str) -> dict:
         """Chọn nhóm ăn cho em ghép vắng (chỉ ngày đang mở); group rỗng = chọn lại."""
@@ -512,89 +465,15 @@ class Api:
             rows.append({"id": s.id, "lop": s.lop, "ten": s.ho_ten, "ns": s.ngay_sinh, "bt": s.ban_tru,
                          "goi": s.ten_ghi_so or "", "ghep": s.an_ghep,
                          "db": "; ".join(special), "gc": s.ghi_chu, "now": s.is_boarding(day)})
-        return {"rows": rows, "classes": roster.class_codes(), "data_dirty": self._ws.data_dirty}
+        return {"rows": rows, "classes": roster.class_codes()}
 
-    def save_data(self) -> dict:
-        try:
-            self._ws.save_data()
-        except FileLockedError:
-            return {"error": f"File dữ liệu đang mở trong Excel:\n{self._ws.data.path}\nHãy đóng Excel rồi lưu lại."}
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"Không lưu được:\n{e}"}
-        return {"ok": "Đã lưu danh sách học sinh.", "state": self.state()}
-
-    # ================================================================== lịch thêm / cắt
-    def schedules(self) -> dict:
-        today = self._ws.day
-        groups = {"soon": [], "weekly": [], "done": []}
-        for it in self._ws.schedule_items():
-            key = "weekly" if it.kind == sch.FRIDAY else ("soon" if it.start and it.start > today else "done")
-            groups[key].append(it)
-        out = {}
-        for key, lst in groups.items():
-            lst.sort(key=lambda i: (i.start or dt.date.min, class_sort_key(i.student.lop_tinh)))
-            out[key] = [{"key": f"{it.kind}|{it.student.id}", "ngay": fmt_date(it.start) if it.start else
-                         ("mỗi thứ 6" if it.kind == sch.FRIDAY else ""), "lop": it.student.lop_tinh,
-                         "hs": it.student.ho_ten, "viec": it.text} for it in lst]
-        return out
-
-    def schedule_options(self, kind: str, code: str, q: str = "") -> dict:
-        roster, day = self._ws.roster, self._ws.day
-        if kind == sch.ADD:
-            pool = [s for s in roster.in_class(code) if not s.is_boarding(day) and not (s.bt_tu and s.bt_tu > day)]
-        else:
-            pool = roster.boarding(code, day)
-            if kind == sch.FRIDAY:
-                pool = [s for s in pool if not s.cat_thu6]
-            if kind == sch.CUT:
-                pool = [s for s in pool if not s.cat_tu]
-        pool = [s for s in roster.sort_like_roster(pool) if matches(q, s.ho_ten)]
-        nxt, month = next_school_day(day), sch.next_month_start(day)
-        return {"students": [{"id": s.id, "ten": s.ho_ten, "ns": s.ngay_sinh, "bt": s.ban_tru} for s in pool],
-                "classes": roster.class_codes(), "today": fmt_date(day), "next": fmt_date(nxt),
-                "month": fmt_date(month)}
-
-    def add_schedule(self, kind: str, code: str, ids: list, start: str = "", new_name: str = "",
-                     new_dob: str = "", note: bool = True) -> dict:
-        new_name = clean_spaces(new_name)
-        if not ids and not new_name:
-            return {"error": "Chọn ít nhất một học sinh."}
-        d = None
-        if kind != sch.FRIDAY:
-            d = parse_date(start)
-            if not d:
-                return {"error": "Ngày áp dụng phải có dạng dd/mm/yyyy."}
-        dob = parse_date(new_dob)
-        try:
-            text = self._ws.schedule(kind, code, list(ids), d, None, new_name, fmt_date(dob) if dob else "", bool(note))
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"Không lưu được lịch:\n{e}"}
-        msg = f"Đã đặt lịch: {sch.LABEL[kind].lower()}" + (f" từ {fmt_date(d)}" if d else "")
-        if text:
-            msg += f". Đã ghi chú cột H lớp {code}: \"{text}\" — nhớ bấm Lưu vào sổ."
-        self._ws.roster.invalidate()
-        return {"ok": msg, "state": self.state()}
-
-    def cancel_schedules(self, keys: list) -> dict:
-        items = {f"{it.kind}|{it.student.id}": it for it in self._ws.schedule_items()}
-        n = 0
-        try:
-            for k in keys:
-                if k in items:
-                    self._ws.cancel_schedule(items[k])
-                    n += 1
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"Không lưu được:\n{e}"}
-        self._ws.roster.invalidate()
-        return {"ok": f"Đã hủy {n} lịch. Nếu đã ghi chú ở cột H, hãy xóa ghi chú đó trong ô Ghi chú của lớp.",
-                "state": self.state()}
-
-    # ================================================================== cài đặt
+    # ================================================================== cài đặt (3 file: sổ, danh sách, CaiDat.txt)
     def settings(self) -> dict:
-        st = self._ws.settings
-        groups = self._ws.data.meal_groups or []
-        return {"data": str(self._ws.data.path), "so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", ""),
-                "version": __version__, "nhom_an": sum(1 for g in groups if not g.blank)}
+        ws, st = self._ws, self._ws.settings
+        groups = ws.list.meal_groups or []
+        return {"so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", ""), "settings_file": str(ws.settings_path),
+                "version": __version__, "list_error": ws.list_error, "n": len(ws.roster.students),
+                "nhom_an": sum(1 for g in groups if not g.blank), "nhom_an_errors": ws.list.meal_errors + ws.list.meal_warnings}
 
     def choose_book(self, path: str | None = None) -> dict:
         path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", ("Excel (*.xlsx)",))
@@ -605,89 +484,32 @@ class Api:
         res["flash"] = f"Đã chọn sổ {Path(path).name}."
         return res
 
-    def import_list(self, path: str | None = None) -> dict:
-        """Đọc file danh sách học sinh; trả về các thay đổi để giáo vụ duyệt (apply_import)."""
+    def choose_list(self, path: str | None = None) -> dict:
+        """Chọn file Excel danh sách học sinh (app đọc thẳng file này, sửa file thì app tự đọc lại)."""
         path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", ("Excel (*.xlsx;*.xls)",))
         if not path:
             return {"cancel": True}
         try:
-            changes, rows = self._ws.import_cdhs(path)
+            self._ws.set_list(path)
         except RosterFormatError as e:
             return {"error": str(e)}
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không đọc được file:\n{e}"}
-        self._pending_import = (changes, path)
-        mism = flag_mismatches(rows)
-        meal_errors, meal_warnings = self._ws.meal_check or ([], [])
-        return {"file": Path(path).name, "n": len(rows), "n_bt": sum(1 for r in rows if r.red),
-                "first": not self._ws.roster.students,
-                "changes": [{"i": i, "text": c.text, "apply": c.apply, "removed": c.kind == "removed"}
-                            for i, c in enumerate(changes)],
-                "mismatch": [f"{r.ho_ten} ({r.lop})" for r in mism[:8]],
-                "meal_errors": meal_errors, "meal_warnings": meal_warnings}
-
-    def apply_import(self, selected: list) -> dict:
-        if not self._pending_import:
-            return {"error": "Chưa chọn file."}
-        changes, path = self._pending_import
-        keep = {int(i) for i in selected}
-        for i, c in enumerate(changes):
-            c.apply = i in keep
-        try:
-            n = self._ws.apply_import(changes, path)
-        except Exception as e:  # noqa: BLE001
-            self._ws.data_dirty = True
-            return {"error": f"Đã nhập nhưng chưa ghi được file dữ liệu:\n{e}"}
-        self._pending_import = None
-        self._ws.roster.invalidate()
         res = self.open_day(_iso(self._ws.day), True) if not self._ws.dirty else {"state": self.state()}
-        res["flash"] = f"Đã áp dụng {n} thay đổi từ {Path(path).name}."
-        return res
-
-    def note_suggestions(self) -> dict:
-        try:
-            sugs = self._ws.note_suggestions()
-        except Exception as e:  # noqa: BLE001
-            return {"error": f"Không đọc được sổ:\n{e}"}
-        self._pending_notes = sugs
-        return {"items": [{"i": i, "text": g.text, "apply": g.apply} for i, g in enumerate(sugs)]}
-
-    def apply_notes(self, selected: list) -> dict:
-        sugs = self._pending_notes or []
-        keep = {int(i) for i in selected}
-        for i, g in enumerate(sugs):
-            g.apply = i in keep
-        try:
-            n = self._ws.apply_note_suggestions(sugs)
-        except Exception as e:  # noqa: BLE001
-            self._ws.data_dirty = True
-            return {"error": f"Đã cập nhật nhưng chưa ghi được file dữ liệu:\n{e}"}
-        self._pending_notes = None
-        self._ws.roster.invalidate()
-        res = self.open_day(_iso(self._ws.day), True) if not self._ws.dirty else {"state": self.state()}
-        res["flash"] = f"Đã cập nhật {n} học sinh theo ghi chú trong sổ."
+        res["flash"] = f"Đã chọn {Path(path).name}: {len(self._ws.roster.students)} học sinh."
         return res
 
     def open_path(self, kind: str) -> dict:
-        st = self._ws.settings
-        paths = {"data": str(self._ws.data.path), "so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", "")}
-        if kind in paths:
-            p = Path(paths[kind]) if paths[kind] else None
-            if p and p.exists():
-                printing.open_file(p)
-                return {"ok": ""}
+        """Mở file (so_file, cdhs_file, settings) hoặc thư mục chứa file (so_folder, cdhs_folder)."""
+        files = {"so_file": self._ws.settings.get("so_file", ""), "cdhs_file": self._ws.settings.get("cdhs_file", ""),
+                 "settings": str(self._ws.settings_path)}
+        key = kind.removesuffix("_folder") + ("_file" if kind.endswith("_folder") else "")
+        p = Path(files.get(key) or "")
+        if not files.get(key) or not p.exists():
             return {"error": "Chưa có file này."}
-        if kind == "so_folder" and st.get("so_file"):
-            printing.open_folder(Path(st["so_file"]))
-        elif kind == "backup" and st.get("so_file"):
-            b = Path(st["so_file"]).parent / "SaoLuu"
-            printing.open_folder(b if b.exists() else Path(st["so_file"]))
-        elif kind == "data_folder":
-            printing.open_folder(self._ws.data.path)
-        elif kind == "cdhs_folder" and st.get("cdhs_file"):
-            printing.open_folder(Path(st["cdhs_file"]))
+        (open_folder if kind.endswith("_folder") else open_file)(p)
         return {"ok": ""}
 
     # ================================================================== đóng app
     def close_check(self) -> dict:
-        return {"dirty": self._ws.dirty, "data_dirty": self._ws.data_dirty, "day": fmt_date(self._ws.day)}
+        return {"dirty": self._ws.dirty, "day": fmt_date(self._ws.day)}

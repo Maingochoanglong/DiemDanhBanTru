@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Annotated
 
 import uvicorn
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Request, Response
@@ -115,7 +116,7 @@ def create_app(api: Api, clients: Clients | None = None, dev: bool = False) -> F
         clients.seen(x_client or "")
 
     @app.post("/api/{name}", dependencies=[Depends(from_app)])
-    def call(name: str, args: list = Body(default_factory=list)):
+    def call(name: str, args: Annotated[list, Body(default_factory=list)]):
         if name not in methods:
             raise HTTPException(404, f"Không có hàm {name}.")
         with lock:

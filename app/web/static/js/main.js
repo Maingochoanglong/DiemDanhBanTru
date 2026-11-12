@@ -23,7 +23,7 @@ app.use(PV.Config, { theme: { preset: Theme, options: { darkModeSelector: false 
 app.use(PV.ToastService);
 app.use(PV.DialogService);
 for (const name of ["Button", "Card", "Checkbox", "Column", "DataTable", "DatePicker", "Dialog", "DynamicDialog", "IconField", "InputGroup",
-  "InputIcon", "InputText", "Listbox", "Menu", "Message", "Popover", "RadioButton", "Select", "SelectButton", "Tag", "Toast", "ToggleButton"]) {
+  "InputIcon", "InputText", "Menu", "Message", "Popover", "RadioButton", "Select", "SelectButton", "Tag", "Toast", "ToggleButton"]) {
   app.component(name, PV[name]);
 }
 app.mount("#app");

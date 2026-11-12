@@ -10,14 +10,12 @@ Bấm Lưu vào sổ thì app ghi sổ chính rồi xóa sổ tạm.
 from __future__ import annotations
 
 import datetime as dt
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
 
 from ..core.text import fmt_date, parse_date
-from .files import FileLockedError, is_locked
 
 SHEET = "TAMTHOI"
 TAG = "tamthoi"
@@ -29,10 +27,6 @@ SEP = "; "
 def temp_path(book: str | Path) -> Path:
     book = Path(book)
     return book.with_name(f"{book.stem} {TAG}{book.suffix}")
-
-
-def is_temp(path: str | Path) -> bool:
-    return Path(path).stem.lower().endswith(TAG)
 
 
 def _join(items) -> str:
@@ -81,16 +75,6 @@ def build(state, book: str | Path, now: dt.datetime | None = None):
         ws.column_dimensions[col].width = w
     write_state_sheet(wb, state, book, now)
     return wb
-
-
-def save(wb, path: str | Path) -> None:
-    """Ghi sổ tạm (ghi ra file phụ rồi thay thế, không sao lưu bản cũ)."""
-    path = Path(path)
-    if is_locked(path):
-        raise FileLockedError(str(path))
-    tmp = path.with_name(f".{path.stem}.ghi{path.suffix}")
-    wb.save(str(tmp))
-    os.replace(tmp, path)
 
 
 @dataclass

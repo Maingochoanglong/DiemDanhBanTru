@@ -1,17 +1,15 @@
 // Trang Suất ăn: bảng suất ăn như trong sổ (cột suất, tên ghép, gồm), em ghép vắng chưa rõ nhóm.
 import { api } from "../api.js";
-import { store } from "../store.js";
+import { openPath, store } from "../store.js";
 import { mealDiff } from "../util.js";
-import MealEditor from "./MealEditor.js";
 
 const { computed, onActivated, ref } = Vue;
 
 export default {
-  components: { MealEditor },
   setup() {
-    const m = ref(null), editing = ref(false);
+    const m = ref(null);
     const load = async () => { m.value = await api("meals"); };
-    onActivated(() => { editing.value = false; load(); });
+    onActivated(load);
 
     // như bảng trong sổ: dòng trống giữ chỗ cách dòng
     const rows = computed(() => {
@@ -34,13 +32,11 @@ export default {
     const rowClass = r => r.gap ? "gap" : r.self ? "text-muted" : r.m ? "warn-row" : "";
     async function pick(sid, g) { const r = await api("pick_ghep", sid, g); store.S = r.state; load(); }
     function students(code) { store.hsPreset = code; store.page = "hs"; }
-    function closeEditor(saved) { editing.value = false; if (saved) load(); }
-    return { m, editing, rows, title, rowClass, pick, students, closeEditor };
+    return { m, rows, title, rowClass, pick, students, openPath };
   },
   template: /* html */`
   <section class="page">
-    <MealEditor v-if="editing" @close="closeEditor" />
-    <div v-else-if="m" class="sheet">
+    <div v-if="m" class="sheet">
       <div class="sheet-head">
         <div class="grow">
           <template v-if="m.empty"><div class="fs-5 fw-bold">Sổ chưa có bảng suất ăn</div></template>
@@ -50,7 +46,8 @@ export default {
             <div class="small text-muted">{{ m.self ? "Các nhóm " + m.groups_total + " + tự ăn tại lớp " + m.self.meals + " = " + m.total + " suất" : "Các nhóm: " + m.groups_total + " suất" }}</div>
           </template>
         </div>
-        <Button label="Sửa cách ghép" icon="pi pi-sitemap" outlined title="Lớp nào ăn chung dòng nào trong bảng suất ăn của sổ" @click="editing = true" />
+        <Button label="Sửa cách ghép" icon="pi pi-external-link" severity="secondary" outlined @click="openPath('cdhs_file')"
+          title="Mở file danh sách học sinh để sửa sheet Nhóm ăn (lớp nào ăn chung dòng nào trong bảng suất ăn)" />
       </div>
       <div v-if="!m.empty" class="px-3 pt-2">
         <Message v-if="m.ask.length" severity="warn" class="mb-2">

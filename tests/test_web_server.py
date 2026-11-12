@@ -152,3 +152,16 @@ def test_file_dialogs_run_on_main_thread():
     threading.Thread(target=worker).start()
     d.loop(stop)
     assert out == ["C:/so.xlsx"] and seen == [True]
+
+
+def test_run_starts_and_stops_cleanly(api, monkeypatch):  # noqa: F811
+    """Vòng đời mở app → thoát (đóng thẻ / bấm Thoát): máy chủ chạy rồi tắt, không lỗi."""
+    seen = []
+
+    def user_quits(self, stop):  # thay vòng chờ hộp chọn file: người dùng bấm Thoát ngay
+        seen.append(True)
+        stop.set()
+
+    monkeypatch.setattr(webrun.MainThreadDialogs, "loop", user_quits)
+    webrun.run(api._ws, port=0, open_browser=False)
+    assert seen == [True]

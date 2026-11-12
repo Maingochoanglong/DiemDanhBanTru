@@ -6,20 +6,15 @@ import json
 import openpyxl
 import pytest
 
-from app.excel.database import AppData
 from app.service import Workspace
 from app.web.api import Api
+from tests.conftest import make_workspace
 from tests.test_excel import make_book
 
 
 @pytest.fixture
-def api(tmp_path, monkeypatch, roster):
-    monkeypatch.setenv("APPDATA", str(tmp_path / "appdata"))
-    book = make_book(tmp_path / "SO DIEM DANH T10.xlsx")
-    AppData(tmp_path / "DuLieu_BanTru.xlsx", roster).save()
-    ws = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
-    ws.set_book(book)
-    ws.autosave_delay = 3600  # test tự gọi autosave_flush() thay cho luồng chạy nền
+def api(tmp_path, roster):
+    ws = make_workspace(tmp_path, roster, make_book(tmp_path / "SO DIEM DANH T10.xlsx"))
     a = Api(ws)
     assert "state" in a.open_day("2026-10-29")
     return a
@@ -86,36 +81,28 @@ def test_new_month_asks_to_create_book(api):
     assert r["state"]["book"] == "SO DIEM DANH T11.xlsx" and r["flash"].startswith("Đã tạo sổ mới")
 
 
-def test_students_lookup_and_schedule(api):
+def test_students_lookup(api):
     rows = api.students("long", "", True)["rows"]
     assert [r["ten"] for r in rows] == ["Khổng Hải Long"]
-    assert not hasattr(api, "save_student") and not hasattr(api, "export_list")  # danh sách sửa trong Excel
-    # lịch cắt thứ 6 cho 1 em
-    opt = api.schedule_options("thu6", "2D17", "")
-    target = next(s for s in opt["students"] if s["ten"] == "Viên Duy Mạnh")
-    r = api.add_schedule("thu6", "2D17", [target["id"]], "", "", "", False)
-    assert r["ok"].startswith("Đã đặt lịch")
-    weekly = api.schedules()["weekly"]
-    assert [w["hs"] for w in weekly] == ["Viên Duy Mạnh"]
-    assert api.cancel_schedules([weekly[0]["key"]])["ok"].startswith("Đã hủy 1 lịch")
+    for name in ("save_student", "export_list", "import_list", "schedules", "add_schedule", "save_meal_groups"):
+        assert not hasattr(api, name)  # học sinh, lịch, nhóm ăn: sửa trong file Excel danh sách
 
 
-def test_import_simple_list_preview_then_apply(api, tmp_path):
+def test_choose_list_reads_file_directly(api, tmp_path):
     p = tmp_path / "ds.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú"])
-    ws.append(["1D15", "Kha Bảo Ngọc", dt.datetime(2020, 3, 2), "Không"])  # đang ăn → thôi ăn
-    ws.append(["1D15", "Bùi Văn Mới", dt.datetime(2020, 1, 1), "Có"])  # em mới
+    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú", "Ghi chú"])
+    ws.append(["1D15", "Kha Bảo Ngọc", dt.datetime(2020, 3, 2), "Có", "cắt thứ 6"])
+    ws.append(["1D15", "Bùi Văn Mới", dt.datetime(2020, 1, 1), "Có", None])
     wb.save(p)
-    prev = api.import_list(str(p))
-    assert prev["n"] == 2 and prev["n_bt"] == 1
-    texts = [c["text"] for c in prev["changes"]]
-    assert any("Bùi Văn Mới" in t for t in texts) and any("Kha Bảo Ngọc" in t for t in texts)
-    sel = [c["i"] for c in prev["changes"] if "Bùi Văn Mới" in c["text"]]
-    r = api.apply_import(sel)
-    assert r["flash"].startswith("Đã áp dụng 1 thay đổi")
-    assert [x["ten"] for x in api.students("bui van", "", False)["rows"]] == ["Bùi Văn Mới"]
+    r = api.choose_list(str(p))
+    assert r["flash"] == "Đã chọn ds.xlsx: 2 học sinh." and api.settings()["cdhs_file"] == str(p)
+    rows = api.students("", "", False)["rows"]
+    assert [(x["ten"], x["db"]) for x in rows] == [("Kha Bảo Ngọc", "cắt thứ 6"), ("Bùi Văn Mới", "")]
+    bad = tmp_path / "sai.xlsx"
+    openpyxl.Workbook().save(bad)
+    assert "error" in api.choose_list(str(bad)) and api.settings()["cdhs_file"] == str(p)  # file sai: giữ file cũ
 
 
 def test_save_blocked_when_names_unclear(api):
@@ -138,8 +125,8 @@ def test_temp_book_autosaves_and_is_removed_after_save(api, tmp_path):
     temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
     sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
     api.set_absent("1D15", sid, True)
+    assert temp.exists()  # ghi ngay sau mỗi thao tác
     api.set_note("1D15", "ghi chú tạm")
-    ws.autosave_flush()
     assert temp.exists() and ws.temp_saved_at and not ws.temp_error
     wb = openpyxl.load_workbook(temp)
     assert wb["TAMTHOI"].sheet_state == "hidden" and len(wb.sheetnames) == 2  # file gọn, không chép cả sổ
@@ -162,14 +149,11 @@ def test_restore_after_power_loss(api, tmp_path, monkeypatch):
     api.set_absent("1D15", sid, True)
     api.mark_full("2D17")
     api.set_note("2D17", "ghi chú tạm")
-    api._ws.autosave_flush()
     temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
     assert temp.exists()
 
     # mở lại app (lần trước tắt đột ngột, chưa lưu vào sổ)
-    ws2 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
-    ws2.autosave_delay = 3600
-    a2 = Api(ws2)
+    a2 = Api(Workspace(tmp_path / "CaiDat.txt"))
     r = a2.boot()
     assert r["restore"]["day"] == "29/10/2026" and r["restore"]["file"] == temp.name
     r = a2.restore_temp(True)
@@ -182,23 +166,20 @@ def test_restore_after_power_loss(api, tmp_path, monkeypatch):
     assert temp.exists()  # vẫn giữ cho tới khi lưu vào sổ
 
     # mở lại lần nữa và chọn bỏ bản lưu tạm
-    ws3 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
-    a3 = Api(ws3)
+    a3 = Api(Workspace(tmp_path / "CaiDat.txt"))
     assert a3.boot()["restore"]
     a3.restore_temp(False)
-    assert not temp.exists() and "restore" not in Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
+    assert not temp.exists() and "restore" not in Api(Workspace(tmp_path / "CaiDat.txt")).boot()
 
 
 def test_temp_removed_when_changes_discarded(api, tmp_path):
     sid = sid_of(api, "1D16", "Kiều Thanh Vy")
     api.set_absent("1D16", sid, True)
-    api._ws.autosave_flush()
     temp = tmp_path / "SO DIEM DANH T10 tamthoi.xlsx"
     assert temp.exists()
     api.step_day(1, True)  # đổi ngày, chọn Không lưu
     assert not temp.exists()
     api.set_absent("1D16", sid_of(api, "1D16", "Kiều Thanh Vy"), True)
-    api._ws.autosave_flush()
     assert temp.exists()
     api.discard_temp()  # thoát app, chọn Không lưu
     assert not temp.exists()
@@ -226,26 +207,6 @@ def test_state_lists_unreported_classes(api):
     assert "1D15" not in api.state()["unreported"]
 
 
-def test_boot_tells_when_list_file_was_edited(api, tmp_path):
-    import os
-
-    p = tmp_path / "ds.xlsx"
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Ăn ghép"])
-    ws.append(["1D19", "Châu Bảo Ngọc", "01/02/2020", "Có", "1.2"])
-    wb.save(p)
-    prev = api.import_list(str(p))
-    texts = [c["text"] for c in prev["changes"]]
-    assert any("Châu Bảo Ngọc" in t and "ăn ghép 1.2" in t for t in texts)  # đọc cột "Ăn ghép"
-    api.apply_import([c["i"] for c in prev["changes"] if "ăn ghép" in c["text"]])
-    assert "list_changed" not in Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
-    st = p.stat()
-    os.utime(p, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))  # giáo vụ sửa file Excel
-    r = Api(Workspace(tmp_path / "DuLieu_BanTru.xlsx")).boot()
-    assert r["list_changed"] == {"file": "ds.xlsx", "path": str(p)}
-
-
 def test_class_detail_lists_non_boarding_students_with_reason(api):
     d = api.class_detail("1D15")
     assert all(n["full"] != "Mạc Trần Quỳnh Anh" for n in d["names"])
@@ -264,11 +225,8 @@ def test_pick_ghep_group_and_keep_it_in_temp_book(api, tmp_path):
     line = next(x for x in r["meals"]["lines"] if x["code"] == "1.2")
     assert line["absent"] == [{"sid": sid, "name": "Gia Hân", "picked": True}] and "em ghép lớp 1D19" in line["gom"]
     assert r["meals"]["groups_total"] + (r["meals"]["self"] or {}).get("meals", 0) == r["meals"]["total"]
-    api._ws.autosave_flush()
 
-    ws2 = Workspace(tmp_path / "DuLieu_BanTru.xlsx")  # mất điện, mở lại app: nhóm đã chọn vẫn còn
-    ws2.autosave_delay = 3600
-    a2 = Api(ws2)
+    a2 = Api(Workspace(tmp_path / "CaiDat.txt"))  # mất điện, mở lại app: nhóm đã chọn vẫn còn
     a2.boot()
     a2.restore_temp(True)
     assert a2._ws.state.ghep_pick == {sid: "1.2"} and a2.meals()["ok"]
@@ -278,8 +236,7 @@ def test_meals_show_ghep_list_progress(api):
     g = {x["code"]: x for x in api.meals()["ghep"]}
     assert (g["1D19"]["n"], g["1D19"]["done"]) == (4, 0)
     for name in ("ghep", "assign_ghep", "assign_ghep_text", "undo_friday"):
-        assert not hasattr(api, name)  # nhóm ghép chỉ ghi ở file Excel; cắt thứ 6 hủy ở trang Lịch thêm/cắt
-
+        assert not hasattr(api, name)  # nhóm ghép, cắt thứ 6: chỉ ghi ở file Excel danh sách
 
 
 def test_save_check_gathers_all_questions(api):
@@ -294,7 +251,6 @@ def test_save_check_gathers_all_questions(api):
 def test_friday_class_with_only_auto_absent_is_still_unreported(api):
     kid = next(s for s in api._ws.roster.students if s.ho_ten == "Lục Thảo Mi")  # 4D19
     kid.cat_thu6 = True
-    api._ws.roster.invalidate()
     api.open_day("2026-10-30", True)  # thứ 6
     row = next(r for r in api.state()["rows"] if r.get("code") == "4D19")
     assert not row["reported"] and row["status"] == "muted" and row["auto"] == "Thảo Mi" and row["ten"] == ""

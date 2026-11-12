@@ -11,5 +11,8 @@ venv/
 # Không đưa dữ liệu thật của học sinh lên GitHub
 *.xls
 *.xlsx
-SaoLuu/
 app/_build.py
+
+# cài đặt / nhật ký lỗi của app khi chạy từ mã nguồn (cạnh run_app.py)
+CaiDat.txt
+loi.log

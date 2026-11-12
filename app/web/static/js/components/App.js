@@ -1,19 +1,17 @@
 // Khung app: thanh bên (trang), thanh ngày, trang đang mở, các hộp thoại.
 import { api, conn, IS_APP } from "../api.js";
-import { ask, ui } from "../dialogs.js";
-import { askClose, askRestore, doSave, handle, importList, loadSettings, store } from "../store.js";
-import { esc } from "../util.js";
+import { ui } from "../dialogs.js";
+import { askClose, askRestore, doSave, handle, loadSettings, store } from "../store.js";
 import CaiDatPage from "./CaiDatPage.js";
 import ClassDialog from "./ClassDialog.js";
 import DiemDanhPage from "./DiemDanhPage.js";
 import HocSinhPage from "./HocSinhPage.js";
-import LichPage from "./LichPage.js";
 import SetupDialog from "./SetupDialog.js";
 import SuatAnPage from "./SuatAnPage.js";
 import TopBar from "./TopBar.js";
 
 const { computed, onMounted, ref, watch } = Vue;
-const PAGES = { dd: DiemDanhPage, sa: SuatAnPage, hs: HocSinhPage, lich: LichPage, cd: CaiDatPage };
+const PAGES = { dd: DiemDanhPage, sa: SuatAnPage, hs: HocSinhPage, cd: CaiDatPage };
 
 function readSide() { try { return localStorage.getItem("sideMin") === "1"; } catch { return false; } }
 
@@ -23,7 +21,7 @@ export default {
     ui.dialog = PrimeVue.useDialog();
     ui.toast = PrimeVue.useToast();
     const nav = [["dd", "Điểm danh", "pi-check-square"], ["sa", "Suất ăn", "pi-shopping-bag"], ["hs", "Học sinh", "pi-users"],
-      ["lich", "Lịch thêm/cắt", "pi-calendar"], ["cd", "Cài đặt", "pi-cog"]]
+      ["cd", "Cài đặt", "pi-cog"]]
       .map(([page, label, icon]) => ({ page, label, icon: "pi " + icon, command: () => { store.page = page; } }));
     const page = computed(() => PAGES[store.page]);
     const sideMin = ref(readSide());
@@ -50,11 +48,6 @@ export default {
       if (r?.setup) { store.setup = r.setup; return; }
       loadSettings();
       if (r?.restore) await askRestore(r.restore);
-      if (r?.list_changed) {  // file Excel danh sách đã được sửa sau lần nhập trước
-        const k = await ask("File danh sách đã sửa", `File <b>${esc(r.list_changed.file)}</b> đã được sửa sau lần nhập trước.<br>Nhập lại để cập nhật danh sách trong app?`,
-          [{ key: "go", label: "Nhập lại" }, { key: "later", label: "Để sau" }], { icon: "pi-file-excel" });
-        if (k === "go") importList(r.list_changed.path);
-      }
     });
     return { store, conn, IS_APP, nav, page, sideMin, askClose };
   },

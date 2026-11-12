@@ -8,8 +8,7 @@ import pytest
 from app.core.day import DayState
 from app.core.meals import MealGroup as G
 from app.excel import sobook
-from app.excel.database import AppData
-from app.excel.roster_import import check_meal_groups, describe_meal_change, read_meal_groups
+from app.excel.roster_import import check_meal_groups, read_meal_groups
 from app.service import Workspace
 from tests.test_excel import make_book
 
@@ -122,25 +121,6 @@ def test_check_meal_groups():
     ]
 
 
-def test_describe_meal_change():
-    old = same_as_book()
-    assert describe_meal_change(old, same_as_book()) is None
-    assert describe_meal_change(None, old).endswith("(3 dòng).")
-    new = [G("cô Lan", ["2D17", "1D16"]), G("1.1 ghép", ["1D15"], "1.1"), G("1.2 riêng", [], "1.2")]
-    text = describe_meal_change(old, new)
-    assert 'dòng "cô Lan": 2D17 → 2D17, 1D16' in text and 'thêm dòng "1.2 riêng" (em ghép 1.2)' in text
-    assert 'bỏ dòng "4.2 ghép 4.4"' in text
-    renamed = describe_meal_change(old, [G("cô Lan", ["2D17"]), G("1.1 ghép 1.2", ["1D15", "1D16"], "1.1")])
-    assert 'dòng "1.1 ghép" → "1.1 ghép 1.2": 1D15 + em ghép 1.1 → 1D15, 1D16 + em ghép 1.1' in renamed
-
-
-def test_app_data_keeps_groups(tmp_path, roster):
-    d = AppData(tmp_path / "DuLieu.xlsx", roster)
-    d.meal_groups = same_as_book()
-    d.save()
-    assert AppData.load(tmp_path / "DuLieu.xlsx").meal_groups == same_as_book()
-
-
 def write_list(path, groups_rows):
     """File danh sách gọn (tên bịa) + sheet Nhóm ăn."""
     from tests.conftest import FAKE
@@ -161,29 +141,23 @@ def write_list(path, groups_rows):
 
 
 @pytest.fixture
-def wsp(tmp_path, monkeypatch, roster):
-    monkeypatch.setenv("APPDATA", str(tmp_path / "appdata"))
-    book = make_book_self(tmp_path / "SO DIEM DANH T10.xlsx")
-    AppData(tmp_path / "DuLieu_BanTru.xlsx", roster).save()
-    w = Workspace(tmp_path / "DuLieu_BanTru.xlsx")
-    w.set_book(book)
+def wsp(tmp_path):
+    w = Workspace(tmp_path / "CaiDat.txt")
+    w.set_book(make_book_self(tmp_path / "SO DIEM DANH T10.xlsx"))
     return w
 
 
-def test_import_list_with_groups_then_new_day_rebuilds(wsp, tmp_path):
+def test_list_with_groups_then_new_day_rebuilds(wsp, tmp_path):
     rows = [("cô Lan", "2D17, 1D16", None), (None, None, None), ("1.1 ghép", "1D15", 1.1), ("1.2 riêng", None, "1.2"),
             ("4.2 ghép 4.4", "4.1", 4.2)]
     path = write_list(tmp_path / "DS.xlsx", rows)
     assert read_meal_groups(path)[0] == (2, "cô Lan", "2D17, 1D16", "")
-    changes, _ = wsp.import_cdhs(path)
-    assert wsp.meal_check == ([], [])
-    nhom = [c for c in changes if c.kind == "nhom_an"]
-    assert len(nhom) == 1 and nhom[0].text.startswith("Bảng Nhóm ăn: từ tờ ngày mới")
-    wsp.apply_import(changes, path)
-    assert AppData.load(wsp.data.path).meal_groups[4] == G("4.2 ghép 4.4", ["4D19"], "4.2")
+    wsp.set_list(path)
+    assert wsp.list.meal_errors == [] and wsp.list.meal_warnings == []
+    assert wsp.list.meal_groups[4] == G("4.2 ghép 4.4", ["4D19"], "4.2")
 
     st = wsp.load_day(dt.date(2026, 10, 28))  # tờ đã có: giữ bảng của sổ, chỉ báo khác
-    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "4.2 ghép 4.4"] and "khác cách ghép đã đặt" in wsp.meal_note
+    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "4.2 ghép 4.4"] and "khác sheet Nhóm ăn" in wsp.meal_note
 
     st = wsp.load_day(dt.date(2026, 10, 29))  # tờ mới: tính theo bảng sẽ dựng
     assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "1.2 riêng", "4.2 ghép 4.4"]
@@ -202,18 +176,15 @@ def test_import_list_with_groups_then_new_day_rebuilds(wsp, tmp_path):
     assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "1.2 riêng", "4.2 ghép 4.4"]
 
 
-def test_import_list_with_bad_groups_keeps_old(wsp, tmp_path):
-    path = write_list(tmp_path / "DS.xlsx", [("cô Lan", "2D17, 9D99", None)])
-    changes, _ = wsp.import_cdhs(path)
-    assert not [c for c in changes if c.kind == "nhom_an"]
-    assert wsp.meal_check[0] == ['Nhóm ăn, dòng 2 (cô Lan): danh sách không có lớp "9D99".']
+def test_list_with_bad_groups_keeps_book_table(wsp, tmp_path):
+    wsp.set_list(write_list(tmp_path / "DS.xlsx", [("cô Lan", "2D17, 9D99", None)]))
+    assert wsp.list.meal_groups is None  # sheet Nhóm ăn có lỗi: giữ bảng suất ăn của sổ, báo ở trang Cài đặt
+    assert wsp.list.meal_errors == ['Nhóm ăn, dòng 2 (cô Lan): danh sách không có lớp "9D99".']
 
 
 def test_new_month_book_rebuilds_first_sheet(wsp, tmp_path):
-    wsp.data.meal_groups = [G("cô Lan", ["2D17", "1D16"]), G("1.1 ghép", ["1D15"], "1.1"), G("1.2 ghép", [], "1.2"),
-                            G("4.2 ghép 4.4", ["4D19"], "4.2")]
-    for s in wsp.roster.students:
-        s.an_ghep = {"1D19": "1.1" if s.ho_ten in ("Châu Bảo Ngọc", "Phùng Gia Hân") else "1.2", "4D21": "4.2"}.get(s.lop, "")
+    rows = [("cô Lan", "2D17, 1D16", None), ("1.1 ghép", "1D15", 1.1), ("1.2 ghép", None, "1.2"), ("4.2 ghép 4.4", "4D19", 4.2)]
+    wsp.set_list(write_list(tmp_path / "DS.xlsx", rows))
     new = wsp.create_month_book(dt.date(2026, 11, 2))
     ws = sobook.load_book(new)["2"]
     assert (ws["I21"].value, ws["J23"].value, ws["G22"].value) == ("=F10+F7", "1.2 ghép", "=0")
@@ -235,25 +206,3 @@ def test_ghep_kid_can_eat_with_other_grade(roster):
     assert st.groups_for(layout, "1D19") == ["1.1", "2.1"]
     m = st.meals(layout)
     assert not m.ask and m.balanced and [(x.o, x.m) for x in m.lines] == [(3, 0), (1, 1)]
-
-
-def test_edit_groups_in_app_and_rebuild_open_sheet(wsp):
-    """Sửa cách ghép ở trang Suất ăn: lấy theo sổ khi chưa đặt; lưu; chọn dựng lại cả tờ đang mở."""
-    wsp.load_day(dt.date(2026, 10, 28))
-    groups, saved = wsp.meal_groups_current()
-    assert not saved and groups == same_as_book()
-    assert wsp.set_meal_groups([("cô Lan", ["2D17", "2D17"], "")], False) == [
-        "Lớp 2D17 nằm ở 2 dòng, dòng 1 (cô Lan) và dòng 1 (cô Lan)."]
-    raw = [("cô Lan", ["2D17", "1D16"], ""), ("", [], ""), ("1.1 ghép", ["1D15"], "1.1"), ("1.2 riêng", [], "1.2"),
-           ("4.2 ghép 4.4", ["4D19"], "4.2")]
-    for s in wsp.roster.students:
-        s.an_ghep = {"1D19": "1.1" if s.ho_ten in ("Châu Bảo Ngọc", "Phùng Gia Hân") else "1.2", "4D21": "4.2"}.get(s.lop, "")
-    assert wsp.set_meal_groups(raw, apply_today=True) == []
-    assert wsp.meal_groups_current()[1] and "Khi lưu" in wsp.meal_note
-    assert [r.label for r in wsp.layout.rows] == ["cô Lan", "1.1 ghép", "1.2 riêng", "4.2 ghép 4.4"]
-    assert wsp.meals().balanced
-    wsp.push_undo()
-    assert wsp.save() == "28"
-    ws = sobook.load_book(wsp.book_path)["28"]
-    assert (ws["I21"].value, ws["I24"].value, ws["G22"].value) == ("=F10+F7", "=L24", "=0")
-    assert wsp.meal_note == "" and wsp.meal_force is None
