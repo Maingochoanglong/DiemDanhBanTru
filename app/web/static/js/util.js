@@ -2,7 +2,7 @@
 
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-export const fold = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+const fold = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
 // mỗi từ gõ vào là đầu của một chữ trong tên: "h long" khớp "Hải Long"
 export function matches(q, text) {
@@ -40,12 +40,9 @@ export const searchTerms = q => q.split(/[,;\n]|\s+v[aà]\s+/i).map(t => t.repla
 // tổng suất so với hiện diện: "thừa 1 suất" / "thiếu 2 suất"
 export function mealDiff(m) { const d = m.total - m.present; return d > 0 ? `thừa ${d} suất` : `thiếu ${-d} suất`; }
 
-export const pad = n => String(n).padStart(2, "0");
+const pad = n => String(n).padStart(2, "0");
 export const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const dmyOf = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-export function dateOf(text) {  // "2026-10-29" hoặc "29/10/2026" -> Date
-  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || "");
-  if (m) return new Date(+m[1], m[2] - 1, +m[3]);
-  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text || "");
-  return m ? new Date(+m[3], m[2] - 1, +m[1]) : null;
+export function dateOf(iso) {  // "2026-10-29" -> Date (giờ địa phương)
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? new Date(+m[1], m[2] - 1, +m[3]) : null;
 }

@@ -15,8 +15,9 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - Ghi Excel an toàn dùng chung `excel/files.py:safe_save` (sổ chính lẫn sổ tạm).
    - Chặn tên miền lạ dùng `TrustedHostMiddleware` của FastAPI.
 2. **Thêm thư viện mới chỉ khi thật cần.** Frontend phải là bản dựng sẵn đóng kèm trong `app/web/static/vendor/` (không cần Node, không có bước build, chạy không cần mạng). Không dùng PrimeVue 5 trở lên: bản 5 đổi sang giấy phép thương mại.
-3. **Bỏ code thừa ngay khi bỏ tính năng**: hàm, API, thành phần Vue, lớp CSS, test, chữ trong tài liệu. Hai test giữ việc này:
+3. **Bỏ code thừa ngay khi bỏ tính năng**: hàm, API, thành phần Vue, lớp CSS, test, chữ trong tài liệu. Các công cụ giữ việc này:
    - `tests/test_static.py` báo lỗi khi có hàm Python mà giao diện không gọi, hoặc thành phần đăng ký mà không dùng;
+   - `ruff check` (luật trong `pyproject.toml`: import / biến / tham số không dùng, mã cũ bị comment, cấu trúc thừa);
    - `python -m vulture app --min-confidence 60` giúp tìm hàm chết. Lưu ý vulture báo nhầm các hàm của `Api` (giao diện gọi theo tên) và thuộc tính openpyxl.
 4. **Mã dễ đọc cho người và AI**:
    - mỗi file một việc, có docstring/chú thích đầu file nói file đó làm gì;

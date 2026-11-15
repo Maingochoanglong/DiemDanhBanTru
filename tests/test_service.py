@@ -23,7 +23,7 @@ def absent(ws, code, full):
 def test_new_day_click_save_reload(ws):
     day = dt.date(2026, 10, 29)
     st = ws.load_day(day)
-    assert not st.exists_in_book and ws.template_name == "28"
+    assert not st.exists_in_book and st.template_date == DAY28  # sheet mẫu: tờ 28
     assert st.cd("4D21").note.startswith("Vũ Khoa")  # ghi chú mang sang ngày mới
     absent(ws, "1D15", "Lâm Quốc Tuấn Anh")
     ws.push_undo()
@@ -83,7 +83,7 @@ def test_next_school_day():
     assert next_school_day(dt.date(2026, 11, 2), -1) == dt.date(2026, 10, 30)
 
 
-def test_zero_padded_sheet_name(ws, tmp_path):
+def test_zero_padded_sheet_name(ws):
     from pathlib import Path
 
     book = Path(ws.settings["so_file"])

@@ -122,22 +122,15 @@ def test_check_meal_groups():
 
 
 def write_list(path, groups_rows):
-    """File danh sách gọn (tên bịa) + sheet Nhóm ăn."""
-    from tests.conftest import FAKE
+    """File danh sách (tên bịa) có cột Ăn ghép của lớp ghép 1D19, 4D21 + sheet Nhóm ăn (dùng conftest.write_list)."""
+    from tests.conftest import make_roster
+    from tests.conftest import write_list as write
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Danh sách"
-    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Tên gọi khác", "Ăn ghép"])
+    roster = make_roster()
     ghep = {"Châu Bảo Ngọc": "1.1", "Phùng Gia Hân": "1.1", "Tạ Đức Anh": "1.2", "Quách Minh Khang": "1.2"}
-    for lop, name, dob, bt in FAKE:
-        ws.append([lop, name, dob, "Có" if bt else "Không", None, ghep.get(name) or ("4.2" if lop == "4D21" else None)])
-    wn = wb.create_sheet("Nhóm ăn")
-    wn.append(["Tên dòng (in ở sổ)", "Các lớp ăn chung", "Mã ghép lẻ", None, "Cách dùng: mỗi dòng là 1 dòng bảng suất ăn"])
-    for row in groups_rows:
-        wn.append(list(row))
-    wb.save(path)
-    return path
+    for st in roster.students:
+        st.an_ghep = ghep.get(st.ho_ten) or ("4.2" if st.lop == "4D21" else "")
+    return write(path, roster, groups_rows)
 
 
 @pytest.fixture

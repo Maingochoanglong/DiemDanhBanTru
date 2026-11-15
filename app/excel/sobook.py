@@ -72,7 +72,7 @@ def analyze(ws: Worksheet) -> SheetInfo | None:
             cols.setdefault("lop", c)
         elif "giao vien" in f or "gvcn" in f:
             cols.setdefault("gvcn", c)
-        elif f.startswith("si so") or f.startswith("sy so"):
+        elif f.startswith(("si so", "sy so")):
             cols.setdefault("siso", c)
         elif f.startswith("vang"):
             cols.setdefault("vang", c)

@@ -3,7 +3,7 @@ const { reactive } = Vue;
 
 export const CONFIG = window.APP_CONFIG;  // giá trị cố định do máy chủ gửi (app/config.py qua /config.js), không viết cứng ở đây
 export const IS_APP = CONFIG.mode === "app";  // app thật (có nút Thoát); "dev" = máy chủ chạy thử
-export const CLIENT = Math.random().toString(36).slice(2) + Date.now().toString(36);  // mã của thẻ trình duyệt này
+const CLIENT = Math.random().toString(36).slice(2) + Date.now().toString(36);  // mã của thẻ trình duyệt này
 export const conn = reactive({ gone: false, quit: false });  // máy chủ đã tắt / đã bấm Thoát
 
 // gọi lần lượt từng việc (bấm nhanh liên tiếp cũng không chạy chồng lên nhau)

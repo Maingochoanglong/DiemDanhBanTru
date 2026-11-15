@@ -56,7 +56,6 @@ class Workspace:
         self.state: DayState | None = None
         self.layout: MealLayout = MealLayout()
         self.sheet_checks: dict[str, list[matcher.MatchResult]] = {}
-        self.template_name: str | None = None
         self._undo: list[DayState] = []
         self._wb_cache: tuple[tuple, object] | None = None
         self.sheet_name: str = ""  # tên sheet của ngày đang mở (vd. "01" hoặc "29")
@@ -251,7 +250,6 @@ class Workspace:
         info = sobook.analyze(src) if src is not None else None
         codes = list(info.class_rows) if info else self.roster.class_codes()
         st = DayState.new(day, self.roster, codes)
-        self.template_name = src.title if src is not None else None
         self.layout = info.meal if info else MealLayout()
         recs: dict = {}
         self._src_info, self._src_exists = info, ws is not None

@@ -139,7 +139,7 @@ def test_new_day_sheet_black_names_and_keeps_count_formula(book, roster):
     assert ws["E12"].value == 1  # cột Vắng không có công thức: app ghi số
 
 
-def test_new_month_book(book, tmp_path):
+def test_new_month_book(book):
     new = sobook.month_file_name(book, 11)
     assert new.name == "SO DIEM DANH T11.xlsx"
     sobook.new_month_book(book, dt.date(2026, 11, 2), new)

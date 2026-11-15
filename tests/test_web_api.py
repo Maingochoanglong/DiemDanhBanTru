@@ -140,7 +140,7 @@ def test_temp_book_autosaves_and_is_removed_after_save(api, tmp_path):
     assert "ok" in out and not temp.exists()
 
 
-def test_restore_after_power_loss(api, tmp_path, monkeypatch):
+def test_restore_after_power_loss(api, tmp_path):
     sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
     api.set_absent("1D15", sid, True)
     api.mark_full("2D17")
@@ -198,7 +198,8 @@ def test_pick_unknown_name_from_whole_class(api):
 
 def test_state_lists_unreported_classes(api):
     st = api.state()
-    assert "1D15" in st["unreported"] and len(st["unreported"]) == st["totals"]["n"] - st["totals"]["rep"]
+    assert "1D15" in st["unreported"]
+    assert st["unreported"] == [r["code"] for r in st["rows"] if r["kind"] == "class" and not r["reported"]]
     api.mark_full("1D15")
     assert "1D15" not in api.state()["unreported"]
 

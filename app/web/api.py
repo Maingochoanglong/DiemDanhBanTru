@@ -22,7 +22,7 @@ WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "C
 class NoDialogs:
     """Không có hộp chọn file (máy chủ chạy thử, test). App thật dùng hộp của Windows (run.py)."""
 
-    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
+    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:  # noqa: ARG002 - cùng mẫu với hộp thật
         return None
 
 
@@ -199,8 +199,7 @@ class Api:
             rows.append({"kind": "khoi", "code": f"KHỐI {k}", "si": si, "vang": ab, "hd": si - ab})
         si, ab, pr = st.totals()
         out["rows"] = rows
-        out["totals"] = {"si": si, "vang": ab, "hd": pr, "rep": sum(1 for c in st.classes.values() if c.reported),
-                         "n": len(st.classes)}
+        out["totals"] = {"si": si, "vang": ab, "hd": pr}
         if not ws.layout.is_empty:
             m = ws.meals()
             out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced, "ask": len(m.ask)}
@@ -209,7 +208,7 @@ class Api:
         out["unreported"] = st.unreported()
         if n_pending:
             first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
-            out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first, "level": "err"})
+            out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first})
         checks = ws.sheet_checks
         if checks and not n_pending:
             n = sum(len(v) for v in checks.values())

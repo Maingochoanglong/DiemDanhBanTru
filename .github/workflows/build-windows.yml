@@ -33,6 +33,9 @@ jobs:
       - name: Chạy test
         run: python -m pytest -q
 
+      - name: Kiểm tra mã (code thừa, import không dùng…)
+        run: python -m ruff check app tests
+
       - name: Dựng file .exe
         # giao diện web (Vue + PrimeVue, đóng kèm sẵn) nằm trong app/web/static: đóng kèm vào file .exe.
         # Kèm thông tin phiên bản (tên app, mô tả) và không nén UPX: Windows ít cảnh báo nhầm hơn.
