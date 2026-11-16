@@ -148,7 +148,7 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 
 ## 8. An toàn dữ liệu & lỗi thường gặp
 
-- App **không tạo bản sao lưu**. Sổ chính chỉ thay đổi khi bấm **Lưu vào sổ**; lúc ghi, app ghi ra file phụ rồi mới thay sổ, nên lỗi giữa chừng không làm hỏng sổ.
+- App **không tạo bản sao lưu**. Sổ chính chỉ thay đổi khi bấm **Lưu vào sổ**; lúc ghi, app dựng xong cả file trong bộ nhớ rồi mới ghi đè một lần, nên lỗi giữa chừng không làm hỏng sổ.
 - **Sổ tạm (phòng mất điện)**: **ngay sau mỗi thao tác**, app tự lưu một file nhỏ (vài KB, không chép cả cuốn sổ nên rất nhẹ), tên là tên sổ thêm chữ `tamthoi`, nằm cạnh sổ chính (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
   - Bấm **Lưu vào sổ** thì app chép vào sheet của ngày trong sổ chính rồi xóa sổ tạm.
   - Nếu máy tắt đột ngột khi chưa lưu, lần mở app sau sẽ hỏi **Khôi phục**. Chọn Khôi phục để làm tiếp, rồi nhớ bấm Lưu vào sổ.
@@ -157,6 +157,12 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
 - **In sổ**: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ.
 - App **chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách học sinh, sổ đang chọn và sổ tạm của sổ đó. Không ghi file nhật ký, không tạo file nào khác, không tự mở các file khác trong thư mục. Lỗi hiện ngay trên màn hình (lỗi lúc mở app hiện hộp thông báo).
+- **Mọi thứ của app nằm trong thư mục chứa `DiemDanhBanTru.exe`**, không ghi gì vào `%APPDATA%` hay `%TEMP%`. Khi đang chạy, app tạm giải nén vào thư mục con `.DiemDanhBanTru_…` ngay cạnh file .exe; thoát app thì thư mục này tự mất (nếu máy tắt đột ngột mà còn sót thì xóa được).
+  - **Gỡ app**: thoát app rồi xóa thư mục chứa `DiemDanhBanTru.exe` (nhớ giữ lại sổ điểm danh và file danh sách nếu để chung thư mục).
+  - Bản app cũ (cửa sổ riêng, trước khi chạy trong trình duyệt) có tạo các chỗ dưới đây; bản mới không dùng nữa, xóa được:
+    - thư mục `%APPDATA%\DiemDanhBanTru` (`config.json`, `loi.log`): gõ `%APPDATA%` vào thanh địa chỉ của File Explorer;
+    - thư mục `Documents\DiemDanhBanTru` (`DuLieu_BanTru.xlsx`): danh sách học sinh giờ đọc thẳng từ file danh sách;
+    - thư mục `SaoLuu` cạnh sổ điểm danh (bản sao lưu cũ của sổ).
 - **Thư mục đặt app không ghi được** (vd. Program Files): app báo không ghi được CaiDat.txt; chép `DiemDanhBanTru.exe` vào thư mục khác (vd. Documents).
 - **Bấm mở app mà không thấy trình duyệt hiện lên**: mở Edge/Chrome rồi gõ địa chỉ `127.0.0.1:47615`.
 - Hộp **chọn file** (chọn sổ, chọn file danh sách) là cửa sổ riêng của app; nếu không thấy, tìm nó trên thanh tác vụ (taskbar).

@@ -7,6 +7,7 @@ App Windows nhỏ gọn giúp giáo vụ làm sổ điểm danh bán trú hằng
 - tự tính bảng suất ăn cho bảo mẫu, kể cả các lớp ghép; bảng suất ăn của tờ ngày mới dựng theo sheet *Nhóm ăn* trong file danh sách (đổi cách ghép không phải sửa công thức sổ);
 - ghi vào sổ Excel giữ y mẫu cũ (mỗi ngày 1 sheet, mỗi tháng 1 file) (in bằng Excel như thường lệ);
 - chỉ làm việc với 3 file: **danh sách học sinh** (Excel, app chỉ đọc; lịch thêm/cắt ghi ở cột Ghi chú), **sổ điểm danh tháng**, **CaiDat.txt** cạnh file .exe. Đang làm dở thì có thêm sổ tạm `… tamthoi.xlsx`, ghi sau mỗi thao tác, xóa khi đã lưu vào sổ.
+- mọi thứ nằm trong thư mục chứa file .exe (không ghi gì vào `%APPDATA%`, `%TEMP%`): gỡ app chỉ cần xóa thư mục đó.
 
 👉 **Hướng dẫn sử dụng: [HUONG_DAN.md](HUONG_DAN.md)**
 

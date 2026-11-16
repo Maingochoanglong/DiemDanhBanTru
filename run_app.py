@@ -7,6 +7,9 @@ Dựng file .exe: python -m nuitka run_app.py --file-version=<phiên bản> --pr
 # nuitka-project: --mode=onefile
 # nuitka-project: --output-dir={MAIN_DIRECTORY}/dist
 # nuitka-project: --output-filename=DiemDanhBanTru.exe
+# mọi thứ của app nằm trong thư mục chứa .exe (không dùng %TEMP%, %APPDATA%): .exe tự giải nén vào thư mục con
+# cạnh nó, thoát app thì tự xóa
+# nuitka-project: --onefile-tempdir-spec={PROGRAM_DIR}/.DiemDanhBanTru_{PID}_{TIME}
 # nuitka-project: --include-data-dir={MAIN_DIRECTORY}/app/web/static=app/web/static
 # nuitka-project: --product-name=Điểm danh bán trú
 # nuitka-project: --file-description=Điểm danh bán trú

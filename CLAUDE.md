@@ -24,6 +24,7 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - tên hàm rõ nghĩa; mỗi trang / hộp thoại là một file trong `js/components/`;
    - không viết lớp trừu tượng "để dành". Sửa chỗ nào thì sửa đúng file của việc đó (xem bản đồ dưới).
 5. **Chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách, sổ đang chọn (CaiDat.txt) và sổ tạm của sổ đó. Không file nhật ký, không file phụ khi ghi (`files.safe_save` dựng file trong bộ nhớ rồi ghi đè 1 lần), không tự mở / liệt kê file khác trong thư mục, không lưu gì ở trình duyệt (localStorage…). `tests/test_rules.py` theo dõi mọi lần mở / xóa / đổi tên file / liệt kê thư mục bằng audit hook trong cả một ngày làm việc.
+   - **Mọi thứ nằm trong thư mục chứa .exe**: không dùng `%APPDATA%`, `%TEMP%`, thư mục người dùng (gỡ app = xóa thư mục). Bản .exe Nuitka giải nén vào thư mục con cạnh nó (`--onefile-tempdir-spec={PROGRAM_DIR}/…` ở `run_app.py`), thoát thì tự xóa. `test_rules.test_nothing_outside_exe_folder` kiểm tra.
 6. **Không viết cứng giá trị**: mọi giá trị cố định đặt tên trong `app/config.py` (người dùng cần đổi thì thêm khóa vào `settings.KEYS`, đọc ở CaiDat.txt). JavaScript lấy qua `CONFIG` (`js/api.js` ← `/config.js`). `tests/test_rules.py` báo lỗi khi chuỗi / số cổng của config bị viết lại ở file khác, hoặc có số thực trần ngoài config.
 7. **Dữ liệu thật của học sinh không bao giờ vào repo.** `.gitignore` chặn `*.xls`, `*.xlsx`, `CaiDat.txt`. Test chỉ dùng tên bịa (`tests/conftest.py`). File thật người dùng gửi chỉ để trong thư mục tạm của phiên.
 

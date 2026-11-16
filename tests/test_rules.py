@@ -3,6 +3,7 @@
 1. App chỉ đọc / ghi 3 file trong cài đặt (CaiDat.txt, sổ điểm danh, file danh sách học sinh) và 1 sổ tạm.
    Theo dõi bằng audit hook của Python: mọi lần mở / xóa / đổi tên file, tạo thư mục, liệt kê thư mục.
 2. Không viết cứng: giá trị trong app/config.py không được viết lại ở file khác (Python và JavaScript).
+3. Mọi thứ của app nằm trong thư mục chứa .exe: không %APPDATA%, %TEMP%, thư mục người dùng.
 """
 
 import ast
@@ -132,3 +133,14 @@ def test_school_days_from_config(monkeypatch):
     assert next_school_day(dt.date(2026, 10, 30)) == dt.date(2026, 11, 2)  # thứ 6 -> thứ 2
     monkeypatch.setattr(config, "SCHOOL_DAYS", 6)
     assert next_school_day(dt.date(2026, 10, 30)) == dt.date(2026, 10, 31)  # thứ 6 -> thứ 7
+
+
+# ---------------------------------------------------------------- 3. mọi thứ trong thư mục chứa .exe
+def test_nothing_outside_exe_folder():
+    """Không file nào ở %APPDATA%, %TEMP%, thư mục người dùng: gỡ app chỉ cần xóa thư mục chứa .exe."""
+    banned = re.compile(r"APPDATA|LOCALAPPDATA|USERPROFILE|expanduser|Path\.home|tempfile|gettempdir|os\.environ|getenv")
+    for f in ROOT.rglob("*.py"):
+        assert not banned.search(f.read_text(encoding="utf-8")), f
+    # .exe Nuitka giải nén vào thư mục con cạnh nó (mặc định của Nuitka là %TEMP%)
+    run_app = (ROOT.parent / "run_app.py").read_text(encoding="utf-8")
+    assert "# nuitka-project: --onefile-tempdir-spec={PROGRAM_DIR}/" in run_app
