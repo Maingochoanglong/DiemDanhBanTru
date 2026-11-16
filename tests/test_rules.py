@@ -143,4 +143,4 @@ def test_nothing_outside_exe_folder():
         assert not banned.search(f.read_text(encoding="utf-8")), f
     # .exe Nuitka giải nén vào thư mục con cạnh nó (mặc định của Nuitka là %TEMP%)
     run_app = (ROOT.parent / "run_app.py").read_text(encoding="utf-8")
-    assert "# nuitka-project: --onefile-tempdir-spec={PROGRAM_DIR}/" in run_app
+    assert "# nuitka-project: --onefile-tempdir-spec={PROGRAM_BASE}_" in run_app

@@ -157,7 +157,7 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 - **"File đang mở trong Excel"**: đóng file đó trong Excel, rồi bấm *Thử lại*.
 - **In sổ**: bấm **Mở sổ Excel** rồi in trong Excel như thường lệ.
 - App **chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách học sinh, sổ đang chọn và sổ tạm của sổ đó. Không ghi file nhật ký, không tạo file nào khác, không tự mở các file khác trong thư mục. Lỗi hiện ngay trên màn hình (lỗi lúc mở app hiện hộp thông báo).
-- **Mọi thứ của app nằm trong thư mục chứa `DiemDanhBanTru.exe`**, không ghi gì vào `%APPDATA%` hay `%TEMP%`. Khi đang chạy, app tạm giải nén vào thư mục con `.DiemDanhBanTru_…` ngay cạnh file .exe; thoát app thì thư mục này tự mất (nếu máy tắt đột ngột mà còn sót thì xóa được).
+- **Mọi thứ của app nằm trong thư mục chứa `DiemDanhBanTru.exe`**, không ghi gì vào `%APPDATA%` hay `%TEMP%`. Khi đang chạy, app tạm giải nén vào thư mục `DiemDanhBanTru_dang_chay_…` ngay cạnh file .exe; thoát app thì thư mục này tự mất (nếu máy tắt đột ngột mà còn sót thì xóa được).
   - **Gỡ app**: thoát app rồi xóa thư mục chứa `DiemDanhBanTru.exe` (nhớ giữ lại sổ điểm danh và file danh sách nếu để chung thư mục).
   - Bản app cũ (cửa sổ riêng, trước khi chạy trong trình duyệt) có tạo các chỗ dưới đây; bản mới không dùng nữa, xóa được:
     - thư mục `%APPDATA%\DiemDanhBanTru` (`config.json`, `loi.log`): gõ `%APPDATA%` vào thanh địa chỉ của File Explorer;
