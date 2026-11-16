@@ -13,6 +13,11 @@ Dựng file .exe: python -m nuitka run_app.py --file-version=<phiên bản> --pr
 # nuitka-project: --company-name=DiemDanhBanTru
 # nuitka-project: --copyright=Điểm danh bán trú
 # nuitka-project: --assume-yes-for-downloads
+# openpyxl, uvicorn chỉ thử import các gói này khi máy có sẵn (app không dùng): không đóng kèm, .exe nhỏ hơn
+# nuitka-project: --nofollow-import-to=numpy
+# nuitka-project: --nofollow-import-to=PIL
+# nuitka-project: --nofollow-import-to=lxml
+# nuitka-project: --nofollow-import-to=yaml
 # nuitka-project-if: {OS} == "Windows":
 #    nuitka-project: --windows-console-mode=disable
 #    nuitka-project: --enable-plugins=tk-inter
