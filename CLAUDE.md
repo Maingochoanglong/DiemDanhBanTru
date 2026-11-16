@@ -49,7 +49,7 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 ## Bản đồ mã nguồn
 
 ```
-run_app.py                điểm khởi chạy (PyInstaller)
+run_app.py                điểm khởi chạy; đầu file có các tùy chọn dựng .exe bằng Nuitka ("# nuitka-project:")
 app/main.py               main(), --selftest (CI chạy trên file .exe; Excel thử trong bộ nhớ), lỗi nặng hiện hộp thông báo
 app/config.py             MỌI giá trị cố định (cổng, tên file, thời gian chờ, ngưỡng, lịch học…); phần UI gửi qua /config.js
 app/settings.py           CaiDat.txt
@@ -95,4 +95,4 @@ python -m ruff check app tests
 python -m app.web.server 8765 <đường dẫn CaiDat.txt>   # chạy thử giao diện: http://127.0.0.1:8765 (API: /docs)
 ```
 
-Sửa giao diện thì chạy thử bằng Playwright (Chromium có sẵn) và xem ảnh chụp. CI (`.github/workflows/build-windows.yml`) chạy test, dựng `.exe` trên Windows và chạy `--selftest`.
+Sửa giao diện thì chạy thử bằng Playwright (Chromium có sẵn) và xem ảnh chụp. CI (`.github/workflows/build-windows.yml`) chạy test, ruff, dựng `.exe` bằng **Nuitka** trên Windows (`python -m nuitka run_app.py`, tùy chọn ở đầu `run_app.py`) và chạy `--selftest`. Bản Nuitka: thư mục chứa `.exe` lấy từ `__compiled__.containing_dir` (`settings.default_path`); giao diện đóng kèm nằm cạnh mã đã dịch (`server.static_dir`).

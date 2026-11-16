@@ -5,7 +5,6 @@ Mỗi dòng "khóa = giá trị"; dòng bắt đầu bằng # là chú thích. C
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from . import config
@@ -21,8 +20,9 @@ KEYS = {
 
 
 def default_path() -> Path:
-    """Cạnh file .exe; chạy từ mã nguồn thì ở thư mục gốc của repo."""
-    base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
+    """Cạnh file .exe (Nuitka cho biết thư mục đó: __compiled__.containing_dir); chạy từ mã nguồn thì ở gốc repo."""
+    compiled = globals().get("__compiled__")
+    base = Path(compiled.containing_dir) if compiled else Path(__file__).resolve().parents[1]
     return base / config.SETTINGS_FILE
 
 

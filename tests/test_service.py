@@ -238,3 +238,14 @@ def test_settings_not_writable_gives_clear_message(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "write_text", denied)
     with pytest.raises(OSError, match="thư mục ghi được"):
         settings.save(tmp_path / "CaiDat.txt", {})
+
+
+def test_settings_next_to_exe_when_built_with_nuitka(tmp_path, monkeypatch):
+    """Bản .exe Nuitka: CaiDat.txt cạnh file .exe (Nuitka cho biết thư mục: __compiled__.containing_dir)."""
+    from types import SimpleNamespace
+
+    from app import settings
+
+    assert settings.default_path().parent == Path(settings.__file__).resolve().parents[1]  # chạy từ mã nguồn: gốc repo
+    monkeypatch.setitem(vars(settings), "__compiled__", SimpleNamespace(containing_dir=str(tmp_path)))
+    assert settings.default_path() == tmp_path / "CaiDat.txt"

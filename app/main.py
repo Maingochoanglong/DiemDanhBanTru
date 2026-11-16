@@ -10,7 +10,7 @@ import sys
 import traceback
 from pathlib import Path
 
-if __package__ in (None, ""):  # chạy trực tiếp file / bản đóng gói PyInstaller
+if __package__ in (None, ""):  # chạy thẳng file này: python app/main.py
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     __package__ = "app"  # noqa: A001
 

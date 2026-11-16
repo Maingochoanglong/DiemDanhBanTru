@@ -24,7 +24,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# uvicorn nạp các phần này theo tên (chuỗi): import thẳng để PyInstaller đóng gói kèm
+# uvicorn nạp các phần này theo tên (chuỗi): import thẳng để Nuitka đóng gói kèm
 import uvicorn.lifespan.off  # noqa: F401
 import uvicorn.loops.asyncio  # noqa: F401
 import uvicorn.protocols.http.h11_impl  # noqa: F401
@@ -40,10 +40,7 @@ mimetypes.add_type("font/woff2", ".woff2")
 
 
 def static_dir() -> Path:
-    """Thư mục giao diện: cạnh mã nguồn, hoặc trong file .exe (PyInstaller giải nén vào sys._MEIPASS)."""
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        return Path(base) / "app" / "web" / "static"
+    """Thư mục giao diện, cạnh file này (bản .exe Nuitka giải nén cả app/web/static cạnh mã đã dịch)."""
     return Path(__file__).with_name("static")
 
 

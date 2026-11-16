@@ -33,7 +33,7 @@ python run_app.py            # mở app trong trình duyệt
 python run_app.py --no-open  # chạy máy chủ, không tự mở trình duyệt (tự vào http://127.0.0.1:47615)
 python -m app.web.server    # máy chủ thử: mở http://127.0.0.1:8765 để xem/chụp giao diện, tài liệu API ở /docs
 python -m pytest             # chạy test
-pyinstaller --onefile --windowed --name DiemDanhBanTru --add-data "app/web/static;app/web/static" run_app.py   # dựng .exe (trên Windows)
+python -m nuitka run_app.py --file-version=1.2.0 --product-version=1.2.0   # dựng dist/DiemDanhBanTru.exe bằng Nuitka (tùy chọn ở đầu run_app.py)
 ```
 
 Cấu trúc mã:

@@ -2,9 +2,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-build/
 dist/
-*.spec
 .venv/
 venv/
 
@@ -13,6 +11,8 @@ venv/
 *.xlsx
 app/_build.py
 
-# cài đặt / nhật ký lỗi của app khi chạy từ mã nguồn (cạnh run_app.py)
+# cài đặt của app khi chạy từ mã nguồn (cạnh run_app.py)
 CaiDat.txt
-loi.log
+
+# Nuitka: bộ nhớ đệm dịch (CI); file dựng nằm trong dist/
+.nuitka-cache/
