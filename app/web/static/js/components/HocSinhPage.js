@@ -1,4 +1,4 @@
-// Trang Học sinh: tra cứu danh sách (sửa thì sửa file Excel rồi nhập lại).
+// Trang Học sinh: tra cứu danh sách (sửa thì sửa file Excel danh sách, lưu là app đọc lại).
 import { api } from "../api.js";
 import { openPath, store } from "../store.js";
 
@@ -9,6 +9,7 @@ export default {
     const cls = ref(""), q = ref(""), bt = ref(true), HS = ref({ rows: [], classes: [] });
     const load = async () => { HS.value = await api("students", q.value, cls.value || "", bt.value); };
     watch([cls, q, bt], load);
+    watch(() => store.S, () => { if (store.page === "hs") load(); });  // vd. quay lại từ Excel vừa sửa danh sách
     onActivated(() => {
       if (store.hsPreset !== null) {  // mở từ trang Suất ăn: lọc sẵn 1 lớp
         const preset = store.hsPreset;
@@ -43,6 +44,6 @@ export default {
       </DataTable>
     </div>
     <div class="text-muted small">Trang này chỉ để tra cứu. Thêm, sửa học sinh, cắt / thêm bán trú: sửa file Excel danh sách
-      (cột <b>Ghi chú</b>: <i>cắt thứ 6</i>, <i>cắt từ 30/10</i>, <i>ăn từ 3/11</i>), lưu file, app tự đọc lại khi mở ngày.</div>
+      (cột <b>Ghi chú</b>: <i>cắt thứ 6</i>, <i>cắt từ 30/10</i>, <i>ăn từ 3/11</i>), lưu file là app đọc lại ngay.</div>
   </section>`,
 };

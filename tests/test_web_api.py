@@ -363,3 +363,9 @@ def test_new_student_keeps_absent_already_chosen(api, tmp_path, roster):
     assert next(n for n in d["names"] if n["id"] == sid)["absent"] and api.state()["dirty"]
     api.undo()  # hoàn tác vẫn dùng danh sách mới
     assert "Lò Văn Mới" in [n["full"] for n in api.class_detail("1D15")["names"]]
+
+
+def test_students_page_shows_list_just_edited(api, tmp_path, roster):
+    """Sửa file danh sách bằng Excel rồi xem trang Học sinh: hiện ngay em mới (không phải đổi ngày)."""
+    _add_new_student(tmp_path, roster)
+    assert "Lò Văn Mới" in [r["ten"] for r in api.students("moi", "1D15")["rows"]]

@@ -143,7 +143,7 @@ Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và c�
 
 Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác**, ăn ghép, **Ghi chú** và cột **App hiểu là** (cắt thứ 6, cắt từ…, ăn từ…).
 
-- Muốn **thêm, sửa, xóa học sinh**, đặt **lịch thêm / cắt**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. App đọc lại khi mở ngày.
+- Muốn **thêm, sửa, xóa học sinh**, đặt **lịch thêm / cắt**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. Quay lại app là thấy ngay (cột **App hiểu là** cho biết app hiểu ghi chú thế nào).
 - Đổi sang file danh sách khác: **Cài đặt → Chọn file khác…**.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.

@@ -36,7 +36,7 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 
 | File | Ai sửa | Mã đọc/ghi |
 |---|---|---|
-| **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App **chỉ đọc**, tự đọc lại khi mở ngày nếu file đã sửa. | `excel/roster_import.py:load_list` |
+| **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App **chỉ đọc**; file vừa sửa thì đọc lại ngay ở lần gọi kế tiếp (`Workspace.sync_list`). | `excel/roster_import.py:load_list` |
 | **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
 | **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
 

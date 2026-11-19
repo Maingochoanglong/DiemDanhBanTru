@@ -26,6 +26,9 @@ export default {
     const sideMin = computed(() => !!store.settings?.side_min);
     function toggleSide() { store.settings.side_min = !sideMin.value; api("set_side_min", store.settings.side_min); }
 
+    // quay lại cửa sổ trình duyệt (vd. vừa sửa, lưu file danh sách trong Excel): lấy lại trạng thái, app đọc lại file đã sửa
+    window.addEventListener("focus", () => { if (store.S && !conn.gone) api("state").then(S => { store.S = S; }); });
+
     document.addEventListener("keydown", e => {
       if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); doSave(); }
       if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.target.matches("input,textarea")) { e.preventDefault(); api("undo").then(handle); }

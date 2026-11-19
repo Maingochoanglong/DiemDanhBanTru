@@ -3,13 +3,14 @@ import { api } from "../api.js";
 import { openPath, store } from "../store.js";
 import { mealDiff } from "../util.js";
 
-const { computed, onActivated, ref } = Vue;
+const { computed, onActivated, ref, watch } = Vue;
 
 export default {
   setup() {
     const m = ref(null);
     const load = async () => { m.value = await api("meals"); };
     onActivated(load);
+    watch(() => store.S, () => { if (store.page === "sa") load(); });  // vd. quay lại từ Excel vừa sửa cột Ăn ghép
 
     // như bảng trong sổ: dòng trống giữ chỗ cách dòng
     const rows = computed(() => {

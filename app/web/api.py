@@ -408,6 +408,7 @@ class Api:
 
     # ================================================================== suất ăn
     def meals(self) -> dict:
+        self._ws.sync_list()  # vừa sửa cột Ăn ghép / sheet Nhóm ăn bằng Excel: trang Suất ăn hiện ngay
         ws, st = self._ws, self._ws.state
         layout = ws.layout
         if st is None or layout.is_empty:
@@ -457,6 +458,7 @@ class Api:
 
     # ================================================================== học sinh
     def students(self, q: str = "", cls: str = "", only_bt: bool = True) -> dict:
+        self._ws.sync_list()  # vừa sửa file danh sách bằng Excel: trang Học sinh hiện ngay
         roster, day = self._ws.roster, self._ws.day
         items = search_students(roster, "", cls or None, only_bt)
         items = [s for s in items if matches(q, s.ho_ten + " " + roster.display_name(s))]
