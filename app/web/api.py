@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
-from .. import __version__, config
+from .. import __version__, config, settings
 from ..core import matcher
 from ..core.search import matches
 from ..core.text import class_sort_key, clean_spaces, fmt_date, parse_date
@@ -22,7 +22,7 @@ WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "C
 class NoDialogs:
     """Không có hộp chọn file (máy chủ chạy thử, test). App thật dùng hộp của Windows (run.py)."""
 
-    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:  # noqa: ARG002 - cùng mẫu với hộp thật
+    def open_file(self, title: str, types: tuple[str, ...], folder: str) -> str | None:  # noqa: ARG002 - cùng mẫu với hộp thật
         return None
 
 
@@ -471,7 +471,10 @@ class Api:
     def settings(self) -> dict:
         ws, st = self._ws, self._ws.settings
         groups = ws.list.meal_groups or []
+        app_dir = ws.app_dir.absolute()
+        outside = [k for k in settings.PATH_KEYS if st.get(k) and not Path(st[k]).absolute().is_relative_to(app_dir)]
         return {"so_file": st.get("so_file", ""), "cdhs_file": st.get("cdhs_file", ""), "settings_file": str(ws.settings_path),
+                "app_dir": str(app_dir), "outside": outside,  # file nằm ngoài thư mục app (nên chép vào cho gọn)
                 "version": __version__, "list_error": ws.list_error, "n": len(ws.roster.students),
                 "nhom_an": sum(1 for g in groups if not g.blank), "nhom_an_errors": ws.list.meal_errors + ws.list.meal_warnings,
                 "side_min": st.get("thanh_ben_thu_gon") == "x"}
@@ -491,7 +494,7 @@ class Api:
     def choose_book(self, path: str | None = None) -> dict:
         if (err := self._unsaved_error()) is not None:
             return err
-        path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", config.BOOK_FILE_TYPES)
+        path = path or self._dlg.open_file("Chọn sổ điểm danh tháng (.xlsx)", config.BOOK_FILE_TYPES, str(self._ws.app_dir))
         if not path:
             return {"cancel": True}
         if Path(path).suffix.lower() not in config.BOOK_SUFFIXES:
@@ -505,7 +508,7 @@ class Api:
         """Chọn file Excel danh sách học sinh (app đọc thẳng file này, sửa file thì app tự đọc lại)."""
         if (err := self._unsaved_error()) is not None:
             return err
-        path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", config.LIST_FILE_TYPES)
+        path = path or self._dlg.open_file("Chọn file danh sách học sinh (Excel)", config.LIST_FILE_TYPES, str(self._ws.app_dir))
         if not path:
             return {"cancel": True}
         try:
@@ -519,9 +522,9 @@ class Api:
         return res
 
     def open_path(self, kind: str) -> dict:
-        """Mở file (so_file, cdhs_file, settings) hoặc thư mục chứa file (so_folder, cdhs_folder)."""
+        """Mở file (so_file, cdhs_file, settings_file) hoặc thư mục chứa file (so_folder, cdhs_folder, settings_folder = thư mục app)."""
         files = {"so_file": self._ws.settings.get("so_file", ""), "cdhs_file": self._ws.settings.get("cdhs_file", ""),
-                 "settings": str(self._ws.settings_path)}
+                 "settings_file": str(self._ws.settings_path)}
         key = kind.removesuffix("_folder") + ("_file" if kind.endswith("_folder") else "")
         p = Path(files.get(key) or "")
         if not files.get(key) or not p.exists():

@@ -8,7 +8,7 @@ export default {
     onActivated(loadSettings);
     const s = computed(() => store.settings || {});
     const files = computed(() => [
-      { key: "so_file", icon: "pi-book", label: "Sổ điểm danh tháng", help: "Lưu vào sổ: app ghi sheet của ngày rồi xóa sổ tạm (… tamthoi.xlsx cạnh sổ, ghi sau mỗi thao tác).",
+      { key: "so_file", icon: "pi-book", label: "Sổ điểm danh tháng", help: "Lưu vào sổ: app ghi sheet của ngày rồi xóa sổ tạm (… tamthoi.xlsx trong thư mục app, ghi sau mỗi thao tác).",
         buttons: [{ label: "Chọn sổ khác…", icon: "pi-upload", run: chooseBook }, { label: "Thư mục", icon: "pi-folder-open", open: "so_folder" }] },
       { key: "cdhs_file", icon: "pi-file-excel", label: `Danh sách học sinh (Excel)${s.value.n ? ` — ${s.value.n} học sinh` : ""}`,
         help: "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép · Ghi chú (vd. <i>cắt thứ 6</i>, <i>cắt từ 30/10</i>, <i>ăn từ 3/11</i>). " +
@@ -17,16 +17,23 @@ export default {
         errors: [s.value.list_error, ...(s.value.nhom_an_errors || [])].filter(Boolean),
         buttons: [{ label: "Chọn file khác…", icon: "pi-upload", run: chooseList }, { label: "Mở file", icon: "pi-external-link", open: "cdhs_file" }] },
       { key: "settings_file", icon: "pi-cog", label: "Cài đặt của app (cạnh file .exe)",
-        buttons: [{ label: "Mở file", icon: "pi-external-link", open: "settings" }] },
+        buttons: [{ label: "Mở file", icon: "pi-external-link", open: "settings_file" }] },
     ]);
+    const outside = key => (s.value.outside || []).includes(key);
     const click = b => b.open ? openPath(b.open) : b.run();
     const fileName = p => p.split(/[\\/]/).pop();
-    return { s, files, click, fileName };
+    return { s, files, click, fileName, outside, openPath };
   },
   template: /* html */`
   <section class="page">
     <Card>
       <template #title>3 file app làm việc</template>
+      <template #subtitle>
+        <div class="row-gap flex-wrap">
+          <span>Thư mục app: <b class="text-break">{{ s.app_dir }}</b> (file .exe, {{ fileName(s.settings_file || "") }}, sổ tạm). Gỡ app: xóa thư mục này.</span>
+          <Button label="Mở thư mục" icon="pi pi-folder-open" severity="secondary" outlined size="small" @click="openPath('settings_folder')" />
+        </div>
+      </template>
       <template #content>
         <div v-for="f in files" :key="f.key" class="file-row">
           <i :class="['pi', f.icon, 'file-icon']"></i>
@@ -35,6 +42,7 @@ export default {
             <div class="fw-semibold text-truncate" :title="s[f.key]">{{ s[f.key] ? fileName(s[f.key]) : "" }}<span v-if="!s[f.key]" class="text-muted fw-normal">chưa có</span></div>
             <div v-if="f.help" class="text-muted small" v-html="f.help"></div>
             <Message v-for="e in f.errors" severity="warn" size="small" class="mt-1">{{ e }}</Message>
+            <Message v-if="outside(f.key)" severity="info" size="small" class="mt-1">File này nằm ngoài thư mục app. Nên chép vào thư mục app rồi chọn lại, để mọi file nằm chung một chỗ.</Message>
           </div>
           <div class="row-gap">
             <Button v-for="b in f.buttons" :key="b.label" :label="b.label" :icon="'pi ' + b.icon" :severity="b.open ? 'secondary' : undefined"

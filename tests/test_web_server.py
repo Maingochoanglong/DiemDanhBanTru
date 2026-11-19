@@ -139,20 +139,22 @@ def test_file_dialogs_run_on_main_thread():
     seen = []
 
     class FakeTk:
-        def open_file(self, title, types):
-            seen.append(threading.current_thread() is threading.main_thread())
+        def open_file(self, title, types, folder):
+            seen.append((threading.current_thread() is threading.main_thread(), folder))
             return "C:/so.xlsx"
 
     d._tk = FakeTk()
     stop, out = threading.Event(), []
 
     def worker():
-        out.append(d.open_file("Chọn sổ", ()))
-        stop.set()
+        try:
+            out.append(d.open_file("Chọn sổ", (), "C:/app"))
+        finally:
+            stop.set()
 
     threading.Thread(target=worker).start()
     d.loop(stop)
-    assert out == ["C:/so.xlsx"] and seen == [True]
+    assert out == ["C:/so.xlsx"] and seen == [(True, "C:/app")]
 
 
 def test_run_starts_and_stops_cleanly(api, monkeypatch):  # noqa: F811

@@ -286,3 +286,18 @@ def test_reload_right_after_first_setup_keeps_unsaved_day(tmp_path, monkeypatch,
     a.set_absent("1D15", sid_of(a, "1D15", "Lâm Quốc Tuấn Anh"), True)
     r = a.boot()  # F5
     assert r["state"]["dirty"] and r["state"]["date"] == "2026-10-29"
+
+
+def test_settings_show_app_folder_and_files_outside_it(api, tmp_path, monkeypatch):
+    """Trang Cài đặt: thư mục app (mở được), file nào nằm ngoài thư mục app."""
+    from app.web import api as api_mod
+
+    st = api.settings()
+    assert st["app_dir"] == str(tmp_path.absolute()) and st["outside"] == []
+    other = tmp_path.parent / f"{tmp_path.name} khac" / "SO DIEM DANH T10.xlsx"
+    other.parent.mkdir()
+    api.choose_book(str(make_book(other)))
+    assert api.settings()["outside"] == ["so_file"]
+    opened = []
+    monkeypatch.setattr(api_mod, "open_folder", opened.append)
+    assert api.open_path("settings_folder") == {"ok": ""} and opened == [tmp_path / "CaiDat.txt"]

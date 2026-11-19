@@ -2,7 +2,7 @@
 
 App chỉ làm việc với 3 file:
 - file Excel danh sách học sinh (chỉ đọc: excel/roster_import.py, đọc lại khi file được sửa);
-- sổ điểm danh tháng (excel/sobook.py) + sổ tạm "… tamthoi.xlsx" cạnh sổ (excel/tamthoi.py), ghi sau mỗi thao tác,
+- sổ điểm danh tháng (excel/sobook.py) + sổ tạm "… tamthoi.xlsx" trong thư mục app (excel/tamthoi.py), ghi sau mỗi thao tác,
   xóa khi đã lưu vào sổ;
 - CaiDat.txt cạnh file .exe (settings.py).
 """
@@ -373,15 +373,20 @@ class Workspace:
         return ws.title
 
     # ---------------------------------------------------------------- sổ tạm (tự lưu)
+    @property
+    def app_dir(self) -> Path:
+        """Thư mục app: chứa .exe, CaiDat.txt, sổ tạm."""
+        return self.settings_path.parent
+
     def temp_path(self) -> Path | None:
-        return tamthoi.temp_path(self.book_path) if self.book_path else None
+        return tamthoi.temp_path(self.book_path, self.app_dir) if self.book_path else None
 
     def autosave(self) -> None:
         """Ghi sổ tạm ngay (gọi sau mỗi thao tác) nếu ngày đang mở có thay đổi chưa ghi tạm. File nhỏ, ghi nhanh."""
         if self.state is None or not self.book_path or not self.dirty or self.version == self._temp_version:
             return
         try:
-            safe_save(tamthoi.build(self.state, self.book_path), tamthoi.temp_path(self.book_path))
+            safe_save(tamthoi.build(self.state, self.book_path), self.temp_path())
             self._temp_version = self.version
             self.temp_saved_at, self.temp_error = time.strftime("%H:%M:%S"), ""
         except Exception as e:  # noqa: BLE001 - lưu tạm lỗi thì báo nhẹ, không chặn công việc
@@ -401,7 +406,7 @@ class Workspace:
         """Sổ tạm còn lại từ lần trước (app bị tắt khi chưa lưu vào sổ)."""
         if not self.settings.get("so_file"):
             return None
-        p = tamthoi.temp_path(self.settings["so_file"])  # chỉ sổ tạm của sổ đang chọn
+        p = tamthoi.temp_path(self.settings["so_file"], self.app_dir)  # chỉ sổ tạm của sổ đang chọn
         return tamthoi.read(p) if p.exists() else None
 
     def restore_temp(self, info: tamthoi.TempInfo) -> None:

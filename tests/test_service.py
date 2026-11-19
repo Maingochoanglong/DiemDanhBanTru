@@ -249,3 +249,44 @@ def test_settings_next_to_exe_when_built_with_nuitka(tmp_path, monkeypatch):
     assert settings.default_path().parent == Path(settings.__file__).resolve().parents[1]  # chạy từ mã nguồn: gốc repo
     monkeypatch.setitem(vars(settings), "__compiled__", SimpleNamespace(containing_dir=str(tmp_path)))
     assert settings.default_path() == tmp_path / "CaiDat.txt"
+
+
+def test_files_in_app_folder_saved_relative_so_folder_can_move(tmp_path, roster):
+    """Sổ / danh sách trong thư mục app: CaiDat.txt chỉ ghi tên file, chép cả thư mục đi chỗ khác vẫn chạy."""
+    import shutil
+
+    from app import settings
+
+    app = tmp_path / "app"
+    app.mkdir()
+    ws = make_workspace(app, roster, make_book(app / "SO DIEM DANH T10.xlsx"))
+    text = (app / "CaiDat.txt").read_text(encoding="utf-8")
+    assert "so_file = SO DIEM DANH T10.xlsx\n" in text and "cdhs_file = DanhSach.xlsx\n" in text
+
+    other = tmp_path / "ngoai" / "SO DIEM DANH T11.xlsx"  # sổ ở thư mục khác: giữ đường dẫn đầy đủ
+    other.parent.mkdir()
+    ws.set_book(make_book(other))
+    assert f"so_file = {other}\n" in (app / "CaiDat.txt").read_text(encoding="utf-8")
+
+    ws.set_book(app / "SO DIEM DANH T10.xlsx")
+    moved = tmp_path / "may khac"
+    shutil.copytree(app, moved)
+    st = settings.load(moved / "CaiDat.txt")
+    assert Path(st["so_file"]) == moved / "SO DIEM DANH T10.xlsx" and Path(st["cdhs_file"]) == moved / "DanhSach.xlsx"
+    assert Workspace(moved / "CaiDat.txt").roster.students  # đọc được danh sách ở chỗ mới
+
+
+def test_temp_book_in_app_folder_even_if_book_elsewhere(tmp_path, roster):
+    """Sổ tạm nằm trong thư mục app (cạnh CaiDat.txt), không nằm cạnh sổ ở thư mục khác."""
+    app, books = tmp_path / "app", tmp_path / "so"
+    app.mkdir()
+    books.mkdir()
+    ws = make_workspace(app, roster, make_book(books / "SO DIEM DANH T10.xlsx"))
+    ws.load_day(dt.date(2026, 10, 29))
+    absent(ws, "1D15", "Lâm Quốc Tuấn Anh")
+    ws.autosave()
+    assert ws.temp_path() == app / "SO DIEM DANH T10 tamthoi.xlsx" and ws.temp_path().exists()
+    assert not (books / "SO DIEM DANH T10 tamthoi.xlsx").exists()
+    assert Workspace(app / "CaiDat.txt").find_temp() is not None  # lần mở sau vẫn tìm thấy để khôi phục
+    ws.save()
+    assert not ws.temp_path().exists()

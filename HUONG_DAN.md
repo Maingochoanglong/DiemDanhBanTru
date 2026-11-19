@@ -32,7 +32,13 @@ Máy cần Windows 10/11 và Microsoft Excel (để mở, in sổ). Không cần
 | **Sổ điểm danh tháng** (Excel) | sổ như thường lệ, mỗi ngày 1 sheet, mỗi tháng 1 file | app ghi sheet của ngày khi bấm **Lưu vào sổ** |
 | **CaiDat.txt** (cạnh file `DiemDanhBanTru.exe`) | nhớ đang dùng sổ nào, file danh sách nào, cổng của app (`cong`, chỉ đổi khi trùng chương trình khác), thanh bên thu gọn | app tự ghi; mở bằng Notepad sửa được |
 
-Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh sổ, có khi đang làm dở và tự xóa khi đã lưu vào sổ.
+Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh file .exe, có khi đang làm dở và tự xóa khi đã lưu vào sổ.
+
+**Nên để cả 3 file chung một thư mục với `DiemDanhBanTru.exe`** (thư mục app), ví dụ `Documents\DiemDanhBanTru`:
+- hộp chọn file luôn mở sẵn thư mục này;
+- sổ và danh sách nằm trong thư mục này thì CaiDat.txt chỉ ghi tên file, nên chép cả thư mục sang máy khác hoặc USB vẫn chạy ngay;
+- sổ tháng mới được tạo cạnh sổ tháng trước, tức là cũng trong thư mục này;
+- trang **Cài đặt** ghi rõ thư mục app và báo nếu file nào nằm ngoài thư mục đó. Để file ở chỗ khác app vẫn chạy, chỉ là không gọn.
 
 **File danh sách học sinh** có các cột (tên cột viết như dưới, thứ tự tùy ý):
 
@@ -149,7 +155,7 @@ Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ 
 ## 8. An toàn dữ liệu & lỗi thường gặp
 
 - App **không tạo bản sao lưu**. Sổ chính chỉ thay đổi khi bấm **Lưu vào sổ**; lúc ghi, app dựng xong cả file trong bộ nhớ rồi mới ghi đè một lần, nên lỗi giữa chừng không làm hỏng sổ.
-- **Sổ tạm (phòng mất điện)**: **ngay sau mỗi thao tác**, app tự lưu một file nhỏ (vài KB, không chép cả cuốn sổ nên rất nhẹ), tên là tên sổ thêm chữ `tamthoi`, nằm cạnh sổ chính (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
+- **Sổ tạm (phòng mất điện)**: **ngay sau mỗi thao tác**, app tự lưu một file nhỏ (vài KB, không chép cả cuốn sổ nên rất nhẹ), tên là tên sổ thêm chữ `tamthoi`, nằm trong thư mục app, cạnh `DiemDanhBanTru.exe` (vd. `SO DIEM DANH T10 tamthoi.xlsx`). Dòng trạng thái dưới bảng ghi *"đã lưu tạm lúc …"*.
   - Bấm **Lưu vào sổ** thì app chép vào sheet của ngày trong sổ chính rồi xóa sổ tạm.
   - Nếu máy tắt đột ngột khi chưa lưu, lần mở app sau sẽ hỏi **Khôi phục**. Chọn Khôi phục để làm tiếp, rồi nhớ bấm Lưu vào sổ.
   - Thoát app và chọn *Không lưu*, hoặc đổi ngày và chọn *Không lưu*, thì sổ tạm cũng bị xóa.

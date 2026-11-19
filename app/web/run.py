@@ -34,14 +34,15 @@ class TkDialogs:
         root.focus_force()
         return root
 
-    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
-        """types: vd. ("Excel (*.xlsx;*.xls)",) -> chỉ hiện các file đó."""
+    def open_file(self, title: str, types: tuple[str, ...], folder: str) -> str | None:
+        """types: vd. ("Excel (*.xlsx;*.xls)",) -> chỉ hiện các file đó. Mở sẵn thư mục folder (thư mục app)."""
         from tkinter import filedialog
 
         filetypes = [(t.split("(")[0].strip(), t[t.find("(") + 1:t.rfind(")")].replace(";", " ")) for t in types]
         root = self._root()
         try:
-            return filedialog.askopenfilename(parent=root, title=title, filetypes=filetypes or [("Excel", "*.xlsx")]) or None
+            return filedialog.askopenfilename(parent=root, title=title, initialdir=folder,
+                                              filetypes=filetypes or [("Excel", "*.xlsx")]) or None
         finally:
             root.destroy()
 
@@ -61,8 +62,8 @@ class MainThreadDialogs:
             raise box["error"]
         return box.get("result")
 
-    def open_file(self, title: str, types: tuple[str, ...]) -> str | None:
-        return self._call("open_file", title, types)
+    def open_file(self, title: str, types: tuple[str, ...], folder: str) -> str | None:
+        return self._call("open_file", title, types, folder)
 
     def loop(self, stop: threading.Event) -> None:
         """Chạy ở luồng chính cho tới khi app thoát."""

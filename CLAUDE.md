@@ -36,11 +36,14 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 | **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
 | **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
 
+Thư mục app = thư mục chứa CaiDat.txt (`Workspace.app_dir`): hộp chọn file mở sẵn ở đây; sổ / danh sách nằm trong đó thì CaiDat.txt
+ghi đường dẫn tương đối (`settings.PATH_KEYS`), chép cả thư mục đi nơi khác vẫn chạy.
+
 - **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · Lớp tính BT (tùy chọn) · **Ghi chú**.
   - Cột Ghi chú chứa lịch thêm/cắt: `cắt thứ 6`, `cắt từ 30/10`, `ăn từ 3/11` (bộ đọc ở `core/notes.py`).
   - Sheet **Nhóm ăn** (tùy chọn) quy định bảng suất ăn của tờ ngày mới.
 - **Mã học sinh** = `lớp|họ tên|ngày sinh`: không đổi giữa các lần đọc file.
-- **Sổ tạm** `… tamthoi.xlsx` cạnh sổ (`excel/tamthoi.py`):
+- **Sổ tạm** `… tamthoi.xlsx` trong thư mục app, cạnh CaiDat.txt (`excel/tamthoi.py`, `Workspace.app_dir`):
   - ghi **ngay sau mỗi thao tác**: `Api.state()` gọi `Workspace.autosave()`;
   - khi bấm Lưu: ghi sổ tạm, ghi sheet vào sổ, rồi xóa sổ tạm;
   - mất điện thì lần mở sau app hỏi khôi phục.

@@ -1,6 +1,7 @@
 """Sổ tạm: bản sao sổ điểm danh tự lưu sau mỗi thao tác, phòng mất điện / tắt máy đột ngột.
 
-Tên file = tên sổ đang dùng + " " + config.TEMP_TAG (vd. "SO DIEM DANH T10 tamthoi.xlsx"), nằm cạnh sổ chính.
+Tên file = tên sổ đang dùng + " " + config.TEMP_TAG (vd. "SO DIEM DANH T10 tamthoi.xlsx"), nằm trong thư mục app
+(cạnh .exe và CaiDat.txt), sổ chính để ở đâu cũng vậy.
 File nhỏ (vài KB), không chép cả cuốn sổ, nên lưu tạm sau mỗi thao tác rất nhẹ:
 - sheet "Dang diem danh": lớp, đã báo, số vắng, tên vắng, ghi chú (mở bằng Excel xem được ngay);
 - sheet ẩn TAMTHOI ghi lại đủ thao tác của ngày đó để app khôi phục chính xác.
@@ -24,9 +25,10 @@ COLS = ["Lớp", "Đã báo", "Vắng (mã HS)", "Tên ghi tay", "Bỏ vắng t�
 SEP = "; "
 
 
-def temp_path(book: str | Path) -> Path:
+def temp_path(book: str | Path, folder: Path) -> Path:
+    """Sổ tạm của sổ book, trong thư mục app folder."""
     book = Path(book)
-    return book.with_name(f"{book.stem} {config.TEMP_TAG}{book.suffix}")
+    return folder / f"{book.stem} {config.TEMP_TAG}{book.suffix}"
 
 
 def _join(items) -> str:

@@ -8,7 +8,7 @@ APP_ID = "DiemDanhBanTru"
 
 # ---- 4 file app được đọc / ghi (xem CLAUDE.md) ----
 SETTINGS_FILE = "CaiDat.txt"  # cạnh file .exe
-TEMP_TAG = "tamthoi"  # sổ tạm = "<tên sổ> tamthoi.xlsx" cạnh sổ
+TEMP_TAG = "tamthoi"  # sổ tạm = "<tên sổ> tamthoi.xlsx" trong thư mục app (cạnh CaiDat.txt)
 BOOK_SUFFIXES = (".xlsx", ".xlsm")  # sổ điểm danh: openpyxl đọc/ghi được
 LIST_FILE_TYPES = ("Excel (*.xlsx;*.xls)",)  # hộp chọn file danh sách
 BOOK_FILE_TYPES = ("Excel (*.xlsx)",)  # hộp chọn file sổ
