@@ -31,7 +31,8 @@ export default {
   template: /* html */`
   <Dialog :visible="!!s" modal :closable="false" :closeOnEscape="false" :draggable="false" header="Thiết lập trước khi điểm danh" class="setup-dialog">
     <template v-if="s">
-      <p class="text-muted">Bản app mới tải về: làm đủ 2 bước dưới đây rồi bấm <b>Bắt đầu điểm danh</b>.</p>
+      <p class="text-muted">Bản app mới tải về: làm đủ 2 bước dưới đây rồi bấm <b>Bắt đầu điểm danh</b>.<br>
+        Nên chép sổ và file danh sách vào thư mục chứa app trước (hộp chọn file mở sẵn thư mục này), để mọi file nằm chung một chỗ.</p>
       <div v-for="(st, i) in steps" :key="st.key" :class="['setup-step', { done: st.done }]">
         <div class="num"><i v-if="st.done" class="pi pi-check"></i><template v-else>{{ i + 1 }}</template></div>
         <div class="grow">
