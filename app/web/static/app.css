@@ -141,7 +141,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 12
 .names .nm.p-togglebutton:not(.p-togglebutton-checked):hover { border-color: var(--p-primary-color); background: var(--p-primary-50); }
 .names .nm .ck { font-size: 1.2rem; color: var(--p-surface-400); }
 .names .nm-txt { display: flex; flex: 1; align-items: center; gap: .4rem; min-width: 0; }
-.names .nm .tg { margin-left: auto; font-size: .78rem; color: var(--muted); }
+.names .nm .tg { margin-left: auto; font-size: .78rem; color: var(--muted); white-space: nowrap; }
 .names .nm.p-togglebutton-checked { background: var(--p-red-600); border-color: var(--p-red-600); color: #fff; font-weight: 700; }
 .names .nm.p-togglebutton-checked .ck, .names .nm.p-togglebutton-checked .tg { color: #fff; }
 /* tên gõ / dán không có trong bảng: vàng = nên xem lại (gõ sai, chưa có trong danh sách); xám = không ăn bán trú */
@@ -151,7 +151,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 12
 .names .nm.miss .ck { color: #e0a800; }
 .names .nm.miss.known { border-color: var(--p-surface-400); background: var(--p-surface-50); color: #495057; }
 .names .nm.miss.known .ck { color: var(--p-surface-400); }
-.names .nm.miss .why { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+.names .nm.miss .why { font-size: .75rem; color: var(--muted); }
 
 /* chọn trong danh sách (hộp Chọn học sinh) */
 .pick-list { border: 1px solid var(--line); border-radius: 8px; }

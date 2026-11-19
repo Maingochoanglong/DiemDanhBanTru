@@ -144,9 +144,18 @@ class Api:
         steps = []
         if not self._ws.roster.students:
             steps.append("chọn file danh sách học sinh")
-        if not self._ws.book_path:
+        if not self._ws.book_path and not self._month_hint():
             steps.append("chọn sổ điểm danh tháng này")
-        return ("Vào Cài đặt để " + " và ".join(steps) + ".") if steps else ""
+        if steps:
+            return "Vào Cài đặt để " + " và ".join(steps) + "."
+        if self._month_hint():
+            return f"Chưa có sổ tháng {self._ws.day.month}/{self._ws.day.year} — bấm vào đây để tạo sổ tháng mới hoặc chọn sổ có sẵn."
+        return ""
+
+    def _month_hint(self) -> bool:
+        """Ngày đang mở chưa có sổ, nhưng đã có sổ tháng khác (tạo sổ tháng mới từ sổ đó được)."""
+        so = self._ws.settings.get("so_file")
+        return not self._ws.book_path and bool(so) and Path(so).exists()
 
     def _status(self, code: str) -> str:
         st = self._ws.state
@@ -166,7 +175,7 @@ class Api:
             "date": _iso(ws.day), "date_text": fmt_date(ws.day), "weekday": WEEKDAYS[ws.day.weekday()],
             "book": bp.name if bp else "", "book_stem": bp.stem if bp else "",
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
-            "dirty": ws.dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(),
+            "dirty": ws.dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(), "hint_month": self._month_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
             "unreported": [],
         }
@@ -209,8 +218,12 @@ class Api:
         if n_pending:
             first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
             out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first})
+        need_look = [code for code in st.classes if st.class_warnings(code)]
+        if need_look:
+            out["todo"].append({"text": f"{len(need_look)} lớp cần xem (chữ đỏ ở cột Ghi chú): {', '.join(need_look)} — bấm để mở",
+                                "code": need_look[0]})
         checks = ws.sheet_checks
-        if checks and not n_pending:
+        if checks and not n_pending and not need_look:
             n = sum(len(v) for v in checks.values())
             out["info"].append(f"Sổ ngày {fmt_date(st.date)}: {n} tên vắng đã có, đều khớp danh sách")
         changes = st.scheduled_changes()
@@ -232,14 +245,14 @@ class Api:
             if s.id in auto:
                 tags.append(auto[s.id])
             elif s.cat_thu6:
-                tags.append("nghỉ T6")
+                tags.append("cắt thứ 6")
             if s.cat_tu and s.cat_tu > st.date:
                 tags.append(f"cắt từ {s.cat_tu:%d/%m}")
             if s.an_ghep:
                 tags.append(f"ăn {s.an_ghep}")
             names.append({"id": s.id, "name": roster.display_name(s), "full": s.ho_ten, "dob": s.ngay_sinh,
                           "alias": s.ten_ghi_so, "absent": st.is_absent(code, s.id), "tags": tags,
-                          "friday": s.cat_thu6})
+                          "auto": s.id in auto})
         board_ids = {s.id for s in roster.boarding(code, st.date)}
         others = []  # em của lớp không có trong bảng chọn hôm nay: để báo lý do khi gõ / dán tên các em này
         for s in roster.in_class(code):
@@ -274,7 +287,8 @@ class Api:
         return {
             "code": code, "ma": info.ma_ngan if info else "", "gvcn": info.gvcn if info else "",
             "si": st.si_so(code), "vang": st.absent_count(code), "hd": st.present(code),
-            "reported": c.reported, "note": c.note, "warnings": st.class_warnings(code), "extra": list(c.extra),
+            "reported": c.reported, "note": c.note, "extra": list(c.extra),
+            "warnings": st.class_warnings(code)[1 if c.extra else 0:],  # tên chưa xác định (cảnh báo đầu) có ô riêng: extra
             "not_bt": list(c.not_bt),
             "names": names, "others": others, "pending": pending, "upcoming": upcoming,
         }
@@ -351,7 +365,7 @@ class Api:
 
     def save_check(self) -> dict:
         """Mọi điều cần hỏi trước khi lưu, để giao diện hỏi một lần: còn tên chưa rõ (không lưu được),
-        lớp chưa báo, suất ăn lệch, sĩ số danh sách khác sổ."""
+        lớp chưa báo, tên chưa xác định (lưu nguyên chữ), suất ăn lệch, sĩ số danh sách khác sổ."""
         ws, st = self._ws, self._ws.state
         if st is None or not ws.book_path:
             return {}
@@ -359,7 +373,8 @@ class Api:
         if blocked:
             return {"blocked": blocked}
         out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines(),
-               "unreported_auto": [c for c in st.unreported() if st.absent_count(c)]}
+               "unreported_auto": [c for c in st.unreported() if st.absent_count(c)],
+               "extra": [f"Lớp {code}: {', '.join(st.cd(code).extra)}" for code in st.classes if st.cd(code).extra]}
         if not ws.layout.is_empty:
             m = ws.meals()
             if not m.balanced:

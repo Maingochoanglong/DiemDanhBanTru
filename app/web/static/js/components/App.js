@@ -76,7 +76,7 @@ export default {
   <ClassDialog />
   <SetupDialog />
   <DynamicDialog />
-  <Toast position="bottom-right" />
+  <Toast position="top-center" />  <!-- không che nút Lưu ở góc dưới -->
   <Dialog :visible="conn.gone" modal :closable="false" :closeOnEscape="false" :draggable="false" :header="conn.quit ? 'Đã thoát app' : 'App đã tắt'">
     <div class="text-center"><i class="pi pi-power-off gone-icon"></i>
       <p class="text-muted mb-0">Có thể đóng thẻ trình duyệt này.<br>Muốn dùng tiếp: mở lại <b>DiemDanhBanTru.exe</b>.</p></div>

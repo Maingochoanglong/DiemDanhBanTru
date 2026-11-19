@@ -1,7 +1,7 @@
 // Trang Điểm danh: bảng như tờ sổ (lớp, sĩ số, vắng, hiện diện, tên vắng, ghi chú) + thanh lưu.
 import { api, CONFIG } from "../api.js";
 import { ask } from "../dialogs.js";
-import { doSave, handle, openClass, store } from "../store.js";
+import { doSave, gotoDay, handle, openClass, store } from "../store.js";
 import { mealDiff } from "../util.js";
 
 const { computed, ref } = Vue;
@@ -48,16 +48,18 @@ export default {
     }
     const undo = async () => handle(await api("undo"));
     const shown = CONFIG.unreported_shown;  // số mã lớp "Chưa báo" hiện trên thanh
-    return { store, shown, S, filter, filters, rows, empty, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave };
+    // chưa có sổ tháng này: mở lại ngày để app hỏi tạo sổ tháng mới; còn lại thì vào Cài đặt
+    const hintClick = () => S.value.hint_month ? gotoDay(f => api("open_day", S.value.date, f)) : (store.page = "cd");
+    return { store, shown, S, filter, filters, rows, empty, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave, hintClick };
   },
   template: /* html */`
   <section class="page" id="page-dd">
-    <Message v-if="S.hint" severity="warn" icon="pi pi-cog" class="clickable" @click="store.page = 'cd'">{{ S.hint }}</Message>
+    <Message v-if="S.hint" severity="warn" :icon="S.hint_month ? 'pi pi-calendar-plus' : 'pi pi-cog'" class="clickable" @click="hintClick">{{ S.hint }}</Message>
     <Message v-for="t in S.todo" severity="error" icon="pi pi-exclamation-triangle" class="clickable" @click="openClass(t.code)">{{ t.text }}</Message>
     <div v-if="S.info.length" class="text-muted small"><i class="pi pi-info-circle me-1"></i>{{ S.info.join(" · ") }}</div>
 
     <div class="row-gap flex-wrap">
-      <span v-if="!S.unreported.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
+      <span v-if="!S.unreported.length && rows.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
       <template v-else>
         <span class="text-muted"><i class="pi pi-hourglass me-1"></i>Chưa báo ({{ S.unreported.length }}):</span>
         <Button v-for="c in S.unreported.slice(0, shown)" :key="c" :label="c" size="small" severity="secondary" outlined class="py-0" @click="openClass(c)" />
@@ -90,7 +92,7 @@ export default {
           <template v-if="r.kind === 'class'">
             <template v-if="r.reported">{{ r.ten }}</template>
             <template v-else><span class="text-muted fst-italic">(chưa báo)</span>
-              <span v-if="r.auto" class="text-muted small"> · nghỉ T6: {{ r.auto }}</span></template>
+              <span v-if="r.auto" class="text-muted small"> · cắt thứ 6: {{ r.auto }}</span></template>
           </template></template></Column>
         <Column header="Ghi chú" class="note"><template #body="{ data: r }">
           <div v-if="r.kind === 'class'" class="cut" :title="tip(r)">{{ note(r) }}</div></template></Column>
@@ -104,7 +106,7 @@ export default {
       <Button label="Đặt lại" icon="pi pi-refresh" severity="danger" outlined @click="reset"
         title='Mọi lớp về "chưa báo", bỏ hết tên vắng đã chọn (dùng khi sheet trong sổ đã tạo sẵn)' />
       <Button label="Hoàn tác" icon="pi pi-undo" severity="secondary" outlined @click="undo" />
-      <Button label="Lưu vào sổ" icon="pi pi-save" @click="doSave" />
+      <Button label="Lưu vào sổ" icon="pi pi-save" :disabled="!S.book" @click="doSave" />
     </div>
   </section>`,
 };

@@ -5,12 +5,12 @@ import { applyClass, store } from "../store.js";
 import { matches, matchLevel, searchTerms, tailMatch } from "../util.js";
 import ResolveDialog from "./ResolveDialog.js";
 
-const { computed, nextTick, ref, watch } = Vue;
+const { computed, ref, watch } = Vue;
 
 export default {
   setup() {
     const cls = store.cls;
-    const q = ref(""), note = ref(""), search = ref(null);
+    const q = ref(""), note = ref("");
     watch(() => cls.D, D => { note.value = D ? D.note : ""; });
     watch(() => cls.open, open => { if (open) q.value = ""; });
 
@@ -33,7 +33,7 @@ export default {
       const hint = !tiles.some(x => x.show) && miss.some(m => !m.o);
       return { tiles, miss, hint };
     });
-    const friday = computed(() => cls.D?.names.some(n => n.absent && n.tags.includes("cắt thứ 6")));
+    const friday = computed(() => cls.D?.names.some(n => n.absent && n.auto));  // có em cắt thứ 6 tự tính vắng
 
     const toggle = async n => applyClass(await api("set_absent", cls.code, n.id, !n.absent));
     const full = async () => applyClass(await api("mark_full", cls.code));
@@ -52,11 +52,10 @@ export default {
       el.setRangeText(t.trim().replace(/\s*[\r\n]+\s*/g, ", "), el.selectionStart, el.selectionEnd, "end");
       q.value = el.value;
     }
-    const focus = () => nextTick(() => search.value?.$el.focus());
-    return { cls, q, note, search, view, friday, toggle, full, clearExtra, saveNote, resolve, paste, focus };
+    return { cls, q, note, view, friday, toggle, full, clearExtra, saveNote, resolve, paste };
   },
   template: /* html */`
-  <Dialog v-model:visible="cls.open" modal maximizable :draggable="false" class="cls-dialog" @show="focus">
+  <Dialog v-model:visible="cls.open" modal maximizable :draggable="false" class="cls-dialog">
     <template #header>
       <div v-if="cls.D" class="cls-head">
         <div><div class="p-dialog-title">Lớp {{ cls.D.code }}{{ cls.D.ma ? " (" + cls.D.ma + ")" : "" }}</div>
@@ -77,17 +76,18 @@ export default {
       </Message>
       <Message v-if="cls.D.not_bt.length" severity="info" class="mb-2">Sổ có ghi tên em <b>không ăn bán trú</b> (theo danh sách hiện nay):
         {{ cls.D.not_bt.join(", ") }}. Giữ nguyên như sổ, không phải tên lạ.</Message>
-      <Message v-if="cls.D.extra.length" severity="secondary" class="mb-2">Giữ nguyên chữ đã ghi: {{ cls.D.extra.join(", ") }}
-        <Button label="Xóa các tên này" size="small" severity="secondary" outlined class="ms-2" @click="clearExtra" /></Message>
+      <Message v-if="cls.D.extra.length" severity="error" icon="pi pi-exclamation-triangle" class="mb-2">
+        Tên trong sổ chưa xác định: <b>{{ cls.D.extra.join(", ") }}</b>. Bấm chọn đúng em bên dưới (nếu có), rồi bấm
+        <Button label="Xóa các tên này" size="small" severity="danger" outlined class="ms-1" @click="clearExtra" /></Message>
       <div v-if="cls.D.upcoming.length" class="text-muted small mb-2"><i class="pi pi-calendar"></i> Sắp tới: {{ cls.D.upcoming.join("; ") }}</div>
 
       <div class="row-gap mb-3">
         <IconField class="grow">
           <InputIcon class="pi pi-search" />
-          <InputText id="clsSearch" ref="search" v-model="q" size="large" fluid autocomplete="off"
+          <InputText id="clsSearch" v-model="q" size="large" fluid autocomplete="off" autofocus
             placeholder="Tìm tên (không cần dấu) — nhiều tên cách nhau dấu phẩy" @paste="paste" @keydown.enter.prevent />
         </IconField>
-        <Button :label="friday ? 'Đủ (trừ em nghỉ thứ 6)' : 'Lớp này đủ'" icon="pi pi-check-square" size="large" severity="success" outlined @click="full" />
+        <Button :label="friday ? 'Đủ (trừ em cắt thứ 6)' : 'Lớp này đủ'" icon="pi pi-check-square" size="large" severity="success" outlined @click="full" />
       </div>
 
       <div class="names">
@@ -98,7 +98,7 @@ export default {
         </ToggleButton>
         <div v-for="m in view.miss" :key="m.t" class="nm miss" :class="{ known: m.o }" title="Không tính vào bán trú của lớp">
           <i :class="['pi', m.o ? 'pi-user-minus' : 'pi-question-circle', 'ck']"></i>
-          <span class="nm-txt"><span>{{ m.t }}</span><small class="why">{{ m.o ? m.o.why : "Không có trong danh sách" }}</small></span>
+          <span class="nm-txt"><span>{{ m.t }}</span><small class="why">{{ m.o ? m.o.why : "Không có trong lớp này" }}</small></span>
         </div>
         <div v-if="!cls.D.names.length" class="text-muted">Lớp này chưa có em nào ăn bán trú trong danh sách.</div>
       </div>

@@ -301,3 +301,33 @@ def test_settings_show_app_folder_and_files_outside_it(api, tmp_path, monkeypatc
     opened = []
     monkeypatch.setattr(api_mod, "open_folder", opened.append)
     assert api.open_path("settings_folder") == {"ok": ""} and opened == [tmp_path / "CaiDat.txt"]
+
+
+def test_class_with_unknown_names_is_flagged_not_called_all_matched(tmp_path, roster):
+    """Sổ có tên ghi tay không khớp ai: đầu trang báo lớp cần xem, không nói "đều khớp danh sách"."""
+    book = make_book(tmp_path / "SO DIEM DANH T10.xlsx")
+    wb = openpyxl.load_workbook(book)
+    wb["28"]["G7"], wb["28"]["E7"] = "Bông", 1  # 1D16: tên không có trong lớp
+    wb.save(book)
+    api = Api(make_workspace(tmp_path, roster, book))
+    st = api.open_day("2026-10-28")["state"]
+    assert any("1D16" in t["text"] and t["code"] == "1D16" for t in st["todo"])
+    assert not any("đều khớp" in i for i in st["info"])
+
+
+def test_hint_offers_new_month_book_when_previous_book_exists(api):
+    """Ngày của tháng chưa có sổ: lời nhắc bấm được để tạo sổ tháng mới (không bắt vào Cài đặt)."""
+    st = api.open_day("2026-11-19")["state"]
+    assert st["hint_month"] and "11/2026" in st["hint"] and "Cài đặt" not in st["hint"]
+    assert not api.open_day("2026-10-29")["state"]["hint_month"]
+
+
+def test_save_check_mentions_unknown_names(tmp_path, roster):
+    """Trước khi lưu: nhắc lớp còn tên chưa xác định (sẽ lưu nguyên chữ)."""
+    book = make_book(tmp_path / "SO DIEM DANH T10.xlsx")
+    wb = openpyxl.load_workbook(book)
+    wb["28"]["G7"], wb["28"]["E7"] = "Bông", 1
+    wb.save(book)
+    api = Api(make_workspace(tmp_path, roster, book))
+    api.open_day("2026-10-28")
+    assert api.save_check()["extra"] == ["Lớp 1D16: Bông"]

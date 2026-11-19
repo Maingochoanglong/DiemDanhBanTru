@@ -75,7 +75,9 @@ export async function doSave() {
   const items = [];
   if (ck.unreported?.length) items.push(`<li class="mb-2"><b>${ck.unreported.length} lớp chưa báo</b>: ${esc(ck.unreported.join(", "))}.
     Lưu bây giờ thì các lớp này coi như <b>không em nào vắng</b>` +
-    `${ck.unreported_auto?.length ? ` (trừ các em nghỉ thứ 6 ở lớp ${esc(ck.unreported_auto.join(", "))})` : ""}.</li>`);
+    `${ck.unreported_auto?.length ? ` (trừ các em cắt thứ 6 ở lớp ${esc(ck.unreported_auto.join(", "))})` : ""}.</li>`);
+  if (ck.extra?.length) items.push(`<li class="mb-2"><b class="text-danger">Tên chưa xác định</b> (lưu nguyên chữ như đang ghi, không tính là em nào):
+    <ul>${ck.extra.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   if (ck.meal) items.push(`<li class="mb-2"><b class="text-danger">Suất ăn ${mealDiff(ck.meal)}</b> (tổng suất ${ck.meal.total}, hiện diện ${ck.meal.present})` +
     `${ck.meal.ask ? `: ${ck.meal.ask} em ăn ghép vắng chưa chọn nhóm` : ""}. Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch.</li>`);
   if (ck.conflicts?.length) items.push(`<li class="mb-2"><b>Sĩ số khác nhau</b> giữa danh sách bán trú và sổ (có thể do thêm/cắt em chưa cập nhật):
