@@ -290,8 +290,8 @@ class DayState:
 
     def scheduled_changes(self, code: str | None = None) -> list:
         """Các em thêm/cắt bán trú (cột Ghi chú của file danh sách) có hiệu lực từ sau sheet mẫu tới hôm nay:
-        sĩ số đổi so với sổ hôm trước."""
-        if self.exists_in_book or not self.template_date or self.template_date >= self.date:
+        sĩ số đổi so với sổ hôm trước. Sheet đã điểm danh thì không có template_date (giữ sĩ số như sổ)."""
+        if not self.template_date or self.template_date >= self.date:
             return []
         after, until = self.template_date, self.date
         return [s for s in self.roster.students if s.ban_tru and (not code or s.lop_tinh == code)

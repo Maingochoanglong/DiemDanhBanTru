@@ -290,3 +290,37 @@ def test_temp_book_in_app_folder_even_if_book_elsewhere(tmp_path, roster):
     assert Workspace(app / "CaiDat.txt").find_temp() is not None  # lần mở sau vẫn tìm thấy để khôi phục
     ws.save()
     assert not ws.temp_path().exists()
+
+
+def test_first_day_of_new_month_book_applies_schedule(tmp_path, roster):
+    """Sổ tháng mới: sheet ngày đầu app tạo sẵn (còn trống) vẫn áp lịch "ăn từ" ngày đó: sĩ số tăng, lớp chưa báo."""
+    new_kid = next(s for s in roster.students if s.ho_ten == "Doãn Thanh Vy")  # 1D16, chưa ăn bán trú
+    new_kid.ban_tru, new_kid.bt_tu = True, dt.date(2026, 11, 2)
+    ws = make_workspace(tmp_path, roster, make_book(tmp_path / "SO DIEM DANH T10.xlsx"))
+    assert ws.load_day(dt.date(2026, 10, 29)).si_so("1D16") == 5
+    with pytest.raises(NeedMonthBook):
+        ws.load_day(dt.date(2026, 11, 2))
+    ws.create_month_book(dt.date(2026, 11, 2))
+    st = ws.load_day(dt.date(2026, 11, 2))
+    assert st.exists_in_book and st.si_so("1D16") == 6 and st.scheduled_changes("1D16")
+    assert not st.cd("1D16").reported and not st.class_warnings("1D16")
+
+
+def test_blank_presheet_on_friday_auto_marks_cut_friday(tmp_path, roster):
+    """Giáo vụ tạo sẵn sheet thứ 6 trong Excel (chép tờ hôm trước, xóa tên vắng): em cắt thứ 6 vẫn tự tính vắng."""
+    import openpyxl
+
+    next(s for s in roster.students if s.ho_ten == "Tô Minh Khôi").cat_thu6 = True
+    book = make_book(tmp_path / "SO DIEM DANH T10.xlsx")
+    wb = openpyxl.load_workbook(book)
+    fri = wb.copy_worksheet(wb["28"])
+    fri.title, fri["A3"] = "30", "ĐIỂM DANH BÁN TRÚ NGÀY 30/10/2026"
+    for r in range(6, 14):
+        fri[f"G{r}"] = None
+        if isinstance(fri[f"E{r}"].value, int):
+            fri[f"E{r}"] = 0
+    wb.save(book)
+    ws = make_workspace(tmp_path, roster, book)
+    st = ws.load_day(dt.date(2026, 10, 30))
+    assert st.exists_in_book and not st.cd("1D15").reported
+    assert st.absent_names("1D15") == ["Minh Khôi"]

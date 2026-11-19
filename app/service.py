@@ -270,18 +270,22 @@ class Workspace:
         if info:
             recs = sobook.read_records(info)
             self._ensure_classes({c: r.gvcn for c, r in recs.items()})
-            for code, rec in recs.items():
-                if ws is not None:
-                    st.load_class_from_sheet(code, rec.si_so, rec.names, rec.note)
-                    st.cd(code).keep_sheet_si_so = True
-                else:
-                    c = st.cd(code)
-                    c.sheet_si_so = rec.si_so
-                    c.note = rec.note
+        # sheet đã điểm danh: app đã lưu (kể cả lớp nào cũng đủ) hoặc đã có tên vắng ghi tay. Sheet tạo sẵn còn trống
+        # (sheet ngày 1 của sổ tháng mới, hoặc giáo vụ tạo sẵn trong Excel) thì làm như ngày mới: sĩ số theo danh sách
+        # và lịch thêm/cắt, em cắt thứ 6 tự tính vắng, các lớp "chưa báo".
+        filled = ws is not None and (ws.title in sobook.saved_sheets(wb) or any(rec.names for rec in recs.values()))
+        for code, rec in recs.items():
+            if filled:
+                st.load_class_from_sheet(code, rec.si_so, rec.names, rec.note)
+                st.cd(code).keep_sheet_si_so = True
+            else:
+                c = st.cd(code)
+                c.sheet_si_so = rec.si_so
+                c.note = rec.note
         st.exists_in_book = ws is not None
-        if ws is None and src is not None:
-            st.template_date = sobook.sheet_date(src)
-        if ws is not None and info:
+        if not filled and src is not None:  # sĩ số trong sheet là của ngày học trước (sheet trống chép từ hôm trước)
+            st.template_date = sobook.sheet_date(src) if ws is None else next_school_day(day, -1)
+        if filled and info:
             m_book = {}  # số em ghép vắng đã ghi trong sổ (cột M): suy ra nhóm của em vắng chưa ghi nhóm
             for mr in info.meal.rows:
                 v = ws[mr.m_cell].value if mr.code and mr.m_cell else None
@@ -289,9 +293,7 @@ class Workspace:
                     m_book[mr.code] = int(v)
             if m_book:
                 st.picks_from_book(info.meal, m_book)
-        if ws is not None and (ws.title in sobook.saved_sheets(wb) or any(rec.names for rec in recs.values())):
-            # ngày app đã lưu (kể cả lớp nào cũng đủ), hoặc đã điểm danh tay trong sổ (có tên vắng): các lớp đã báo.
-            # Sheet tạo sẵn còn trống thì các lớp vẫn "chưa báo": đủ hay vắng do giáo vụ bấm.
+        if filled:  # các lớp đã báo
             for c in st.classes.values():
                 c.reported = True
         self.state = st
