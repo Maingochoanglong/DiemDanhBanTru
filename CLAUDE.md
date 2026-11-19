@@ -27,6 +27,10 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - **Mọi thứ nằm trong thư mục chứa .exe**: không dùng `%APPDATA%`, `%TEMP%`, thư mục người dùng (gỡ app = xóa thư mục). Bản .exe Nuitka giải nén vào thư mục con cạnh nó (`--onefile-tempdir-spec={PROGRAM_BASE}_…` ở `run_app.py`), thoát thì tự xóa. `test_rules.test_nothing_outside_exe_folder` kiểm tra.
 6. **Không viết cứng giá trị**: mọi giá trị cố định đặt tên trong `app/config.py` (người dùng cần đổi thì thêm khóa vào `settings.KEYS`, đọc ở CaiDat.txt). JavaScript lấy qua `CONFIG` (`js/api.js` ← `/config.js`). `tests/test_rules.py` báo lỗi khi chuỗi / số cổng của config bị viết lại ở file khác, hoặc có số thực trần ngoài config.
 7. **Dữ liệu thật của học sinh không bao giờ vào repo.** `.gitignore` chặn `*.xls`, `*.xlsx`, `CaiDat.txt`. Test chỉ dùng tên bịa (`tests/conftest.py`). File thật người dùng gửi chỉ để trong thư mục tạm của phiên.
+8. **Giao diện theo [USER_STORIES.md](USER_STORIES.md)** (giáo vụ làm gì hằng ngày / thỉnh thoảng / hiếm khi).
+   - Thêm nút, trang, hộp thoại, bộ lọc: phải chỉ ra story nào cần. Không có story thì không thêm.
+   - Hai cách làm cùng một việc thì bỏ một. Việc hiếm không đặt ngang hàng việc hằng ngày (vd. **Đặt lại** là nút chữ nhỏ).
+   - Sửa giao diện xong thì cập nhật cột "Trên app" của USER_STORIES.md.
 
 ## App chỉ làm việc với 3 file (+ sổ tạm)
 

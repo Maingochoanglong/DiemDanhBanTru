@@ -4,29 +4,15 @@ import { ask } from "../dialogs.js";
 import { doSave, gotoDay, handle, openClass, store } from "../store.js";
 import { mealDiff } from "../util.js";
 
-const { computed, ref } = Vue;
+const { computed } = Vue;
 
 export default {
   setup() {
-    const filter = ref("all");  // all | look (cần xem) | unrep (chưa báo) | absent (có vắng)
     const S = computed(() => store.S);
-    const classes = computed(() => S.value.rows.filter(r => r.kind === "class"));
-    const filters = computed(() => {
-      const c = classes.value;
-      return [["all", "Tất cả", c.length], ["look", "Cần xem", S.value.need_look.length], ["unrep", "Chưa báo", c.filter(r => !r.reported).length],
-        ["absent", "Có vắng", c.filter(r => r.vang > 0).length]]
-        .filter(([value, , n]) => value !== "look" || n || filter.value === "look")  // "Cần xem" chỉ hiện khi có lớp chữ đỏ
-        .map(([value, label, n]) => ({ value, label: `${label} (${n})` }));
-    });
-    const keep = r => ({ all: true, look: r.status === "err", unrep: !r.reported, absent: r.vang > 0 })[filter.value];
     const rows = computed(() => {
       const t = S.value.totals;
-      const out = S.value.rows.filter(r => r.kind === "class" ? keep(r) : filter.value === "all");
-      if (t) out.push({ kind: "tong", code: "TỔNG CỘNG", ...t });
-      return out;
+      return t ? [...S.value.rows, { kind: "tong", code: "TỔNG CỘNG", ...t }] : S.value.rows;
     });
-    const empty = computed(() => !classes.value.length ? "Chưa có danh sách học sinh. Vào Cài đặt để nhập."
-      : !classes.value.some(keep) ? ({ look: "Không còn lớp nào cần xem.", unrep: "Các lớp đều đã báo." }[filter.value] || "Không lớp nào có em vắng.") : "");
     const note = r => [r.sched ? "[Lịch]" : "", r.warn, r.not_bt ? `Không ăn BT: ${r.not_bt}` : "", r.note].filter(Boolean).join(" · ");
     const tip = r => (r.sched ? "[Lịch] = sĩ số đổi theo lịch thêm/cắt. " : "") + [r.warn, r.note].filter(Boolean).join(" · ");
     const rowClass = r => r.kind === "class" ? `cls st-${r.status}` : r.kind;
@@ -52,7 +38,7 @@ export default {
     const shown = CONFIG.unreported_shown;  // số mã lớp "Chưa báo" hiện trên thanh
     // chưa có sổ tháng này: mở lại ngày để app hỏi tạo sổ tháng mới; còn lại thì vào Cài đặt
     const hintClick = () => S.value.hint_month ? gotoDay(f => api("open_day", S.value.date, f)) : (store.page = "cd");
-    return { store, shown, S, filter, filters, rows, empty, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave, hintClick };
+    return { store, shown, S, rows, note, tip, rowClass, meal, saveState, openClass, gotoUnresolved, reset, undo, doSave, hintClick };
   },
   template: /* html */`
   <section class="page" id="page-dd">
@@ -64,7 +50,7 @@ export default {
       <span class="text-danger fw-semibold"><i class="pi pi-exclamation-triangle me-1"></i>Cần xem ({{ S.need_look.length }}):</span>
       <Button v-for="c in S.need_look.slice(0, shown)" :key="c" :label="c" size="small" severity="danger" outlined class="py-0" @click="openClass(c)" />
       <span v-if="S.need_look.length > shown" class="text-muted small">và {{ S.need_look.length - shown }} lớp khác</span>
-      <span class="text-muted small">— tên trong sổ chưa xác định hoặc sĩ số lệch (chữ đỏ ở cột Ghi chú). Bấm mã lớp để xem.</span>
+      <span class="text-muted small">(xem chữ đỏ ở cột Ghi chú)</span>
     </div>
     <div class="row-gap flex-wrap">
       <span v-if="!S.unreported.length && rows.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
@@ -73,7 +59,6 @@ export default {
         <Button v-for="c in S.unreported.slice(0, shown)" :key="c" :label="c" size="small" severity="secondary" outlined class="py-0" @click="openClass(c)" />
         <span v-if="S.unreported.length > shown" class="text-muted small">và {{ S.unreported.length - shown }} lớp khác</span>
       </template>
-      <SelectButton v-model="filter" :options="filters" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="ms-auto" />
     </div>
 
     <div class="sheet">
@@ -88,7 +73,7 @@ export default {
       </div>
       <DataTable :value="rows" scrollable scrollHeight="flex" :rowClass="rowClass" class="so" size="small"
         @row-click="e => e.data.kind === 'class' && openClass(e.data.code)">
-        <template #empty><div class="text-center text-muted py-5">{{ empty }}</div></template>
+        <template #empty><div class="text-center text-muted py-5">Chưa có danh sách học sinh. Vào Cài đặt để chọn file.</div></template>
         <Column header="Lớp" class="w-lop"><template #body="{ data: r }">
           <span v-if="r.kind === 'class'" :class="['dot', r.status]"></span>{{ r.code }}
           <span v-if="r.ma" class="text-muted small fw-normal"> ({{ r.ma }})</span></template></Column>
@@ -111,7 +96,7 @@ export default {
       <span :class="['state', saveState.cls]" @click="gotoUnresolved">
         <i v-if="saveState.icon" :class="['pi', saveState.icon]"></i> {{ saveState.text }}<span v-if="saveState.sub" :class="{ 'text-danger': saveState.subErr }">{{ saveState.sub }}</span>
       </span>
-      <Button label="Đặt lại" icon="pi pi-refresh" severity="danger" outlined @click="reset"
+      <Button label="Đặt lại" icon="pi pi-refresh" severity="secondary" text size="small" @click="reset"
         title='Mọi lớp về "chưa báo", bỏ hết tên vắng đã chọn (dùng khi sheet trong sổ đã tạo sẵn)' />
       <Button label="Hoàn tác" icon="pi pi-undo" severity="secondary" outlined @click="undo" />
       <Button label="Lưu vào sổ" icon="pi pi-save" :disabled="!S.book" @click="doSave" />

@@ -49,6 +49,6 @@ Cấu trúc mã:
 | `app/web/` | `api.py` (các hàm giao diện gọi: mở ngày, chọn em vắng, lưu sổ…), `server.py` (máy chủ FastAPI: trả giao diện, nhận lời gọi `POST /api/<tên hàm>`), `run.py` (mở trình duyệt, hộp chọn file của Windows, tự thoát khi đóng thẻ), `static/` (giao diện: `index.html`, `app.css`, `js/main.js` khởi động Vue + PrimeVue, `js/store.js` trạng thái và thao tác chung, `js/components/` mỗi trang / hộp thoại một file, `vendor/` thư viện đóng kèm). |
 | `tests/` | Test với dữ liệu giả (không chứa thông tin thật của học sinh). |
 
-Luật viết mã và bản đồ chi tiết cho người / AI sửa mã: **[CLAUDE.md](CLAUDE.md)**.
+Luật viết mã và bản đồ chi tiết cho người / AI sửa mã: **[CLAUDE.md](CLAUDE.md)**. Giáo vụ dùng app làm gì (căn cứ để sửa giao diện): **[USER_STORIES.md](USER_STORIES.md)**.
 
 > Không đưa file Excel thật (danh sách học sinh, sổ điểm danh) lên repo. `.gitignore` đã chặn `*.xls`, `*.xlsx`.

@@ -1,7 +1,7 @@
 // Bảng chọn tên của 1 lớp: bấm tên em để đánh vắng; ô tìm (gõ không dấu, dán nhiều tên) chỉ để lọc.
 import { api } from "../api.js";
 import { openDialog } from "../dialogs.js";
-import { applyClass, openClass, store } from "../store.js";
+import { applyClass, store } from "../store.js";
 import { matches, matchLevel, searchTerms, tailMatch } from "../util.js";
 import ResolveDialog from "./ResolveDialog.js";
 
@@ -33,11 +33,6 @@ export default {
       const hint = !tiles.some(x => x.show) && miss.some(m => !m.o);
       return { tiles, miss, hint };
     });
-    // còn lớp chữ đỏ khác: đi tiếp tới lớp đó, không phải đóng bảng rồi tìm
-    const nextLook = computed(() => {  // lớp đứng sau lớp đang mở (hết thì quay về đầu)
-      const L = store.S?.need_look || [], i = L.indexOf(cls.code);
-      return [...L.slice(i + 1), ...L.slice(0, Math.max(i, 0))][0];
-    });
     const friday = computed(() => cls.D?.names.some(n => n.absent && n.auto));  // có em cắt thứ 6 tự tính vắng
 
     const toggle = async n => applyClass(await api("set_absent", cls.code, n.id, !n.absent));
@@ -57,10 +52,10 @@ export default {
       el.setRangeText(t.trim().replace(/\s*[\r\n]+\s*/g, ", "), el.selectionStart, el.selectionEnd, "end");
       q.value = el.value;
     }
-    return { cls, q, note, view, nextLook, openClass, friday, toggle, full, clearExtra, saveNote, resolve, paste };
+    return { cls, q, note, view, friday, toggle, full, clearExtra, saveNote, resolve, paste };
   },
   template: /* html */`
-  <Dialog v-model:visible="cls.open" modal maximizable :draggable="false" class="cls-dialog">
+  <Dialog v-model:visible="cls.open" modal :draggable="false" class="cls-dialog">
     <template #header>
       <div v-if="cls.D" class="cls-head">
         <div><div class="p-dialog-title">Lớp {{ cls.D.code }}{{ cls.D.ma ? " (" + cls.D.ma + ")" : "" }}</div>
@@ -113,8 +108,6 @@ export default {
       <div class="row-gap w-100">
         <label for="clsNote" class="text-nowrap">Ghi chú (cột H):</label>
         <InputText id="clsNote" v-model="note" class="grow" @change="saveNote" />
-        <Button v-if="nextLook" :label="'Lớp cần xem tiếp: ' + nextLook" icon="pi pi-arrow-right" iconPos="right" size="large"
-          severity="danger" outlined @click="openClass(nextLook)" />
         <Button label="Xong" size="large" class="px-4" @click="cls.open = false" />
       </div>
     </template>

@@ -15,7 +15,7 @@ const VI = {
   firstDayOfWeek: 1, today: "Hôm nay", clear: "Xóa", dateFormat: "dd/mm/yy", weekHeader: "Tuần",
   emptyMessage: "Không có dữ liệu", emptyFilterMessage: "Không tìm thấy", emptySelectionMessage: "Chưa chọn",
   selectionMessage: "Đã chọn {0}", choose: "Chọn", cancel: "Hủy", accept: "Đồng ý", reject: "Không",
-  aria: { close: "Đóng", maximizeWindow: "Phóng to", minimizeWindow: "Thu nhỏ" },
+  aria: { close: "Đóng" },
 };
 
 const app = Vue.createApp(App);
@@ -23,7 +23,7 @@ app.use(PV.Config, { theme: { preset: Theme, options: { darkModeSelector: false 
 app.use(PV.ToastService);
 app.use(PV.DialogService);
 for (const name of ["Button", "Card", "Checkbox", "Column", "DataTable", "DatePicker", "Dialog", "DynamicDialog", "IconField", "InputGroup",
-  "InputIcon", "InputText", "Menu", "Message", "Popover", "RadioButton", "Select", "SelectButton", "Tag", "Toast", "ToggleButton"]) {
+  "InputIcon", "InputText", "Menu", "Message", "Popover", "RadioButton", "Select", "Tag", "Toast", "ToggleButton"]) {
   app.component(name, PV[name]);
 }
 app.mount("#app");

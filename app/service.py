@@ -15,7 +15,6 @@ from pathlib import Path
 
 from . import build_info, config
 from . import settings as cfg
-from .core import matcher
 from .core.day import DayState
 from .core.meals import MealLayout, MealSummary
 from .core.models import ClassInfo, Roster
@@ -55,7 +54,6 @@ class Workspace:
         self.book_path: Path | None = None
         self.state: DayState | None = None
         self.layout: MealLayout = MealLayout()
-        self.sheet_checks: dict[str, list[matcher.MatchResult]] = {}
         self._undo: list[DayState] = []
         self._wb_cache: tuple[tuple, object] | None = None
         self.sheet_name: str = ""  # tên sheet của ngày đang mở (vd. "01" hoặc "29")
@@ -230,7 +228,6 @@ class Workspace:
         self.day = day
         self._undo.clear()
         self.dirty = False
-        self.sheet_checks = {}
         path = self.book_for(day)
         self.book_path = path
         if path is None:
@@ -259,7 +256,7 @@ class Workspace:
             self._ensure_classes({c: r.gvcn for c, r in recs.items()})
             for code, rec in recs.items():
                 if ws is not None:
-                    self.sheet_checks[code] = st.load_class_from_sheet(code, rec.si_so, rec.names, rec.note)
+                    st.load_class_from_sheet(code, rec.si_so, rec.names, rec.note)
                     st.cd(code).keep_sheet_si_so = True
                 else:
                     c = st.cd(code)

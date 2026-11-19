@@ -219,10 +219,6 @@ class Api:
             first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
             out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first})
         out["need_look"] = [code for code in st.classes if self._status(code) == "err"]  # lớp chữ đỏ: hiện thành nút ở đầu trang
-        checks = ws.sheet_checks
-        if checks and not out["need_look"]:
-            n = sum(len(v) for v in checks.values())
-            out["info"].append(f"Sổ ngày {fmt_date(st.date)}: {n} tên vắng đã có, đều khớp danh sách")
         changes = st.scheduled_changes()
         if changes:
             out["info"].append(f"{len(changes)} em thêm/cắt bán trú từ hôm nay — sĩ số đã tự đổi")
