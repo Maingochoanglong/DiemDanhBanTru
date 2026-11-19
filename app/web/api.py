@@ -177,7 +177,7 @@ class Api:
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
             "dirty": ws.dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(), "hint_month": self._month_hint(),
             "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
-            "unreported": [],
+            "unreported": [], "need_look": [],
         }
         if st is None:
             return out
@@ -218,12 +218,9 @@ class Api:
         if n_pending:
             first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
             out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first})
-        need_look = [code for code in st.classes if st.class_warnings(code)]
-        if need_look:
-            out["todo"].append({"text": f"{len(need_look)} lớp cần xem (chữ đỏ ở cột Ghi chú): {', '.join(need_look)} — bấm để mở",
-                                "code": need_look[0]})
+        out["need_look"] = [code for code in st.classes if self._status(code) == "err"]  # lớp chữ đỏ: hiện thành nút ở đầu trang
         checks = ws.sheet_checks
-        if checks and not n_pending and not need_look:
+        if checks and not out["need_look"]:
             n = sum(len(v) for v in checks.values())
             out["info"].append(f"Sổ ngày {fmt_date(st.date)}: {n} tên vắng đã có, đều khớp danh sách")
         changes = st.scheduled_changes()

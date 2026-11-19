@@ -8,15 +8,17 @@ const { computed, ref } = Vue;
 
 export default {
   setup() {
-    const filter = ref("all");  // all | unrep (chưa báo) | absent (có vắng)
+    const filter = ref("all");  // all | look (cần xem) | unrep (chưa báo) | absent (có vắng)
     const S = computed(() => store.S);
     const classes = computed(() => S.value.rows.filter(r => r.kind === "class"));
     const filters = computed(() => {
       const c = classes.value;
-      return [["all", "Tất cả", c.length], ["unrep", "Chưa báo", c.filter(r => !r.reported).length], ["absent", "Có vắng", c.filter(r => r.vang > 0).length]]
+      return [["all", "Tất cả", c.length], ["look", "Cần xem", S.value.need_look.length], ["unrep", "Chưa báo", c.filter(r => !r.reported).length],
+        ["absent", "Có vắng", c.filter(r => r.vang > 0).length]]
+        .filter(([value, , n]) => value !== "look" || n || filter.value === "look")  // "Cần xem" chỉ hiện khi có lớp chữ đỏ
         .map(([value, label, n]) => ({ value, label: `${label} (${n})` }));
     });
-    const keep = r => filter.value === "all" || (filter.value === "unrep" ? !r.reported : r.vang > 0);
+    const keep = r => ({ all: true, look: r.status === "err", unrep: !r.reported, absent: r.vang > 0 })[filter.value];
     const rows = computed(() => {
       const t = S.value.totals;
       const out = S.value.rows.filter(r => r.kind === "class" ? keep(r) : filter.value === "all");
@@ -24,7 +26,7 @@ export default {
       return out;
     });
     const empty = computed(() => !classes.value.length ? "Chưa có danh sách học sinh. Vào Cài đặt để nhập."
-      : !classes.value.some(keep) ? (filter.value === "unrep" ? "Các lớp đều đã báo." : "Không lớp nào có em vắng.") : "");
+      : !classes.value.some(keep) ? ({ look: "Không còn lớp nào cần xem.", unrep: "Các lớp đều đã báo." }[filter.value] || "Không lớp nào có em vắng.") : "");
     const note = r => [r.sched ? "[Lịch]" : "", r.warn, r.not_bt ? `Không ăn BT: ${r.not_bt}` : "", r.note].filter(Boolean).join(" · ");
     const tip = r => (r.sched ? "[Lịch] = sĩ số đổi theo lịch thêm/cắt. " : "") + [r.warn, r.note].filter(Boolean).join(" · ");
     const rowClass = r => r.kind === "class" ? `cls st-${r.status}` : r.kind;
@@ -58,6 +60,12 @@ export default {
     <Message v-for="t in S.todo" severity="error" icon="pi pi-exclamation-triangle" class="clickable" @click="openClass(t.code)">{{ t.text }}</Message>
     <div v-if="S.info.length" class="text-muted small"><i class="pi pi-info-circle me-1"></i>{{ S.info.join(" · ") }}</div>
 
+    <div v-if="S.need_look.length" class="row-gap flex-wrap">
+      <span class="text-danger fw-semibold"><i class="pi pi-exclamation-triangle me-1"></i>Cần xem ({{ S.need_look.length }}):</span>
+      <Button v-for="c in S.need_look.slice(0, shown)" :key="c" :label="c" size="small" severity="danger" outlined class="py-0" @click="openClass(c)" />
+      <span v-if="S.need_look.length > shown" class="text-muted small">và {{ S.need_look.length - shown }} lớp khác</span>
+      <span class="text-muted small">— tên trong sổ chưa xác định hoặc sĩ số lệch (chữ đỏ ở cột Ghi chú). Bấm mã lớp để xem.</span>
+    </div>
     <div class="row-gap flex-wrap">
       <span v-if="!S.unreported.length && rows.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
       <template v-else>

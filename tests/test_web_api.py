@@ -311,7 +311,7 @@ def test_class_with_unknown_names_is_flagged_not_called_all_matched(tmp_path, ro
     wb.save(book)
     api = Api(make_workspace(tmp_path, roster, book))
     st = api.open_day("2026-10-28")["state"]
-    assert any("1D16" in t["text"] and t["code"] == "1D16" for t in st["todo"])
+    assert st["need_look"] == ["1D16"]
     assert not any("đều khớp" in i for i in st["info"])
 
 
