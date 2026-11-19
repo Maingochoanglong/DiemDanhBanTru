@@ -94,6 +94,22 @@ class Workspace:
         except Exception as e:  # noqa: BLE001 - báo ở giao diện, app vẫn mở được sổ
             self.list_error = f"Không đọc được file danh sách học sinh: {e}"
 
+    def sync_list(self) -> None:
+        """File danh sách vừa được sửa trong lúc đang mở ngày (vd. thêm em chuyển đến): dùng ngay danh sách mới.
+        Mã học sinh không đổi giữa các lần đọc, nên các em đã chọn vắng vẫn giữ nguyên."""
+        if self.state is None:
+            return
+        old = self.list
+        self.refresh_list()
+        if self.list is old:
+            return
+        if self.list_error:  # đọc lỗi (vd. Excel đang ghi dở): làm tiếp với danh sách cũ, lời nhắc lỗi vẫn hiện
+            self.list = old
+        elif self.dirty or not self.book_path:
+            self.state.roster = self.roster
+        else:
+            self.load_day(self.day)  # chưa thay đổi gì: mở lại ngày cho đủ (sĩ số, bảng suất ăn)
+
     def set_list(self, path: str | Path) -> None:
         """Chọn file danh sách học sinh (đọc thử trước: file không đọc được thì không đổi cài đặt)."""
         load_list(path)
@@ -303,6 +319,7 @@ class Workspace:
         if not self._undo:
             return False
         self.state = self._undo.pop()
+        self.state.roster = self.roster  # bản cũ có thể giữ danh sách trước khi file danh sách được sửa
         self.dirty = True
         self.version += 1
         return True

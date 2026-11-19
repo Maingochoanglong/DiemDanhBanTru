@@ -331,3 +331,35 @@ def test_save_check_mentions_unknown_names(tmp_path, roster):
     api = Api(make_workspace(tmp_path, roster, book))
     api.open_day("2026-10-28")
     assert api.save_check()["extra"] == ["Lớp 1D16: Bông"]
+
+
+def _add_new_student(tmp_path, roster):
+    """Giáo vụ ghi thêm em chuyển đến vào file danh sách (bằng Excel) khi app đang mở."""
+    import os
+
+    from app.core.models import Student
+    from tests.conftest import write_list
+
+    roster.students.append(Student(id="HS9999", lop="1D15", ho_ten="Lò Văn Mới", ngay_sinh="05/05/2020", ban_tru=True))
+    path = write_list(tmp_path / "DanhSach.xlsx", roster)
+    st = path.stat()
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))  # chắc chắn khác lần sửa trước
+
+
+def test_new_student_in_list_shows_without_changing_day(api, tmp_path, roster):
+    """Thêm em chuyển đến vào file danh sách: mở lớp là thấy em đó, không phải chuyển ngày."""
+    _add_new_student(tmp_path, roster)
+    d = api.class_detail("1D15")
+    assert "Lò Văn Mới" in [n["full"] for n in d["names"]] and d["si"] == 7
+
+
+def test_new_student_keeps_absent_already_chosen(api, tmp_path, roster):
+    """Đã chọn em vắng (chưa lưu) rồi mới thêm em mới vào danh sách: em đã chọn vắng vẫn giữ."""
+    sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
+    api.set_absent("1D15", sid, True)
+    _add_new_student(tmp_path, roster)
+    d = api.class_detail("1D15")
+    assert "Lò Văn Mới" in [n["full"] for n in d["names"]]
+    assert next(n for n in d["names"] if n["id"] == sid)["absent"] and api.state()["dirty"]
+    api.undo()  # hoàn tác vẫn dùng danh sách mới
+    assert "Lò Văn Mới" in [n["full"] for n in api.class_detail("1D15")["names"]]

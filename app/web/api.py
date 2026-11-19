@@ -168,6 +168,7 @@ class Api:
         return "warn" if n else "ok"
 
     def state(self) -> dict:
+        self._ws.sync_list()  # file danh sách vừa sửa bằng Excel: dùng ngay
         ws, st = self._ws, self._ws.state
         ws.autosave()  # mọi thao tác đều trả về state(): có thay đổi mới thì ghi ngay vào sổ tạm
         bp = ws.book_path
@@ -226,6 +227,7 @@ class Api:
 
     # ================================================================== một lớp
     def class_detail(self, code: str) -> dict:
+        self._ws.sync_list()  # vừa thêm em chuyển đến vào file danh sách: mở lớp là thấy
         ws, st = self._ws, self._ws.state
         if st is None or code not in st.classes:
             return {"error": "Không có lớp này."}

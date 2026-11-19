@@ -63,4 +63,5 @@ UI = {
     "unreported_shown": 12,  # số mã lớp "Chưa báo" hiện trên thanh, còn lại ghi "và n lớp khác"
     "toast_life": 6000,  # mili giây thông báo nhỏ hiện
     "toast_life_error": 12000,
+    "name_words_max": 4,  # dán tin nhắn: đoạn không có tên em nào mà dài hơn số chữ này là lời nhắn, bỏ qua (tên dài nhất ~4 chữ)
 }

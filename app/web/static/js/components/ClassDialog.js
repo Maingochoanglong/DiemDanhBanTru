@@ -1,8 +1,8 @@
 // Bảng chọn tên của 1 lớp: bấm tên em để đánh vắng; ô tìm (gõ không dấu, dán nhiều tên) chỉ để lọc.
-import { api } from "../api.js";
+import { api, CONFIG } from "../api.js";
 import { openDialog } from "../dialogs.js";
 import { applyClass, store } from "../store.js";
-import { matches, matchLevel, searchTerms, tailMatch } from "../util.js";
+import { matches, matchLevel, namesIn, searchTerms, tailMatch } from "../util.js";
 import ResolveDialog from "./ResolveDialog.js";
 
 const { computed, ref, watch } = Vue;
@@ -14,13 +14,14 @@ export default {
     watch(() => cls.D, D => { note.value = D ? D.note : ""; });
     watch(() => [cls.open, cls.code], () => { q.value = ""; });  // mở bảng / sang lớp khác: xóa ô tìm
 
-    // lọc theo các tên đã gõ / dán: mỗi tên chỉ hiện các em khớp tốt nhất
+    // lọc theo các tên đã gõ / dán (dán nguyên tin Zalo của GVCN cũng được): mỗi tên chỉ hiện các em khớp tốt nhất
     // (đủ chữ, đúng dấu trước; khớp đầu chữ khi đang gõ dở); tên không khớp em nào hiện ô viền đứt
     const view = computed(() => {
       const D = cls.D;
       if (!D) return { tiles: [], miss: [], hint: false };
-      const terms = searchTerms(q.value), found = new Set(), rank = new Map();
       const names = D.names.map(n => ({ n, s: `${n.full} ${n.name} ${n.alias || ""}` }));
+      const texts = [...names.map(x => x.s), ...(D.others || []).map(x => x.s)];
+      const terms = searchTerms(q.value).flatMap(t => namesIn(t, texts, CONFIG.name_words_max)), found = new Set(), rank = new Map();
       for (const t of terms) {
         const lv = names.map(x => matchLevel(t, x.s));
         const best = Math.max(0, ...lv);

@@ -83,10 +83,11 @@ app/web/
   static/js/api.js        api(name, ...args), conn (máy chủ đã tắt)
   static/js/store.js      trạng thái chung + thao tác dùng nhiều nơi (lưu, đổi ngày, mở lớp, chọn file, thoát)
   static/js/dialogs.js    ask / info / toast / openDialog (PrimeVue DialogService, ToastService)
-  static/js/util.js       so khớp tên khi gõ, ngày
+  static/js/util.js       so khớp tên khi gõ, nhặt tên trong tin Zalo dán vào (namesIn), ngày
   static/js/components/   App (khung), TopBar, DiemDanhPage, ClassDialog, ResolveDialog,
                           SuatAnPage, HocSinhPage, CaiDatPage, SetupDialog, AskBody
-tests/                    pytest, dữ liệu bịa; conftest.write_list / make_workspace dựng đủ 3 file
+tests/                    pytest, dữ liệu bịa; conftest.write_list / make_workspace dựng đủ 3 file;
+                          test_js_names.py chạy util.js bằng Node (máy không có Node thì bỏ qua)
 ```
 
 Thêm một thao tác mới thì:
