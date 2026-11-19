@@ -98,8 +98,8 @@ def test_zero_padded_sheet_name(ws):
     assert sobook.load_book(book)["01"]["G6"].value == "Tuấn Anh"
 
 
-def test_cut_and_add_from_note_column_end_to_end(tmp_path, roster):
-    """Cột Ghi chú của file danh sách: "cắt từ 30/10" (Tô Minh Khôi), "ăn từ 2/11" (em chưa ăn BT)."""
+def test_cut_and_add_from_schedule_columns_end_to_end(tmp_path, roster):
+    """Cột "Cắt từ" 30/10 (Tô Minh Khôi), "Ăn từ" 2/11 (em chưa ăn BT) của file danh sách."""
     kid = next(s for s in roster.students if s.ho_ten == "Tô Minh Khôi")
     kid.cat_tu = dt.date(2026, 10, 30)
     new = next(s for s in roster.students if s.ho_ten == "Mạc Trần Quỳnh Anh")
@@ -111,14 +111,14 @@ def test_cut_and_add_from_note_column_end_to_end(tmp_path, roster):
     assert ws.save() == "29"  # sĩ số hôm nay chưa đổi
     assert sobook.load_book(ws.book_path)["29"]["D6"].value == 6
     st = ws.load_day(dt.date(2026, 10, 30))
-    assert st.si_so("1D15") == 5 and ws.si_so_conflicts() == []  # đổi theo ghi chú, không hỏi
+    assert st.si_so("1D15") == 5 and ws.si_so_conflicts() == []  # đổi theo lịch, không hỏi
     assert [s.ho_ten for s in st.scheduled_changes()] == ["Tô Minh Khôi"]
     ws.save()
     assert sobook.load_book(ws.book_path)["30"]["D6"].value == 5
 
 
 def test_list_file_edited_is_read_again(ws, tmp_path, roster):
-    """Sửa file danh sách bằng Excel (thêm "cắt thứ 6"): mở ngày là app đọc lại, không cần nhập lại."""
+    """Sửa file danh sách bằng Excel (đánh x cột "Cắt thứ 6"): mở ngày là app đọc lại, không cần nhập lại."""
     import os
 
     from tests.conftest import write_list

@@ -36,15 +36,17 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 
 | File | Ai sửa | Mã đọc/ghi |
 |---|---|---|
-| **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App **chỉ đọc**; file vừa sửa thì đọc lại ngay ở lần gọi kế tiếp (`Workspace.sync_list`). | `excel/roster_import.py:load_list` |
+| **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App đọc; file vừa sửa thì đọc lại ngay ở lần gọi kế tiếp (`Workspace.sync_list`). App chỉ ghi 3 cột lịch khi giáo vụ bấm **Lưu lịch** (trang Học sinh). | `excel/roster_import.py:load_list`, `excel/roster_schedule.py` |
 | **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
 | **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
 
 Thư mục app = thư mục chứa CaiDat.txt (`Workspace.app_dir`): hộp chọn file mở sẵn ở đây; sổ / danh sách nằm trong đó thì CaiDat.txt
 ghi đường dẫn tương đối (`settings.PATH_KEYS`), chép cả thư mục đi nơi khác vẫn chạy.
 
-- **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · Lớp tính BT (tùy chọn) · **Ghi chú**.
-  - Cột Ghi chú chứa lịch thêm/cắt: `cắt thứ 6`, `cắt từ 30/10`, `ăn từ 3/11` (bộ đọc ở `core/notes.py`).
+- **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · Lớp tính BT (tùy chọn)
+  · **Ăn từ** · **Cắt từ** · **Cắt thứ 6** · Ghi chú.
+  - 3 cột lịch bán trú (ngày / x) do hộp Lịch bán trú ghi (`config.SCHEDULE_COLUMNS`); thiếu cột thì app thêm vào cuối bảng.
+  - Ghi chú chỉ là chữ tự do: app hiện ra, không đọc lịch từ đây.
   - Sheet **Nhóm ăn** (tùy chọn) quy định bảng suất ăn của tờ ngày mới.
 - **Mã học sinh** = `lớp|họ tên|ngày sinh`: không đổi giữa các lần đọc file.
 - **Sổ tạm** `… tamthoi.xlsx` trong thư mục app, cạnh CaiDat.txt (`excel/tamthoi.py`, `Workspace.app_dir`):
@@ -67,9 +69,9 @@ app/core/                 xử lý thuần, không đụng file / giao diện
   day.py                  DayState: 1 ngày điểm danh (vắng, đã báo, ghi chú, sĩ số, undo)
   matcher.py, names.py, parser.py, text.py, search.py   so khớp / chuẩn hóa tên tiếng Việt
   meals.py                bảng suất ăn, ăn ghép
-  notes.py                đọc cột Ghi chú của file danh sách
 app/excel/                đọc/ghi Excel
-  roster_import.py        đọc file danh sách + sheet Nhóm ăn
+  roster_import.py        đọc file danh sách (cả 3 cột lịch) + sheet Nhóm ăn
+  roster_schedule.py      ghi 3 cột lịch của một em (hộp Lịch bán trú)
   sobook.py               sổ tháng: tìm hàng lớp, sao chép sheet, ghi ngày, dựng bảng suất ăn
   tamthoi.py              sổ tạm
   files.py                safe_save, is_locked, open_file/open_folder
@@ -85,7 +87,7 @@ app/web/
   static/js/dialogs.js    ask / info / toast / openDialog (PrimeVue DialogService, ToastService)
   static/js/util.js       so khớp tên khi gõ, nhặt tên trong tin Zalo dán vào (namesIn), ngày
   static/js/components/   App (khung), TopBar, DiemDanhPage, ClassDialog, ResolveDialog,
-                          SuatAnPage, HocSinhPage, CaiDatPage, SetupDialog, AskBody
+                          SuatAnPage, HocSinhPage, ScheduleDialog, CaiDatPage, SetupDialog, AskBody
 tests/                    pytest, dữ liệu bịa; conftest.write_list / make_workspace dựng đủ 3 file;
                           test_js_names.py chạy util.js bằng Node (máy không có Node thì bỏ qua)
 ```

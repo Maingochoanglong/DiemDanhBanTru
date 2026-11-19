@@ -85,21 +85,21 @@ def test_students_lookup(api):
     rows = api.students("long", "", True)["rows"]
     assert [r["ten"] for r in rows] == ["Khổng Hải Long"]
     for name in ("save_student", "export_list", "import_list", "schedules", "add_schedule", "save_meal_groups"):
-        assert not hasattr(api, name)  # học sinh, lịch, nhóm ăn: sửa trong file Excel danh sách
+        assert not hasattr(api, name)  # thêm / sửa học sinh, nhóm ăn: sửa trong file Excel danh sách (lịch: set_schedule)
 
 
 def test_choose_list_reads_file_directly(api, tmp_path):
     p = tmp_path / "ds.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú", "Ghi chú"])
-    ws.append(["1D15", "Kha Bảo Ngọc", dt.datetime(2020, 3, 2), "Có", "cắt thứ 6"])
-    ws.append(["1D15", "Bùi Văn Mới", dt.datetime(2020, 1, 1), "Có", None])
+    ws.append(["Lớp", "Họ tên", "Ngày tháng năm sinh", "Bán trú", "Cắt thứ 6", "Ghi chú"])
+    ws.append(["1D15", "Kha Bảo Ngọc", dt.datetime(2020, 3, 2), "Có", "x", "mẹ đón sớm"])
+    ws.append(["1D15", "Bùi Văn Mới", dt.datetime(2020, 1, 1), "Có", None, None])
     wb.save(p)
     r = api.choose_list(str(p))
     assert r["flash"] == "Đã chọn ds.xlsx: 2 học sinh." and api.settings()["cdhs_file"] == str(p)
     rows = api.students("", "", False)["rows"]
-    assert [(x["ten"], x["db"]) for x in rows] == [("Kha Bảo Ngọc", "cắt thứ 6"), ("Bùi Văn Mới", "")]
+    assert [(x["ten"], x["lich"], x["gc"]) for x in rows] == [("Kha Bảo Ngọc", "cắt thứ 6", "mẹ đón sớm"), ("Bùi Văn Mới", "", "")]
     bad = tmp_path / "sai.xlsx"
     openpyxl.Workbook().save(bad)
     assert "error" in api.choose_list(str(bad)) and api.settings()["cdhs_file"] == str(p)  # file sai: giữ file cũ
@@ -233,7 +233,7 @@ def test_meals_show_ghep_list_progress(api):
     g = {x["code"]: x for x in api.meals()["ghep"]}
     assert (g["1D19"]["n"], g["1D19"]["done"]) == (4, 0)
     for name in ("ghep", "assign_ghep", "assign_ghep_text", "undo_friday"):
-        assert not hasattr(api, name)  # nhóm ghép, cắt thứ 6: chỉ ghi ở file Excel danh sách
+        assert not hasattr(api, name)  # nhóm ghép: chỉ ghi ở file Excel danh sách
 
 
 def test_save_check_gathers_all_questions(api):
@@ -369,3 +369,61 @@ def test_students_page_shows_list_just_edited(api, tmp_path, roster):
     """Sửa file danh sách bằng Excel rồi xem trang Học sinh: hiện ngay em mới (không phải đổi ngày)."""
     _add_new_student(tmp_path, roster)
     assert "Lò Văn Mới" in [r["ten"] for r in api.students("moi", "1D15")["rows"]]
+
+
+def test_set_schedule_writes_three_columns_of_list_file(api, tmp_path):
+    """Hộp Lịch bán trú: ghi 3 cột Ăn từ / Cắt từ / Cắt thứ 6 của đúng dòng em đó; ô khác giữ nguyên; dùng ngay."""
+    sid = sid_of(api, "1D15", "Tô Minh Khôi")
+    r = api.set_schedule(sid, "", "2026-11-02", True)
+    assert r["flash"].startswith("Đã lưu lịch của Tô Minh Khôi")
+    wb = openpyxl.load_workbook(tmp_path / "DanhSach.xlsx")
+    ws = wb.active
+    head = [c.value for c in ws[1]]
+    row = next(r for r in ws.iter_rows(min_row=2, values_only=True) if r[1] == "Tô Minh Khôi")
+    rec = dict(zip(head, row, strict=False))
+    assert (rec["Ăn từ"], rec["Cắt từ"].date(), rec["Cắt thứ 6"], rec["Lớp"]) == (None, dt.date(2026, 11, 2), "x", "1D15")
+    s = next(x for x in api.students("khoi", "1D15")["rows"])
+    assert (s["lich"], s["cat_tu"], s["t6"]) == ("cắt thứ 6; cắt từ 02/11/2026", "2026-11-02", True)
+    assert api.open_day("2026-10-30")["state"]["rows"][0]["auto"] == "Minh Khôi"  # thứ 6: tự tính vắng ngay
+    api.set_schedule(sid, "", "", False)  # bỏ lịch
+    s = next(x for x in api.students("khoi", "1D15")["rows"])
+    assert (s["lich"], s["t6"]) == ("", False)
+
+
+def test_set_schedule_adds_missing_columns(api, tmp_path):
+    """File danh sách chưa có 3 cột lịch: app thêm cột vào cuối bảng."""
+    p = tmp_path / "ds.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Ghi chú"])
+    ws.append(["1D15", "Kha Bảo Ngọc", "02/03/2020", "Có", "dị ứng tôm"])
+    ws.append(["1D15", "Bùi Văn Mới", "01/01/2020", "Không", None])
+    wb.save(p)
+    api.choose_list(str(p))
+    sid = next(r["id"] for r in api.students("moi", "", False)["rows"])
+    assert "error" not in api.set_schedule(sid, "03/11/2026", "", False)
+    ws = openpyxl.load_workbook(p).active
+    assert [c.value for c in ws[1]] == ["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Ghi chú", "Ăn từ", "Cắt từ", "Cắt thứ 6"]
+    assert ws["F3"].value.date() == dt.date(2026, 11, 3) and ws["E2"].value == "dị ứng tôm"
+    s = next(r for r in api.students("moi", "", False)["rows"])
+    assert s["bt"] and s["lich"] == "ăn từ 03/11/2026"  # có ngày Ăn từ là tính ăn bán trú từ ngày đó
+
+
+def test_set_schedule_errors(api, tmp_path, monkeypatch):
+    from app.excel import files
+
+    sid = sid_of(api, "1D15", "Tô Minh Khôi")
+    assert "phải sau" in api.set_schedule(sid, "2026-11-05", "2026-11-02", False)["error"]
+    monkeypatch.setattr(files, "is_locked", lambda p: True)
+    assert "đang mở trong Excel" in api.set_schedule(sid, "", "", True)["error"]
+
+
+def test_set_schedule_on_xls_list_explains(api, tmp_path):
+    """File danh sách dạng .xls cũ: app đọc được nhưng không ghi lịch được, báo lưu lại thành .xlsx."""
+    from tests.test_excel import _write_fake_cdhs_xls
+
+    p = tmp_path / "cdhs.xls"
+    _write_fake_cdhs_xls(p)
+    api.choose_list(str(p))
+    sid = api.students("", "", True)["rows"][0]["id"]
+    assert ".xlsx" in api.set_schedule(sid, "", "", True)["error"]

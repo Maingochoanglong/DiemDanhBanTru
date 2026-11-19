@@ -28,7 +28,7 @@ Máy cần Windows 10/11 và Microsoft Excel (để mở, in sổ). Không cần
 
 | File | Dùng để | Ai sửa |
 |---|---|---|
-| **Danh sách học sinh** (Excel) | biết em nào ăn bán trú, tên gọi khác, ăn ghép, lịch thêm/cắt (cột Ghi chú), cách ghép ăn (sheet Nhóm ăn) | **bạn, bằng Excel**. App chỉ đọc; sửa file xong, mở ngày là app đọc lại |
+| **Danh sách học sinh** (Excel) | biết em nào ăn bán trú, tên gọi khác, ăn ghép, lịch thêm/cắt (3 cột Ăn từ / Cắt từ / Cắt thứ 6, đặt trên app), cách ghép ăn (sheet Nhóm ăn) | **bạn, bằng Excel**. App chỉ đọc; sửa file xong, mở ngày là app đọc lại |
 | **Sổ điểm danh tháng** (Excel) | sổ như thường lệ, mỗi ngày 1 sheet, mỗi tháng 1 file | app ghi sheet của ngày khi bấm **Lưu vào sổ** |
 | **CaiDat.txt** (cạnh file `DiemDanhBanTru.exe`) | nhớ đang dùng sổ nào, file danh sách nào, cổng của app (`cong`, chỉ đổi khi trùng chương trình khác), thanh bên thu gọn | app tự ghi; mở bằng Notepad sửa được |
 
@@ -42,23 +42,19 @@ Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh file .exe, có k
 
 **File danh sách học sinh** có các cột (tên cột viết như dưới, thứ tự tùy ý):
 
-| Lớp | Họ tên | Ngày sinh | Bán trú | Tên gọi khác | Ăn ghép | Ghi chú |
-|---|---|---|---|---|---|---|
-| 1D15 | Kha Bảo Ngọc | 02/03/2020 | Có | | | cắt thứ 6 |
-| 1D15 | Tô Minh Khôi | 03/03/2020 | Có | | | cắt từ 30/10 |
-| 1D19 | Phùng Gia Hân | 02/02/2020 | Có | | 1.2 | |
-| 2D17 | Viên Duy Mạnh | 01/01/2019 | Không | | | ăn từ 3/11 |
+| Lớp | Họ tên | Ngày sinh | Bán trú | Tên gọi khác | Ăn ghép | Ăn từ | Cắt từ | Cắt thứ 6 | Ghi chú |
+|---|---|---|---|---|---|---|---|---|---|
+| 1D15 | Kha Bảo Ngọc | 02/03/2020 | Có | | | | | x | mẹ đón sớm thứ 6 |
+| 1D15 | Tô Minh Khôi | 03/03/2020 | Có | | | | 30/10/2026 | | |
+| 1D19 | Phùng Gia Hân | 02/02/2020 | Có | | 1.2 | | | | |
+| 2D17 | Viên Duy Mạnh | 01/01/2019 | Không | | | 03/11/2026 | | | chuyển đến |
 
 - **Bán trú**: *Có* / *Không*. Dùng file danh sách học sinh toàn trường cũng được, khi đó **em tô chữ đỏ là có ăn bán trú**.
 - **Tên gọi khác**: tên GV hay báo khác tên thật (vd. *Mi Mi*). Nhiều tên thì cách nhau dấu phẩy, tên đầu được ghi vào sổ. Em **trùng cả họ và tên** trong cùng lớp thì ghi *Gia Hưng A*, *Gia Hưng B*; để trống thì app tự đặt A/B theo ngày sinh.
 - **Ăn ghép**: nhóm ăn của em lớp ghép (mục 5).
 - **Lớp tính BT** (cột tùy chọn): em học lớp này nhưng tính bán trú ở lớp khác thì ghi lớp đó (vd. *1D16*).
-- **Ghi chú**: lịch thêm / cắt bán trú, ghi ngắn, nhiều ý cách nhau dấu phẩy:
-  - `cắt thứ 6`: mỗi thứ 6 em tự được tính vắng (kể cả khi GV báo "đủ");
-  - `cắt từ 30/10` (hoặc `thôi ăn từ 30/10`, `nghỉ ăn từ 30/10`): từ ngày 30/10 em thôi ăn, sĩ số tự giảm;
-  - `ăn từ 3/11`: từ ngày 3/11 em bắt đầu ăn, sĩ số tự tăng (cột Bán trú ghi *Không* cũng được).
-
-  Ghi kiểu *T11 cắt*, *tháng 11 ăn BT*, *30/10/2026* hay không dấu đều được. Chữ khác (vd. *dị ứng tôm*) app bỏ qua. Trang **Học sinh**, cột **App hiểu là**, cho biết app đã hiểu ghi chú thế nào.
+- **Ăn từ / Cắt từ / Cắt thứ 6**: lịch bán trú của em (mục 4). Không cần tự gõ: đặt trên app ở trang **Học sinh** (bấm vào em), app ghi vào 3 cột này. File chưa có các cột này thì app tự thêm vào cuối bảng.
+- **Ghi chú**: chữ tự do, chỉ để ghi chú (app hiện ra ở trang Học sinh, không đọc lịch từ đây).
 
 **Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**: **chọn sổ điểm danh** của tháng đang làm, **chọn file danh sách học sinh**, rồi bấm **Bắt đầu điểm danh**. Mở lại cùng bản thì không hỏi nữa. Đổi file sau này: trang **Cài đặt** → **Chọn sổ khác…** / **Chọn file khác…**.
 
@@ -97,16 +93,21 @@ Nút **Hoàn tác** (Ctrl+Z) bỏ thao tác vừa làm.
 
 Nút chữ nhỏ **Đặt lại** (cạnh nút Hoàn tác) đưa mọi lớp của ngày đang mở về *chưa báo* và bỏ hết tên vắng đã chọn (ghi chú, sĩ số giữ nguyên). Dùng khi sheet của ngày đó đã được tạo sẵn trong sổ nên app hiểu nhầm là đã điểm danh. Sổ chỉ đổi khi bấm **Lưu vào sổ**. (Sheet tạo sẵn mà còn trống — chưa có tên vắng nào — thì app đã tự coi các lớp là *chưa báo*.)
 
-## 4. Lịch thêm / cắt bán trú, nghỉ thứ 6
+## 4. Lịch thêm / cắt bán trú, cắt thứ 6
 
-Ghi ở cột **Ghi chú** trong file Excel danh sách (mục 2): `cắt từ 30/10`, `ăn từ 3/11`, `cắt thứ 6`. Lưu file Excel là xong: app đang mở cũng tự đọc lại ngay ở lần bấm tiếp theo (mở lớp, chọn em…), các em đã chọn vắng vẫn giữ.
+Vào trang **Học sinh**, tìm em, **bấm vào dòng của em**: hộp **Lịch bán trú** hiện ra.
 
-**Em chuyển đến trường, ăn bán trú**: thêm một dòng vào file danh sách (Lớp, Họ tên, Ngày sinh, Bán trú *Có*), ghi Ghi chú `ăn từ <ngày đến>` để sĩ số tự tăng từ ngày đó, lưu file. Mở lớp đó trong app là thấy em mới.
+- **Bắt đầu ăn bán trú từ ngày**: em mới ăn (kể cả em đang ghi *Không* ăn bán trú);
+- **Thôi ăn (cắt) từ ngày**: từ ngày đó em không ăn nữa;
+- **Cắt thứ 6 hàng tuần**: mỗi thứ 6 em tự được tính vắng (kể cả khi GV báo "đủ").
+
+Bấm **Lưu lịch**: app ghi vào file danh sách (cột Ăn từ, Cắt từ, Cắt thứ 6), cột **Lịch** của trang Học sinh hiện lịch vừa đặt. Xóa ngày (nút **Xóa** trong lịch) hoặc bỏ đánh dấu rồi Lưu lịch là bỏ lịch. File danh sách đang mở trong Excel thì app báo: lưu và đóng file đó rồi bấm Lưu lịch lại. File danh sách dạng .xls cũ thì phải Lưu thành .xlsx trước.
+
+**Em chuyển đến trường, ăn bán trú**: thêm một dòng vào file danh sách bằng Excel (Lớp, Họ tên, Ngày sinh), lưu file; rồi trên app bấm vào em đó, đặt **Bắt đầu ăn bán trú từ ngày** = ngày đến. Lớp ghép thì ghi luôn cột **Ăn ghép** cho em.
 
 - Từ ngày đó app tự đổi sĩ số và danh sách tên của lớp. Trên trang Điểm danh, cột Ghi chú của lớp có chữ **[Lịch]**. Sĩ số đổi theo lịch thì app không hỏi "sĩ số khác nhau" khi lưu.
-- Bảng chọn tên ghi *Sắp tới: cắt … từ …* cho các em sắp đổi; ô tên có nhãn nhỏ *nghỉ T6* nếu em cắt thứ 6.
+- Bảng chọn tên ghi *Sắp tới: cắt … từ …* cho các em sắp đổi; ô tên có nhãn nhỏ *cắt thứ 6* nếu em cắt thứ 6.
 - Muốn ghi vào sổ như cách vẫn viết (vd. "Từ 30/10 cắt bán trú …"): gõ vào ô **Ghi chú (cột H)** trong bảng chọn tên của lớp.
-- Bỏ lịch: xóa chữ trong ô Ghi chú của file danh sách.
 
 ## 5. Ghép lớp (lớp 1.5, 4.4 …)
 
@@ -141,9 +142,9 @@ Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và c�
 
 ## 6. Học sinh
 
-Trang **Học sinh** chỉ để **tra cứu**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác**, ăn ghép, **Ghi chú** và cột **App hiểu là** (cắt thứ 6, cắt từ…, ăn từ…).
+Trang **Học sinh**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác**, ăn ghép, **Lịch** (ăn từ…, cắt từ…, cắt thứ 6) và **Ghi chú**. **Bấm vào một em** để đặt lịch (mục 4).
 
-- Muốn **thêm, sửa, xóa học sinh**, đặt **lịch thêm / cắt**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. Quay lại app là thấy ngay (cột **App hiểu là** cho biết app hiểu ghi chú thế nào).
+- Muốn **thêm, sửa, xóa học sinh**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. Quay lại app là thấy ngay.
 - Đổi sang file danh sách khác: **Cài đặt → Chọn file khác…**.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.

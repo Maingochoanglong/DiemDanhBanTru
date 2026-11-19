@@ -11,7 +11,7 @@ export default {
       { key: "so_file", icon: "pi-book", label: "Sổ điểm danh tháng", help: "Lưu vào sổ: app ghi sheet của ngày rồi xóa sổ tạm (… tamthoi.xlsx trong thư mục app, ghi sau mỗi thao tác).",
         buttons: [{ label: "Chọn sổ khác…", icon: "pi-upload", run: chooseBook }, { label: "Thư mục", icon: "pi-folder-open", open: "so_folder" }] },
       { key: "cdhs_file", icon: "pi-file-excel", label: `Danh sách học sinh (Excel)${s.value.n ? ` — ${s.value.n} học sinh` : ""}`,
-        help: "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép · Ghi chú (vd. <i>cắt thứ 6</i>, <i>cắt từ 30/10</i>, <i>ăn từ 3/11</i>). " +
+        help: "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép · Ăn từ · Cắt từ · Cắt thứ 6 (đặt ở trang <b>Học sinh</b>) · Ghi chú. " +
           (s.value.nhom_an ? `Bảng suất ăn: dựng theo sheet <b>Nhóm ăn</b> (${s.value.nhom_an} dòng).` : "Muốn app dựng bảng suất ăn: thêm sheet <b>Nhóm ăn</b>.") +
           " Sửa file này bằng Excel, lưu là app đọc lại ngay.",
         errors: [s.value.list_error, ...(s.value.nhom_an_errors || [])].filter(Boolean),

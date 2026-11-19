@@ -6,7 +6,7 @@ App Windows nhỏ gọn giúp giáo vụ làm sổ điểm danh bán trú hằng
 - ghi tên theo quy tắc, đếm số vắng;
 - tự tính bảng suất ăn cho bảo mẫu, kể cả các lớp ghép; bảng suất ăn của tờ ngày mới dựng theo sheet *Nhóm ăn* trong file danh sách (đổi cách ghép không phải sửa công thức sổ);
 - ghi vào sổ Excel giữ y mẫu cũ (mỗi ngày 1 sheet, mỗi tháng 1 file) (in bằng Excel như thường lệ);
-- chỉ làm việc với 3 file: **danh sách học sinh** (Excel, app chỉ đọc; lịch thêm/cắt ghi ở cột Ghi chú), **sổ điểm danh tháng**, **CaiDat.txt** cạnh file .exe. Đang làm dở thì có thêm sổ tạm `… tamthoi.xlsx` cạnh file .exe, ghi sau mỗi thao tác, xóa khi đã lưu vào sổ.
+- chỉ làm việc với 3 file: **danh sách học sinh** (Excel; lịch thêm/cắt đặt trên app, lưu vào 3 cột Ăn từ / Cắt từ / Cắt thứ 6), **sổ điểm danh tháng**, **CaiDat.txt** cạnh file .exe. Đang làm dở thì có thêm sổ tạm `… tamthoi.xlsx` cạnh file .exe, ghi sau mỗi thao tác, xóa khi đã lưu vào sổ.
 - mọi thứ nằm trong thư mục chứa file .exe (không ghi gì vào `%APPDATA%`, `%TEMP%`): gỡ app chỉ cần xóa thư mục đó.
 
 👉 **Hướng dẫn sử dụng: [HUONG_DAN.md](HUONG_DAN.md)**
@@ -41,8 +41,8 @@ Cấu trúc mã:
 
 | Thư mục | Nội dung |
 |---|---|
-| `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), tách tên trong ô sổ (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`), đọc cột Ghi chú của file danh sách (`notes.py`). |
-| `app/excel/` | Đọc file danh sách học sinh + sheet Nhóm ăn (`roster_import.py`), sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu, dựng lại bảng suất ăn theo Nhóm ăn), sổ tạm `… tamthoi.xlsx` (`tamthoi.py`), ghi file an toàn / mở file (`files.py`). |
+| `app/core/` | Xử lý không phụ thuộc Excel/giao diện: chuẩn hóa tên tiếng Việt, tên ghi sổ (`names.py`), tách tên trong ô sổ (`parser.py`), so khớp tên (`matcher.py`), một ngày điểm danh (`day.py`), suất ăn (`meals.py`). |
+| `app/excel/` | Đọc file danh sách học sinh + sheet Nhóm ăn (`roster_import.py`), ghi 3 cột lịch bán trú (`roster_schedule.py`), sổ điểm danh tháng (`sobook.py`: tìm hàng lớp và bảng suất ăn theo nội dung, sao chép sheet, ghi số liệu, dựng lại bảng suất ăn theo Nhóm ăn), sổ tạm `… tamthoi.xlsx` (`tamthoi.py`), ghi file an toàn / mở file (`files.py`). |
 | `app/settings.py` | CaiDat.txt (cạnh file .exe). |
 | `app/config.py` | Mọi giá trị cố định (cổng, tên file, thời gian chờ, lịch học…), không viết cứng ở chỗ khác. |
 | `app/service.py` | Điều phối các thao tác (mở ngày, lưu, sổ tạm, tạo sổ tháng mới). |

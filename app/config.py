@@ -40,13 +40,15 @@ FUZZY_MIN_RATIO = 0.6  # so khớp tên gõ sai: độ giống tối thiểu (di
 # ---- lịch học ----
 SCHOOL_DAYS = 5  # thứ 2..thứ 6 (weekday 0..4); thứ 7, CN nghỉ. Trường học thứ 7 thì đặt 6
 FRIDAY = 4  # weekday của thứ 6 (học nửa buổi: em "cắt thứ 6" tự tính vắng)
-SCHOOL_YEAR_START_MONTH = 8  # năm học từ tháng 8 tới tháng 7 năm sau (ngày ghi chú không ghi năm)
 
 # ---- đọc file Excel ----
 RED_FONT = (180, 100, 100)  # chữ đỏ (file danh sách toàn trường): R >= 180, G <= 100, B <= 100
 LIST_HEADER_ROWS = 10  # dò dòng tiêu đề (Lớp, Họ tên…) trong 10 dòng đầu file danh sách
 MEAL_SHEET_HEADER_ROWS = 5  # dò dòng tiêu đề sheet Nhóm ăn
 MEAL_SHEET_COLS = 6
+SCHEDULE_COLUMNS = ("Ăn từ", "Cắt từ", "Cắt thứ 6")  # 3 cột lịch bán trú app ghi vào file danh sách (Lưu lịch)
+SCHEDULE_MARK = "x"  # ô "Cắt thứ 6" của em cắt thứ 6
+EXCEL_DATE_FORMAT = "DD/MM/YYYY"  # kiểu hiện ngày app ghi vào ô Excel
 BOOK_HEADER_ROWS = 20  # dò dòng tiêu đề bảng điểm danh trong 20 dòng đầu sheet ngày
 BOOK_SCAN_COLS = 30
 BOOK_FOOTER_ROWS = 6  # dò dòng "ngày … tháng … năm" dưới dòng tổng

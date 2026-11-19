@@ -1,10 +1,12 @@
-"""Đọc file Excel danh sách học sinh (.xls hoặc .xlsx) — nguồn duy nhất về học sinh của app (app chỉ đọc, không ghi).
+"""Đọc file Excel danh sách học sinh (.xls hoặc .xlsx) — nguồn duy nhất về học sinh của app.
+(App chỉ ghi 3 cột lịch bán trú, khi giáo vụ bấm Lưu lịch: excel/roster_schedule.py.)
 
 Hai dạng file:
 - file danh sách học sinh toàn trường: em tô chữ đỏ là ăn bán trú;
 - file danh sách bán trú gọn: cột "Ăn bán trú" đánh X hoặc có/không, có thể kèm cột "Ghép lớp" (vd. 1.2),
   cột "Tên gọi khác" (tên GV hay báo, vd. "Mi Mi"; tên đầu được ghi vào sổ), cột "Lớp tính BT" (em tính bán trú
-  ở lớp khác lớp học) và cột "Ghi chú" (vd. "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11": xem core/notes.py).
+  ở lớp khác lớp học), 3 cột lịch bán trú "Ăn từ" (ngày bắt đầu ăn), "Cắt từ" (ngày thôi ăn), "Cắt thứ 6" (x)
+  và cột "Ghi chú" (chữ tự do, app chỉ hiện ra, không đọc lịch từ đây).
 
 File gọn có thể có thêm sheet "Nhóm ăn": mỗi dòng là một dòng bảng suất ăn trong sổ
 (Tên dòng | Các lớp ăn chung | Mã ghép lẻ). App dựng bảng suất ăn của tờ ngày mới theo sheet này.
@@ -22,7 +24,6 @@ from pathlib import Path
 from .. import config
 from ..core.meals import CODE_RE, MealGroup
 from ..core.models import ClassInfo, Roster, Student
-from ..core.notes import student_note
 from ..core.text import class_sort_key, clean_spaces, fmt_date, fold, norm_class, parse_date
 
 
@@ -36,6 +37,9 @@ class RosterRow:
     ten_goi: str | None = None  # None = file không có cột "Tên gọi khác"
     ghi_chu: str = ""
     lop_bt: str = ""
+    bt_tu: dt.date | None = None  # cột "Ăn từ"
+    cat_tu: dt.date | None = None  # cột "Cắt từ"
+    cat_thu6: bool = False  # cột "Cắt thứ 6"
 
     @property
     def key(self) -> tuple[str, str]:
@@ -51,11 +55,19 @@ def _is_red_rgb(r: int, g: int, b: int) -> bool:
     return r >= min_r and g <= max_g and b <= max_b
 
 
+# 3 cột lịch bán trú: khóa -> các cách viết tiêu đề (bỏ dấu, chữ thường). Tên cột app ghi: config.SCHEDULE_COLUMNS
+SCHEDULE_HEADERS = {"bttu": ("an tu", "an bt tu", "an ban tru tu"), "cattu": ("cat tu", "thoi an tu"),
+                    "t6": ("cat thu 6", "cat t6")}
+
+
 def _find_columns(header: list[str]) -> dict[str, int] | None:
     cols: dict[str, int] = {}
     for i, h in enumerate(header):
         f = fold(str(h or ""))
-        if "lop" not in cols and ("ten lop" in f or f in ("lop", "lop hoc")):  # (không nhận nhầm cột "Lớp tính BT")
+        key = next((k for k, names in SCHEDULE_HEADERS.items() if f.startswith(names)), None)
+        if key and key not in cols:  # 3 cột lịch bán trú
+            cols[key] = i
+        elif "lop" not in cols and ("ten lop" in f or f in ("lop", "lop hoc")):  # (không nhận nhầm cột "Lớp tính BT")
             cols["lop"] = i
         elif f in ("ho ten", "ho va ten", "ho ten hoc sinh", "ho va ten hoc sinh") and "ten" not in cols:
             cols["ten"] = i
@@ -94,6 +106,14 @@ def _fmt_dob(v) -> str:
     return fmt_date(d) if d else clean_spaces(str(v or ""))
 
 
+def _xls_date(book, cell) -> dt.date | None:
+    import xlrd
+
+    if cell.ctype == xlrd.XL_CELL_DATE:
+        return xlrd.xldate_as_datetime(cell.value, book.datemode).date()
+    return parse_date(cell.value)
+
+
 def _read_xls(path: Path) -> list[RosterRow]:
     import xlrd
 
@@ -118,17 +138,16 @@ def _read_xls(path: Path) -> list[RosterRow]:
                 dob = ""
                 if "ns" in cols:
                     cell = sh.cell(r, cols["ns"])
-                    if cell.ctype == xlrd.XL_CELL_DATE:
-                        dob = fmt_date(xlrd.xldate_as_datetime(cell.value, book.datemode).date())
-                    else:
-                        dob = _fmt_dob(cell.value)
+                    dob = fmt_date(d) if (d := _xls_date(book, cell)) else _fmt_dob(cell.value)
                 if "bt" in cols:
                     red = _is_x(sh.cell_value(r, cols["bt"]))
                 ghep = _fmt_ghep(sh.cell_value(r, cols["ghep"])) if "ghep" in cols else None
                 goi = clean_spaces(str(sh.cell_value(r, cols["goi"]))) if "goi" in cols else None
                 gc = clean_spaces(str(sh.cell_value(r, cols["gc"]))) if "gc" in cols else ""
                 lbt = norm_class(str(sh.cell_value(r, cols["lopbt"]))) if "lopbt" in cols else ""
-                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc, lbt))
+                when = {k: _xls_date(book, sh.cell(r, cols[k])) for k in ("bttu", "cattu") if k in cols}
+                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc, lbt, bt_tu=when.get("bttu"), cat_tu=when.get("cattu"),
+                                      cat_thu6="t6" in cols and _is_x(sh.cell_value(r, cols["t6"]))))
             return rows
     raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
 
@@ -152,56 +171,60 @@ def _openpyxl_red(cell) -> bool:
         return False
 
 
+def find_table(wb) -> tuple:
+    """Sheet, dòng tiêu đề, cột (0-based) của bảng danh sách trong file .xlsx (openpyxl)."""
+    for ws in wb.worksheets:
+        for hr in range(1, min(config.LIST_HEADER_ROWS, ws.max_row) + 1):
+            cols = _find_columns([str(c.value) if c.value is not None else "" for c in ws[hr]])
+            if cols:
+                return ws, hr, cols
+    raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
+
+
+def xlsx_rows(ws, hr: int, cols: dict[str, int]) -> list[tuple[int, RosterRow]]:
+    """(số dòng, dữ liệu) của các em trong bảng (bỏ dòng trống)."""
+    out = []
+    for r in range(hr + 1, ws.max_row + 1):
+        name_cell = ws.cell(r, cols["ten"] + 1)
+        name = clean_spaces(str(name_cell.value or ""))
+        lop = norm_class(str(ws.cell(r, cols["lop"] + 1).value or ""))
+        if not name or not lop:
+            continue
+        val = {k: ws.cell(r, c + 1).value for k, c in cols.items()}
+        red = _is_x(val["bt"]) if "bt" in cols else _openpyxl_red(name_cell)
+        out.append((r, RosterRow(
+            lop, name, _fmt_dob(val.get("ns")), red,
+            ghep=_fmt_ghep(val["ghep"]) if "ghep" in cols else None,
+            ten_goi=clean_spaces(str(val["goi"] or "")) if "goi" in cols else None,
+            ghi_chu=clean_spaces(str(val.get("gc") or "")), lop_bt=norm_class(str(val.get("lopbt") or "")),
+            bt_tu=parse_date(val.get("bttu")), cat_tu=parse_date(val.get("cattu")), cat_thu6=_is_x(val.get("t6")))))
+    return out
+
+
 def _read_xlsx(path: Path) -> list[RosterRow]:
     import openpyxl
 
-    wb = openpyxl.load_workbook(str(path), data_only=True)
-    for ws in wb.worksheets:
-        for hr in range(1, min(config.LIST_HEADER_ROWS, ws.max_row) + 1):
-            header = [c.value for c in ws[hr]]
-            cols = _find_columns([str(v) if v is not None else "" for v in header])
-            if not cols:
-                continue
-            rows = []
-            for r in range(hr + 1, ws.max_row + 1):
-                name_cell = ws.cell(r, cols["ten"] + 1)
-                name = clean_spaces(str(name_cell.value or ""))
-                lop = norm_class(str(ws.cell(r, cols["lop"] + 1).value or ""))
-                if not name or not lop:
-                    continue
-                dob = ""
-                if "ns" in cols:
-                    dob = _fmt_dob(ws.cell(r, cols["ns"] + 1).value)
-                red = _is_x(ws.cell(r, cols["bt"] + 1).value) if "bt" in cols else _openpyxl_red(name_cell)
-                ghep = _fmt_ghep(ws.cell(r, cols["ghep"] + 1).value) if "ghep" in cols else None
-                goi = clean_spaces(str(ws.cell(r, cols["goi"] + 1).value or "")) if "goi" in cols else None
-                gc = clean_spaces(str(ws.cell(r, cols["gc"] + 1).value or "")) if "gc" in cols else ""
-                lbt = norm_class(str(ws.cell(r, cols["lopbt"] + 1).value or "")) if "lopbt" in cols else ""
-                rows.append(RosterRow(lop, name, dob, red, ghep, goi, gc, lbt))
-            return rows
-    raise RosterFormatError("Không tìm thấy cột 'Tên lớp học' và 'Họ tên' trong file.")
+    ws, hr, cols = find_table(openpyxl.load_workbook(str(path), data_only=True))
+    return [row for _, row in xlsx_rows(ws, hr, cols)]
+
+
+def is_xls(path: str | Path) -> bool:
+    """File Excel 97-2003 (.xls): app đọc được nhưng không ghi được."""
+    with open(path, "rb") as f:
+        return f.read(8).startswith(b"\xd0\xcf\x11\xe0")
 
 
 def read_cdhs(path: str | Path) -> list[RosterRow]:
     """Đọc theo nội dung file (file .xls cũ đặt đuôi .xlsx vẫn đọc được)."""
     path = Path(path)
-    with open(path, "rb") as f:
-        head = f.read(8)
-    if head.startswith(b"\xd0\xcf\x11\xe0"):  # định dạng Excel 97-2003 (.xls)
-        return _read_xls(path)
-    return _read_xlsx(path)
+    return _read_xls(path) if is_xls(path) else _read_xlsx(path)
 
 
 # ---------------- sheet "Nhóm ăn" ----------------
-def _is_xls(path: Path) -> bool:
-    with open(path, "rb") as f:
-        return f.read(8).startswith(b"\xd0\xcf\x11\xe0")
-
-
 def read_meal_groups(path: str | Path) -> list[tuple[int, str, str, str]] | None:
     """Sheet "Nhóm ăn" của file danh sách: (số dòng, tên dòng, các lớp, mã ghép lẻ). None = không có sheet này."""
     path = Path(path)
-    if _is_xls(path):
+    if is_xls(path):
         return None
     import openpyxl
 
@@ -310,27 +333,32 @@ class ListData:
     meal_warnings: list[str] = field(default_factory=list)
 
 
-def _student(row: RosterRow, sid: str, today: dt.date) -> Student:
-    s = Student(sid, row.lop, row.ho_ten, row.ngay_sinh, ban_tru=row.red, ten_ghi_so=row.ten_goi or "",
-                lop_bt=row.lop_bt if row.lop_bt != row.lop else "", an_ghep=row.ghep or "", ghi_chu=row.ghi_chu)
-    for key, value in student_note(row.ghi_chu, today).items():  # "cắt thứ 6", "cắt từ 30/10", "ăn từ 3/11"
-        setattr(s, key, value)
-    return s
+def _student(row: RosterRow, sid: str) -> Student:
+    return Student(sid, row.lop, row.ho_ten, row.ngay_sinh, ban_tru=row.red or bool(row.bt_tu),  # có "Ăn từ" là ăn BT
+                   ten_ghi_so=row.ten_goi or "", lop_bt=row.lop_bt if row.lop_bt != row.lop else "",
+                   an_ghep=row.ghep or "", ghi_chu=row.ghi_chu, bt_tu=row.bt_tu, cat_tu=row.cat_tu, cat_thu6=row.cat_thu6)
 
 
-def load_list(path: str | Path, today: dt.date | None = None) -> ListData:
-    """Đọc file danh sách học sinh thành danh sách cho app. Mã học sinh = lớp|họ tên|ngày sinh
-    (không đổi giữa các lần đọc, nên sổ tạm vẫn khớp khi file danh sách được sửa chỗ khác)."""
-    today = today or dt.date.today()
-    rows = read_cdhs(path)
-    roster, seen = Roster(), set()
+def student_ids(rows: list[RosterRow]) -> list[str]:
+    """Mã học sinh từng dòng = lớp|họ tên|ngày sinh (không đổi giữa các lần đọc, nên sổ tạm vẫn khớp khi file
+    danh sách được sửa chỗ khác). Trùng cả 3 (hiếm) thì thêm |2, |3…"""
+    seen, out = set(), []
     for row in rows:
         sid = f"{row.lop}|{row.ho_ten}|{row.ngay_sinh}"
         n = 2
-        while sid in seen:  # trùng cả lớp, họ tên, ngày sinh (hiếm)
+        while sid in seen:
             sid, n = f"{row.lop}|{row.ho_ten}|{row.ngay_sinh}|{n}", n + 1
         seen.add(sid)
-        roster.students.append(_student(row, sid, today))
+        out.append(sid)
+    return out
+
+
+def load_list(path: str | Path) -> ListData:
+    """Đọc file danh sách học sinh thành danh sách cho app."""
+    rows = read_cdhs(path)
+    roster = Roster()
+    for row, sid in zip(rows, student_ids(rows), strict=True):
+        roster.students.append(_student(row, sid))
     # mã ngắn (1D16 -> 1.2) đánh theo mọi lớp trong file, giống cách đọc mã ở sheet Nhóm ăn (check_meal_groups)
     short = short_codes(sorted({r.lop for r in rows} | {s.lop_tinh for s in roster.students}))
     roster.classes = {c: ClassInfo(c, ma_ngan=short[c]) for c in {s.lop_tinh for s in roster.students if s.ban_tru}}

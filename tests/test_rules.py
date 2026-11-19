@@ -46,7 +46,7 @@ def _watch(fn):
 
 
 def test_only_settings_files_and_temp_book_are_touched(tmp_path, roster):
-    """Một ngày làm việc đủ việc: mở app, điểm danh, lưu, mất điện rồi khôi phục, sang tháng mới, đổi file."""
+    """Một ngày làm việc đủ việc: mở app, điểm danh, lưu, mất điện rồi khôi phục, sang tháng mới, lưu lịch, đổi file."""
     work = tmp_path / "work"
     work.mkdir()
     ws = make_workspace(work, roster, make_book(work / "SO DIEM DANH T10.xlsx"))
@@ -72,6 +72,8 @@ def test_only_settings_files_and_temp_book_are_touched(tmp_path, roster):
         b.set_absent("1D15", next(n["id"] for n in b.class_detail("1D15")["names"]), True)
         b.discard_temp()
         b.set_side_min(True)
+        kid = next(r["id"] for r in b.students("", "1D15")["rows"])
+        b.set_schedule(kid, "", "2026-11-20", True)  # hộp Lịch bán trú: ghi vào file danh sách
         b.settings()
         b.choose_list(str(work / "DanhSach.xlsx"))
 

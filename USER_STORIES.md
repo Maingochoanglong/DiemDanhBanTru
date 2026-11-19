@@ -34,7 +34,7 @@ giáo vụ vẫn tự chọn vắng mỗi ngày: app không làm việc này tha
 | H6 | trước khi chốt, biết tổng suất ăn khớp số hiện diện | không báo sai suất | nhãn tổng suất trên bảng; trang **Suất ăn** |
 | H7 | 8h30 lưu vào sổ, mở sổ Excel đúng sheet hôm nay, chép bảng suất ăn dạng ảnh gửi Zalo; in như thường lệ | báo bếp, có sổ giấy | **Lưu vào sổ**, **Mở sổ Excel** (Excel mở đúng sheet vừa lưu). Chụp ảnh làm trong Excel, app không làm thêm |
 | H8 | bấm nhầm thì quay lại | không sợ sai | **Hoàn tác** |
-| H9 | em "cắt thứ 6", em đã cắt / mới thêm bán trú tự được tính | không phải nhớ, không chọn lại mỗi ngày | cột Ghi chú của file danh sách; app tự tính |
+| H9 | em "cắt thứ 6", em đã cắt / mới thêm bán trú tự được tính | không phải nhớ, không chọn lại mỗi ngày | lịch đặt ở hộp **Lịch bán trú**; app tự tính |
 
 ## Thỉnh thoảng
 
@@ -42,8 +42,9 @@ giáo vụ vẫn tự chọn vắng mỗi ngày: app không làm việc này tha
 |---|---|---|---|
 | T1 | làm bù hoặc sửa ngày trước | sổ đủ ngày | lùi / tới ngày, gõ ngày, lịch, **Hôm nay** |
 | T2 | đầu tháng có sổ tháng mới từ sổ tháng trước | giữ mẫu, chữ ký, ghi chú | app hỏi khi mở ngày của tháng chưa có sổ |
-| T3 | thêm / cắt bán trú, đổi cách ghép ăn bằng Excel | sửa ở một chỗ quen thuộc | sửa file danh sách; app tự đọc lại; nút mở file ở trang **Học sinh**, **Suất ăn** |
-| T3b | có em chuyển đến ăn bán trú: ghi tên em vào file danh sách (lúc app đang mở cũng được) | điểm danh em đó ngay hôm đó | lưu file danh sách trong Excel; mở lớp là thấy em mới, các em đã chọn vắng vẫn giữ |
+| T3 | đặt lịch: em bắt đầu ăn từ ngày, thôi ăn từ ngày, cắt thứ 6 | không phải nhớ, đến ngày sĩ số tự đổi; Ghi chú chỉ để ghi chú | trang **Học sinh**: bấm vào em → hộp **Lịch bán trú** (ghi vào 3 cột Ăn từ / Cắt từ / Cắt thứ 6 của file danh sách) |
+| T3a | đổi cách ghép ăn, tên gọi khác | sửa ở một chỗ quen thuộc | sửa file danh sách bằng Excel; nút mở file ở trang **Học sinh**, **Suất ăn** |
+| T3b | có em chuyển đến ăn bán trú: ghi tên em vào file danh sách (lúc app đang mở cũng được) | điểm danh em đó ngay hôm đó | lưu file danh sách trong Excel; mở lớp là thấy em mới, các em đã chọn vắng vẫn giữ; ngày bắt đầu ăn đặt ở hộp **Lịch bán trú** |
 | T4 | tra một em ở lớp nào, có ăn bán trú không | trả lời GVCN | trang **Học sinh** |
 | T5 | em ăn ghép vắng: chọn em đó ăn nhóm nào | suất ăn đúng | trang **Suất ăn** hỏi khi cần |
 | T6 | mất điện / lỡ đóng trình duyệt thì không mất việc đang làm | khỏi làm lại | sổ tạm; lần mở sau hỏi **Khôi phục** |
@@ -64,7 +65,8 @@ giáo vụ vẫn tự chọn vắng mỗi ngày: app không làm việc này tha
 - Nút "Lớp cần xem tiếp" trong bảng chọn tên: trùng hàng **Cần xem**.
 - Nút phóng to bảng chọn tên: bảng đã gần kín màn hình.
 - Dòng "Sổ ngày …: n tên vắng đã có, đều khớp danh sách": chỉ thêm chữ, không phải làm gì.
-- Trước đó: màn duyệt khi nhập danh sách, trang Lịch, sửa cách ghép trong app, đọc ghi chú sổ, sao lưu.
+- Đọc lịch từ chữ trong cột Ghi chú ("cắt thứ 6", "ăn từ 3/11"): giáo vụ muốn Ghi chú chỉ là ghi chú; lịch đặt ở hộp Lịch bán trú.
+- Trước đó: màn duyệt khi nhập danh sách, sửa cách ghép trong app, đọc ghi chú sổ, sao lưu.
 
 ## Không làm (giáo vụ đã nói không cần)
 

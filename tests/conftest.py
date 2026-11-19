@@ -57,21 +57,17 @@ def roster() -> Roster:
 
 
 def write_list(path, roster: Roster, groups=None):
-    """Ghi danh sách học sinh ra file Excel như file giáo vụ dùng (cột Ghi chú theo cách app đọc: core/notes.py).
+    """Ghi danh sách học sinh ra file Excel như file giáo vụ dùng (3 cột lịch bán trú: Ăn từ, Cắt từ, Cắt thứ 6).
     groups: các dòng sheet Nhóm ăn [(tên dòng, các lớp, mã ghép lẻ)]."""
     import openpyxl
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Tên gọi khác", "Ăn ghép", "Ghi chú"])
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Tên gọi khác", "Ăn ghép", "Ăn từ", "Cắt từ", "Cắt thứ 6", "Ghi chú"])
     for s in roster.students:
-        notes = ["cắt thứ 6"] if s.cat_thu6 else []
-        if s.cat_tu:
-            notes.append(f"cắt từ {s.cat_tu:%d/%m/%Y}")
-        if s.bt_tu:
-            notes.append(f"ăn từ {s.bt_tu:%d/%m/%Y}")
-        bt = s.ban_tru and not s.bt_tu  # "ăn từ …" tự bật bán trú
-        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "Có" if bt else "Không", s.ten_ghi_so, s.an_ghep, ", ".join(notes + [s.ghi_chu])])
+        bt = s.ban_tru and not s.bt_tu  # có ngày "Ăn từ" là tự tính ăn bán trú từ ngày đó
+        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "Có" if bt else "Không", s.ten_ghi_so, s.an_ghep,
+                   s.bt_tu, s.cat_tu, "x" if s.cat_thu6 else None, s.ghi_chu])
     if groups is not None:
         g = wb.create_sheet("Nhóm ăn")
         g.append(["Tên dòng", "Các lớp ăn chung", "Mã ghép lẻ"])

@@ -14,6 +14,7 @@ from ..core.search import matches
 from ..core.text import class_sort_key, clean_spaces, fmt_date, parse_date
 from ..excel.files import FileLockedError, open_file, open_folder
 from ..excel.roster_import import RosterFormatError
+from ..excel.roster_schedule import ScheduleError
 from ..service import NeedMonthBook, Workspace, next_school_day, search_students
 
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
@@ -476,8 +477,22 @@ class Api:
                 special.append(f"cắt từ {fmt_date(s.cat_tu)}")
             rows.append({"id": s.id, "lop": s.lop, "ten": s.ho_ten, "ns": s.ngay_sinh, "bt": s.ban_tru,
                          "goi": s.ten_ghi_so or "", "ghep": s.an_ghep,
-                         "db": "; ".join(special), "gc": s.ghi_chu, "now": s.is_boarding(day)})
+                         "lich": "; ".join(special), "gc": s.ghi_chu, "now": s.is_boarding(day),
+                         "bt_tu": _iso(s.bt_tu), "cat_tu": _iso(s.cat_tu), "t6": s.cat_thu6})  # cho hộp Lịch bán trú
         return {"rows": rows, "classes": roster.class_codes()}
+
+    def set_schedule(self, sid: str, bt_tu: str = "", cat_tu: str = "", cat_thu6: bool = False) -> dict:
+        """Hộp Lịch bán trú (trang Học sinh): ăn từ ngày, cắt từ ngày, cắt thứ 6. Ghi vào file danh sách."""
+        s = self._ws.roster.by_id(sid)
+        if s is None:
+            return {"error": "Không thấy em này trong danh sách."}
+        try:
+            self._ws.set_schedule(sid, _day(bt_tu), _day(cat_tu), bool(cat_thu6))
+        except FileLockedError:
+            return {"error": "File danh sách đang mở trong Excel. Lưu và đóng file đó rồi bấm Lưu lịch lại."}
+        except ScheduleError as e:
+            return {"error": str(e)}
+        return {"state": self.state(), "flash": f"Đã lưu lịch của {s.ho_ten} vào file danh sách."}
 
     # ================================================================== cài đặt (3 file: sổ, danh sách, CaiDat.txt)
     def settings(self) -> dict:

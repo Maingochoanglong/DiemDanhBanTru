@@ -169,18 +169,21 @@ def test_safe_save_refuses_when_open_in_excel(book, monkeypatch):
     assert book.read_bytes() == before and sorted(p.name for p in book.parent.iterdir()) == [book.name]
 
 
-def test_load_list_reads_note_column_and_keeps_ids(tmp_path, roster):
-    """File danh sách là nơi duy nhất về học sinh: cột Ghi chú cho cắt thứ 6 / cắt từ ngày / ăn từ ngày."""
+def test_load_list_reads_schedule_columns_and_keeps_ids(tmp_path, roster):
+    """File danh sách là nơi duy nhất về học sinh: 3 cột Ăn từ / Cắt từ / Cắt thứ 6; Ghi chú chỉ là chữ."""
+    roster.students[2].ghi_chu = "cắt thứ 6 từ tháng sau"  # chỉ là ghi chú: không thành lịch
     roster.students[0].cat_thu6 = True
     roster.students[0].cat_tu = dt.date(2026, 11, 1)
     roster.students[1].an_ghep = "1.2"
     roster.students[5].bt_tu = dt.date(2026, 11, 3)  # Mạc Trần Quỳnh Anh: chưa ăn BT, "ăn từ 03/11"
     roster.students[5].ban_tru = True
     p = write_list(tmp_path / "ds.xlsx", roster)
-    data = load_list(p, today=dt.date(2026, 10, 29))
+    data = load_list(p)
     s0, s1, s5 = (data.roster.students[i] for i in (0, 1, 5))
     assert (s0.ho_ten, s0.cat_thu6, s0.cat_tu, s0.ban_tru) == ("Kha Bảo Ngọc", True, dt.date(2026, 11, 1), True)
     assert s1.an_ghep == "1.2"
+    s2 = data.roster.students[2]
+    assert s2.ghi_chu == "cắt thứ 6 từ tháng sau" and not s2.cat_thu6
     assert (s5.ban_tru, s5.bt_tu, s5.is_boarding(dt.date(2026, 11, 2)), s5.is_boarding(dt.date(2026, 11, 3))) == (
         True, dt.date(2026, 11, 3), False, True)
     assert s0.id == "1D15|Kha Bảo Ngọc|02/03/2020" and load_list(p).roster.students[0].id == s0.id  # đọc lại: mã không đổi

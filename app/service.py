@@ -1,7 +1,7 @@
 """Điều phối các thao tác của app (không phụ thuộc giao diện).
 
 App chỉ làm việc với 3 file:
-- file Excel danh sách học sinh (chỉ đọc: excel/roster_import.py, đọc lại khi file được sửa);
+- file Excel danh sách học sinh (đọc: excel/roster_import.py, đọc lại khi file được sửa; ghi 3 cột lịch: excel/roster_schedule.py);
 - sổ điểm danh tháng (excel/sobook.py) + sổ tạm "… tamthoi.xlsx" trong thư mục app (excel/tamthoi.py), ghi sau mỗi thao tác,
   xóa khi đã lưu vào sổ;
 - CaiDat.txt cạnh file .exe (settings.py).
@@ -19,7 +19,7 @@ from .core.day import DayState
 from .core.meals import MealLayout, MealSummary
 from .core.models import ClassInfo, Roster
 from .core.text import fold
-from .excel import sobook, tamthoi
+from .excel import roster_schedule, sobook, tamthoi
 from .excel.files import safe_save
 from .excel.roster_import import ListData, load_list
 
@@ -109,6 +109,14 @@ class Workspace:
             self.state.roster = self.roster
         else:
             self.load_day(self.day)  # chưa thay đổi gì: mở lại ngày cho đủ (sĩ số, bảng suất ăn)
+
+    def set_schedule(self, sid: str, bt_tu: dt.date | None, cat_tu: dt.date | None, cat_thu6: bool) -> None:
+        """Lưu lịch bán trú của một em vào file danh sách (3 cột Ăn từ / Cắt từ / Cắt thứ 6) rồi dùng ngay."""
+        if bt_tu and cat_tu and cat_tu <= bt_tu:
+            raise roster_schedule.ScheduleError("Ngày thôi ăn phải sau ngày bắt đầu ăn.")
+        roster_schedule.save_schedule(self.settings["cdhs_file"], sid, bt_tu, cat_tu, cat_thu6)
+        self._list_key = None  # đọc lại dù giờ sửa file trùng lần trước (2 lần lưu sát nhau)
+        self.sync_list()
 
     def set_list(self, path: str | Path) -> None:
         """Chọn file danh sách học sinh (đọc thử trước: file không đọc được thì không đổi cài đặt)."""

@@ -36,6 +36,7 @@ code { overflow-wrap: anywhere; }
 .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
 .clickable { cursor: pointer; }
 .dlg-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+.sched-grid { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; margin: 1rem 0; }
 
 /* khung app */
 .app { display: flex; height: 100vh; }
