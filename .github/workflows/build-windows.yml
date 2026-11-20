@@ -89,7 +89,7 @@ jobs:
             else
               gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
                 --target "$GITHUB_SHA" --prerelease \
-                --title "Điểm danh bán trú — bản mới nhất" --notes "$notes" || uploaded
+                --title "Điểm danh bán trú, bản mới nhất" --notes "$notes" || uploaded
             fi
           }
           for i in 1 2 3 4; do

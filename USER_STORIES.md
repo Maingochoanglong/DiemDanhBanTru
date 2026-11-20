@@ -14,9 +14,9 @@ Số liệu một ngày (đếm từ sổ tháng 10 thật, không chép tên):
 | | Một ngày |
 |---|---|
 | Lớp | 29 |
-| Lớp có em vắng | 13–23 |
-| Em vắng | 20–79 |
-| Ô ghi chú (cột H) | 8–14, phần lớn chép lại từ hôm trước: "thứ 6 hàng tuần cắt…", "thêm … ghép 1.3", "vắng tới khi có thông báo mới" |
+| Lớp có em vắng | 13 tới 23 |
+| Em vắng | 20 tới 79 |
+| Ô ghi chú (cột H) | 8 tới 14, phần lớn chép lại từ hôm trước: "thứ 6 hàng tuần cắt…", "thêm … ghép 1.3", "vắng tới khi có thông báo mới" |
 | Nhóm suất ăn | 11 |
 
 Khoảng 1/6 số tên vắng giống hệt hôm trước (em nghỉ dài ngày). "Vắng tới khi có thông báo mới" chỉ là ghi chú,

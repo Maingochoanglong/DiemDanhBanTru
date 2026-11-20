@@ -70,7 +70,7 @@ export default {
     <template v-if="cls.D">
       <Message v-for="w in cls.D.warnings" severity="error" icon="pi pi-exclamation-triangle" class="mb-2">{{ w }}</Message>
       <Message v-if="cls.D.pending.length" severity="warn" class="mb-2">
-        <b>Tên trong sổ chưa khớp danh sách</b> — bấm vào tên để chọn em đúng:
+        <b>Tên trong sổ chưa khớp danh sách.</b> Bấm vào tên để chọn em đúng:
         <div class="row-gap flex-wrap mt-2">
           <Button v-for="p in cls.D.pending" :key="p.idx" :label="p.query" icon="pi pi-question-circle" severity="danger" @click="resolve(p)" />
         </div>
@@ -86,7 +86,7 @@ export default {
         <IconField class="grow">
           <InputIcon class="pi pi-search" />
           <InputText id="clsSearch" v-model="q" size="large" fluid autocomplete="off" autofocus
-            placeholder="Tìm tên (không cần dấu) — nhiều tên cách nhau dấu phẩy" @paste="paste" @keydown.enter.prevent />
+            placeholder="Gõ tên hoặc dán tin Zalo (không cần dấu, nhiều tên cách nhau dấu phẩy)" @paste="paste" @keydown.enter.prevent />
         </IconField>
         <Button :label="friday ? 'Đủ (trừ em cắt thứ 6)' : 'Lớp này đủ'" icon="pi pi-check-square" size="large" severity="success" outlined @click="full" />
       </div>

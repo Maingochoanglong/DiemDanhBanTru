@@ -33,7 +33,8 @@ export default {
     const rowClass = r => r.gap ? "gap" : r.self ? "text-muted" : r.m ? "warn-row" : "";
     async function pick(sid, g) { const r = await api("pick_ghep", sid, g); store.S = r.state; load(); }
     function students(code) { store.hsPreset = code; store.page = "hs"; }
-    return { m, rows, title, rowClass, pick, students, openPath };
+    const missing = computed(() => (m.value?.ghep || []).filter(g => g.done < g.n));  // lớp ghép còn em chưa ghi nhóm
+    return { m, rows, title, rowClass, pick, students, openPath, missing };
   },
   template: /* html */`
   <section class="page">
@@ -52,7 +53,7 @@ export default {
       </div>
       <div v-if="!m.empty" class="px-3 pt-2">
         <Message v-if="m.ask.length" severity="warn" class="mb-2">
-          <div class="mb-1"><b><i class="pi pi-question-circle me-2"></i>Em ăn ghép vắng — chọn nhóm em đó ăn:</b>
+          <div class="mb-1"><b><i class="pi pi-question-circle me-2"></i>Em ăn ghép vắng: chọn nhóm em đó ăn</b>
             <span class="small text-muted ms-2">chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách</span></div>
           <div v-for="x in m.ask" :key="x.sid" class="row-gap flex-wrap mb-1">
             <span class="ask-name"><b>{{ x.name }}</b> <span class="text-muted">lớp {{ x.cls }}</span></span>
@@ -67,17 +68,16 @@ export default {
           <b v-if="!l.gap" :class="{ 'text-danger': !l.self }">{{ l.meals }}</b></template></Column>
         <Column field="label" header="Tên ghép" class="fw-semibold w-label" />
         <Column header="Gồm"><template #body="{ data: l }">{{ l.gom }}
-          <span v-if="l.absent && l.absent.length" class="text-danger"> − vắng {{ l.absent.length }}:
+          <span v-if="l.absent && l.absent.length" class="text-danger">; vắng {{ l.absent.length }}:
             <template v-for="(x, i) in l.absent" :key="x.sid">{{ i ? ", " : "" }}<a v-if="x.picked" href="#" class="link-danger"
               title="Bấm để chọn lại nhóm" @click.prevent="pick(x.sid, '')">{{ x.name }}</a><template v-else>{{ x.name }}</template></template>
           </span></template></Column>
       </DataTable>
       <div v-if="m.empty" class="p-3 text-muted">Sheet mẫu của sổ không có bảng suất ăn bên dưới bảng điểm danh.</div>
-      <div v-if="m.ghep && m.ghep.length" class="sheet-foot small">
-        <span v-for="g in m.ghep" :key="g.code" class="me-3 text-nowrap"><i class="pi pi-sitemap me-1"></i>Lớp ghép <b>{{ g.code }}</b>:
-          đã ghi nhóm <b :class="g.done < g.n ? 'text-warn' : 'text-success'">{{ g.done }}/{{ g.n }} em</b> ·
-          <a href="#" @click.prevent="students(g.code)">Xem các em</a></span>
-        <span v-if="m.ghep.some(g => g.done < g.n)" class="text-muted">(ghi nhóm ở cột <b>Ăn ghép</b> trong Excel)</span>
+      <div v-if="missing.length" class="sheet-foot small">
+        <span v-for="g in missing" :key="g.code"><i class="pi pi-sitemap"></i> Lớp ghép <b>{{ g.code }}</b>:
+          mới ghi nhóm <b class="text-warn">{{ g.done }}/{{ g.n }} em</b>, <a href="#" @click.prevent="students(g.code)">xem các em</a></span>
+        <span class="text-muted">Ghi nhóm ở cột <b>Ăn ghép</b> trong file danh sách.</span>
       </div>
     </div>
   </section>`,

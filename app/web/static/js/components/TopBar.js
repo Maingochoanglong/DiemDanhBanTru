@@ -15,7 +15,7 @@ export default {
     const open = iso => gotoDay(f => api("open_day", iso, f));
     const typed = () => { const v = text.value.trim(); if (v && v !== S.value.date_text) open(v); };  // Python hiểu nhiều cách gõ ngày
     function picked(d) { cal.value.hide(); if (d && isoOf(d) !== S.value.date) open(isoOf(d)); }
-    const book = computed(() => S.value.book ? `${S.value.book_stem} · sheet ${S.value.sheet}${S.value.exists ? "" : " (mới)"}` : "Chưa chọn sổ tháng này");
+    const book = computed(() => S.value.book ? `${S.value.book_stem} · sheet ${S.value.sheet}` : "Chưa chọn sổ tháng này");
     async function openBook() { const r = await api("open_book"); if (r.error) info("Chưa có sổ", r.error); }
     return { S, text, cal, step, typed, picked, book, openBook, dateOf, today: () => open(isoOf(new Date())) };
   },

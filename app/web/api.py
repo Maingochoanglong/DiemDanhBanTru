@@ -98,7 +98,7 @@ class Api:
                     "state": self.state()}
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không khôi phục được:\n{e}\n\nBản lưu tạm vẫn giữ ở:\n{info.path}", "state": self.state()}
-        return {"state": self.state(), "flash": f"Đã khôi phục ngày {fmt_date(info.day)} — nhớ bấm Lưu vào sổ."}
+        return {"state": self.state(), "flash": f"Đã khôi phục ngày {fmt_date(info.day)}. Nhớ bấm Lưu vào sổ."}
 
     def discard_temp(self) -> dict:
         """Thoát app và chọn Không lưu: bỏ sổ tạm."""
@@ -150,7 +150,7 @@ class Api:
         if steps:
             return "Vào Cài đặt để " + " và ".join(steps) + "."
         if self._month_hint():
-            return f"Chưa có sổ tháng {self._ws.day.month}/{self._ws.day.year} — bấm vào đây để tạo sổ tháng mới hoặc chọn sổ có sẵn."
+            return f"Chưa có sổ tháng {self._ws.day.month}/{self._ws.day.year}. Bấm vào đây để tạo sổ tháng mới hoặc chọn sổ có sẵn."
         return ""
 
     def _month_hint(self) -> bool:
@@ -178,7 +178,7 @@ class Api:
             "book": bp.name if bp else "", "book_stem": bp.stem if bp else "",
             "exists": bool(st and st.exists_in_book), "sheet": ws.sheet_name or str(ws.day.day),
             "dirty": ws.dirty, "temp_at": ws.temp_saved_at, "temp_error": ws.temp_error, "hint": self._setup_hint(), "hint_month": self._month_hint(),
-            "rows": [], "totals": None, "meal": None, "todo": [], "info": [], "unresolved": 0,
+            "rows": [], "totals": None, "meal": None, "info": [], "unresolved": 0,
             "unreported": [], "need_look": [],
         }
         if st is None:
@@ -214,16 +214,12 @@ class Api:
         if not ws.layout.is_empty:
             m = ws.meals()
             out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced, "ask": len(m.ask)}
-        n_pending = len(st.pending)
         out["unresolved"] = ws.unresolved_count()
         out["unreported"] = st.unreported()
-        if n_pending:
-            first = next((code for code in st.classes if any(p[0] == code for p in st.pending)), None)
-            out["todo"].append({"text": f"{n_pending} tên chưa rõ trong sổ — bấm để xử lý", "code": first})
         out["need_look"] = [code for code in st.classes if self._status(code) == "err"]  # lớp chữ đỏ: hiện thành nút ở đầu trang
         changes = st.scheduled_changes()
         if changes:
-            out["info"].append(f"{len(changes)} em thêm/cắt bán trú từ hôm nay — sĩ số đã tự đổi")
+            out["info"].append(f"{len(changes)} em thêm/cắt bán trú từ hôm nay, sĩ số đã tự đổi")
         return out
 
     # ================================================================== một lớp
@@ -549,7 +545,7 @@ class Api:
         return res
 
     def open_path(self, kind: str) -> dict:
-        """Mở file (so_file, cdhs_file, settings_file) hoặc thư mục chứa file (so_folder, cdhs_folder, settings_folder = thư mục app)."""
+        """Mở file (cdhs_file, settings_file) hoặc thư mục app (settings_folder: thư mục chứa CaiDat.txt)."""
         files = {"so_file": self._ws.settings.get("so_file", ""), "cdhs_file": self._ws.settings.get("cdhs_file", ""),
                  "settings_file": str(self._ws.settings_path)}
         key = kind.removesuffix("_folder") + ("_file" if kind.endswith("_folder") else "")

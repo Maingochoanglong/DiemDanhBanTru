@@ -1,4 +1,4 @@
-// Trang Cài đặt: 3 file app làm việc — sổ điểm danh tháng, danh sách học sinh (Excel), CaiDat.txt.
+// Trang Cài đặt: 3 file app làm việc (sổ điểm danh tháng, danh sách học sinh (Excel), CaiDat.txt).
 import { chooseBook, chooseList, loadSettings, openPath, store } from "../store.js";
 
 const { computed, onActivated } = Vue;
@@ -9,13 +9,13 @@ export default {
     const s = computed(() => store.settings || {});
     const files = computed(() => [
       { key: "so_file", icon: "pi-book", label: "Sổ điểm danh tháng", help: "Lưu vào sổ: app ghi sheet của ngày rồi xóa sổ tạm (… tamthoi.xlsx trong thư mục app, ghi sau mỗi thao tác).",
-        buttons: [{ label: "Chọn sổ khác…", icon: "pi-upload", run: chooseBook }, { label: "Thư mục", icon: "pi-folder-open", open: "so_folder" }] },
-      { key: "cdhs_file", icon: "pi-file-excel", label: `Danh sách học sinh (Excel)${s.value.n ? ` — ${s.value.n} học sinh` : ""}`,
+        buttons: [{ label: "Chọn sổ khác…", icon: "pi-upload", run: chooseBook }] },
+      { key: "cdhs_file", icon: "pi-file-excel", label: `Danh sách học sinh (Excel)${s.value.n ? `: ${s.value.n} học sinh` : ""}`,
         help: "Cột: Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không) · Tên gọi khác · Ăn ghép · Ăn từ · Cắt từ · Cắt thứ 6 (đặt ở trang <b>Học sinh</b>) · Ghi chú. " +
           (s.value.nhom_an ? `Bảng suất ăn: dựng theo sheet <b>Nhóm ăn</b> (${s.value.nhom_an} dòng).` : "Muốn app dựng bảng suất ăn: thêm sheet <b>Nhóm ăn</b>.") +
           " Sửa file này bằng Excel, lưu là app đọc lại ngay.",
         errors: [s.value.list_error, ...(s.value.nhom_an_errors || [])].filter(Boolean),
-        buttons: [{ label: "Chọn file khác…", icon: "pi-upload", run: chooseList }, { label: "Mở file", icon: "pi-external-link", open: "cdhs_file" }] },
+        buttons: [{ label: "Chọn file khác…", icon: "pi-upload", run: chooseList }] },
       { key: "settings_file", icon: "pi-cog", label: "Cài đặt của app (cạnh file .exe)",
         buttons: [{ label: "Mở file", icon: "pi-external-link", open: "settings_file" }] },
     ]);
@@ -51,6 +51,5 @@ export default {
         </div>
       </template>
     </Card>
-    <div class="text-muted small">• Nếu sổ đang mở trong Excel, hãy đóng Excel rồi bấm Lưu lại.</div>
   </section>`,
 };

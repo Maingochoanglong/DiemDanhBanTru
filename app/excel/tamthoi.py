@@ -67,7 +67,7 @@ def build(state, book: str | Path, now: dt.datetime | None = None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Dang diem danh"
-    ws.append([f"Ngày {fmt_date(state.date)} — đang điểm danh, chưa lưu vào sổ {Path(book).name}"])
+    ws.append([f"Ngày {fmt_date(state.date)}: đang điểm danh, chưa lưu vào sổ {Path(book).name}"])
     ws.append(["Lớp", "Đã báo", "Vắng", "Tên học sinh vắng", "Ghi chú"])
     for code in state.classes:
         names = state.absent_names(code)

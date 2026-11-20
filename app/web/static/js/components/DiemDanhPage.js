@@ -9,10 +9,7 @@ const { computed } = Vue;
 export default {
   setup() {
     const S = computed(() => store.S);
-    const rows = computed(() => {
-      const t = S.value.totals;
-      return t ? [...S.value.rows, { kind: "tong", code: "TỔNG CỘNG", ...t }] : S.value.rows;
-    });
+    const rows = computed(() => S.value.rows);
     const note = r => [r.sched ? "[Lịch]" : "", r.warn, r.not_bt ? `Không ăn BT: ${r.not_bt}` : "", r.note].filter(Boolean).join(" · ");
     const tip = r => (r.sched ? "[Lịch] = sĩ số đổi theo lịch thêm/cắt. " : "") + [r.warn, r.note].filter(Boolean).join(" · ");
     const rowClass = r => r.kind === "class" ? `cls st-${r.status}` : r.kind;
@@ -22,12 +19,12 @@ export default {
     });
     const saveState = computed(() => {
       const s = S.value;
-      if (s.unresolved) return { cls: "err", icon: "pi-exclamation-triangle", text: `Còn ${s.unresolved} tên chưa rõ — xử lý xong mới lưu được` };
+      if (s.unresolved) return { cls: "err", icon: "pi-exclamation-triangle", text: `Còn ${s.unresolved} tên chưa rõ, xử lý xong mới lưu được` };
       if (s.dirty) return { cls: "dirty", icon: "pi-pencil", text: "Có thay đổi chưa lưu vào sổ",
-        sub: s.temp_error ? ` — ${s.temp_error}` : (s.temp_at ? ` (đã lưu tạm lúc ${s.temp_at})` : ""), subErr: !!s.temp_error };
+        sub: s.temp_error ? `. ${s.temp_error}` : (s.temp_at ? ` (đã lưu tạm lúc ${s.temp_at})` : ""), subErr: !!s.temp_error };
       return { cls: "", text: s.exists ? "Đã có trong sổ" : (s.book ? "Ngày này chưa có trong sổ" : "") };
     });
-    function gotoUnresolved() { const t = S.value.unresolved && S.value.todo.find(x => x.code); if (t) openClass(t.code); }
+    function gotoUnresolved() { if (S.value.unresolved) openClass(S.value.need_look[0]); }
     async function reset() {
       const k = await ask("Đặt lại điểm danh ngày này?", `<p>Mọi lớp về <b>chưa báo</b>, bỏ hết tên vắng đã chọn. Ghi chú và sĩ số giữ nguyên.</p>
         <p class="text-muted mb-0">Dùng khi sheet trong sổ đã tạo sẵn nên app hiểu nhầm là các lớp đã điểm danh. Sổ chỉ thay đổi khi bấm <b>Lưu vào sổ</b>; bấm <b>Hoàn tác</b> nếu nhầm.</p>`,
@@ -43,7 +40,6 @@ export default {
   template: /* html */`
   <section class="page" id="page-dd">
     <Message v-if="S.hint" severity="warn" :icon="S.hint_month ? 'pi pi-calendar-plus' : 'pi pi-cog'" class="clickable" @click="hintClick">{{ S.hint }}</Message>
-    <Message v-for="t in S.todo" severity="error" icon="pi pi-exclamation-triangle" class="clickable" @click="openClass(t.code)">{{ t.text }}</Message>
     <div v-if="S.info.length" class="text-muted small"><i class="pi pi-info-circle me-1"></i>{{ S.info.join(" · ") }}</div>
 
     <div v-if="S.need_look.length" class="row-gap flex-wrap">

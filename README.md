@@ -15,7 +15,7 @@ App Windows nhỏ gọn giúp giáo vụ làm sổ điểm danh bán trú hằng
 
 👉 **[Tải DiemDanhBanTru.exe](https://github.com/Maingochoanglong/DiemDanhBanTru/raw/main/tai-ve/DiemDanhBanTru.exe)** (thư mục [`tai-ve`](tai-ve) của repo).
 
-File được GitHub Actions (`.github/workflows/build-windows.yml`) dựng trên Windows và tự commit vào `tai-ve/` mỗi khi nhánh `main` có mã mới. Cũng có ở trang **Releases** → bản *Điểm danh bán trú — bản mới nhất*. Mỗi lần cập nhật, repo nặng thêm khoảng 20 MB (dung lượng file `.exe`, dựng bằng Nuitka).
+File được GitHub Actions (`.github/workflows/build-windows.yml`) dựng trên Windows và tự commit vào `tai-ve/` mỗi khi nhánh `main` có mã mới. Cũng có ở trang **Releases** → bản *Điểm danh bán trú, bản mới nhất*. Mỗi lần cập nhật, repo nặng thêm khoảng 20 MB (dung lượng file `.exe`, dựng bằng Nuitka).
 
 ## Chạy từ mã nguồn (cho người phát triển)
 
@@ -24,7 +24,7 @@ Cần Python 3.10 trở lên. App mở giao diện trong **trình duyệt** (Edg
 | Phần | Framework |
 |---|---|
 | Máy chủ (Python) | [FastAPI](https://fastapi.tiangolo.com) chạy bằng [uvicorn](https://www.uvicorn.org) |
-| Giao diện | [Vue 3](https://vuejs.org) + [PrimeVue 4](https://primevue.org) (theme Aura) + PrimeIcons — bản dựng sẵn đóng kèm trong `static/vendor/`, **không cần Node.js / bước build**, chạy không cần mạng |
+| Giao diện | [Vue 3](https://vuejs.org) + [PrimeVue 4](https://primevue.org) (theme Aura) + PrimeIcons: bản dựng sẵn đóng kèm trong `static/vendor/`, **không cần Node.js / bước build**, chạy không cần mạng |
 
 PrimeVue giữ ở bản 4 (giấy phép MIT); từ bản 5 PrimeVue đổi sang giấy phép thương mại có điều kiện.
 

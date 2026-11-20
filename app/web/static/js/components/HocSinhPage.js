@@ -23,7 +23,7 @@ export default {
     // lớp lọc sẵn (vd. lớp ghép) có thể không nằm trong danh sách lớp: vẫn hiện trong ô chọn
     const options = computed(() => !cls.value || HS.value.classes.includes(cls.value) ? HS.value.classes : [...HS.value.classes, cls.value]);
     async function schedule(s) {
-      const r = await openDialog(ScheduleDialog, { header: `Lịch bán trú — ${s.ten}`, width: "34rem", data: { s } });
+      const r = await openDialog(ScheduleDialog, { header: `Lịch bán trú: ${s.ten}`, width: "34rem", data: { s } });
       if (r) handle(await api("set_schedule", s.id, r.bt_tu, r.cat_tu, r.t6));  // xong thì store.S đổi → watch tải lại bảng
     }
     return { cls, q, bt, HS, options, openPath, schedule };

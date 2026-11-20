@@ -4,6 +4,7 @@
    Theo dõi bằng audit hook của Python: mọi lần mở / xóa / đổi tên file, tạo thư mục, liệt kê thư mục.
 2. Không viết cứng: giá trị trong app/config.py không được viết lại ở file khác (Python và JavaScript).
 3. Mọi thứ của app nằm trong thư mục chứa .exe: không %APPDATA%, %TEMP%, thư mục người dùng.
+4. Chữ giao diện, thông báo, tài liệu không dùng gạch dài, gạch ngắn, dấu trừ.
 """
 
 import ast
@@ -146,3 +147,15 @@ def test_nothing_outside_exe_folder():
     # .exe Nuitka giải nén vào thư mục con cạnh nó (mặc định của Nuitka là %TEMP%)
     run_app = (ROOT.parent / "run_app.py").read_text(encoding="utf-8")
     assert "# nuitka-project: --onefile-tempdir-spec={PROGRAM_BASE}_" in run_app
+
+
+# ---------------------------------------------------------------- 4. không dùng gạch dài
+def test_no_long_dashes_in_ui_and_docs():
+    """Chữ trên giao diện, thông báo, tài liệu không dùng gạch dài (—), gạch ngắn (–), dấu trừ (−):
+    dùng dấu hai chấm, dấu phẩy, dấu chấm hoặc ngoặc. Bộ đọc ô sổ vẫn hiểu các dấu này (viết \\u2013 trong regex)."""
+    root = ROOT.parent
+    files = [p for p in ROOT.rglob("*") if p.suffix in (".py", ".js", ".html", ".css") and "vendor" not in p.parts]
+    files += [root / n for n in ("README.md", "HUONG_DAN.md", "USER_STORIES.md", "CLAUDE.md")]
+    bad = [f"{p.relative_to(root)}:{i}" for p in files
+           for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1) if re.search("[—–−]", line)]
+    assert not bad, f"Có gạch dài / gạch ngắn / dấu trừ: {bad}"

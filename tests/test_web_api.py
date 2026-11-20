@@ -270,7 +270,7 @@ def test_book_must_be_xlsx(api, tmp_path):
 
 
 def test_reload_right_after_first_setup_keeps_unsaved_day(tmp_path, monkeypatch, roster):
-    """Bản .exe mới: thiết lập xong, điểm danh dở rồi tải lại trang (F5) — không mất thay đổi."""
+    """Bản .exe mới: thiết lập xong, điểm danh dở rồi tải lại trang (F5): không mất thay đổi."""
     from app import build_info, settings
     from tests.conftest import write_list
 

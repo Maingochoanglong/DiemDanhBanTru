@@ -1,4 +1,4 @@
-"""Đọc file Excel danh sách học sinh (.xls hoặc .xlsx) — nguồn duy nhất về học sinh của app.
+"""Đọc file Excel danh sách học sinh (.xls hoặc .xlsx): nguồn duy nhất về học sinh của app.
 (App chỉ ghi 3 cột lịch bán trú, khi giáo vụ bấm Lưu lịch: excel/roster_schedule.py.)
 
 Hai dạng file:

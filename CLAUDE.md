@@ -1,4 +1,4 @@
-# CLAUDE.md — đọc trước khi sửa mã
+# CLAUDE.md: đọc trước khi sửa mã
 
 App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao diện chạy trong trình duyệt, máy chủ Python chạy trên chính máy đó (127.0.0.1). Người dùng nói tiếng Việt: trả lời, chú thích, thông báo, commit đều viết **tiếng Việt**.
 
