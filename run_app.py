@@ -1,4 +1,29 @@
-"""Điểm khởi chạy app (dùng cho PyInstaller và chạy từ mã nguồn): python run_app.py"""
+"""Điểm khởi chạy app: python run_app.py
+
+Dựng file .exe: python -m nuitka run_app.py --file-version=<phiên bản> --product-version=<phiên bản>
+(Nuitka tự đọc các tùy chọn "nuitka-project" dưới đây; CI: .github/workflows/build-windows.yml).
+"""
+
+# nuitka-project: --mode=onefile
+# nuitka-project: --output-dir={MAIN_DIRECTORY}/dist
+# nuitka-project: --output-filename=DiemDanhBanTru.exe
+# mọi thứ của app nằm trong thư mục chứa .exe (không dùng %TEMP%, %APPDATA%): .exe tự giải nén vào thư mục con
+# cạnh nó, thoát app thì tự xóa. ({PROGRAM_BASE} = đường dẫn .exe bỏ đuôi; {PROGRAM_DIR} thì Nuitka hiểu là thư mục hiện hành)
+# nuitka-project: --onefile-tempdir-spec={PROGRAM_BASE}_dang_chay_{PID}_{TIME}
+# nuitka-project: --include-data-dir={MAIN_DIRECTORY}/app/web/static=app/web/static
+# nuitka-project: --product-name=Điểm danh bán trú
+# nuitka-project: --file-description=Điểm danh bán trú
+# nuitka-project: --company-name=DiemDanhBanTru
+# nuitka-project: --copyright=Điểm danh bán trú
+# nuitka-project: --assume-yes-for-downloads
+# openpyxl, uvicorn chỉ thử import các gói này khi máy có sẵn (app không dùng): không đóng kèm, .exe nhỏ hơn
+# nuitka-project: --nofollow-import-to=numpy
+# nuitka-project: --nofollow-import-to=PIL
+# nuitka-project: --nofollow-import-to=lxml
+# nuitka-project: --nofollow-import-to=yaml
+# nuitka-project-if: {OS} == "Windows":
+#    nuitka-project: --windows-console-mode=disable
+#    nuitka-project: --enable-plugins=tk-inter
 
 from app.main import main
 

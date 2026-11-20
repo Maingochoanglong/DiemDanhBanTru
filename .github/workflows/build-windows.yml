@@ -13,6 +13,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      NUITKA_CACHE_DIR: ${{ github.workspace }}/.nuitka-cache  # giữ giữa các lần dựng: dịch lại nhanh hơn
     steps:
       - uses: actions/checkout@v4
 
@@ -21,28 +23,30 @@ jobs:
           python-version: "3.12"
 
       - name: Cài thư viện
-        env:
-          # Tự dựng phần khởi động (bootloader) của PyInstaller trên máy này thay vì dùng bản dựng sẵn:
-          # bản dựng sẵn dùng chung cho rất nhiều chương trình nên hay bị Windows Defender / phần mềm
-          # diệt virus nhận nhầm là mã độc.
-          PYINSTALLER_COMPILE_BOOTLOADER: "1"
-        run: |
-          python -m pip install --no-binary pyinstaller pyinstaller==6.11.1
-          python -m pip install -r requirements.txt -r requirements-dev.txt
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - uses: actions/cache@v4
+        with:
+          path: .nuitka-cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}-${{ github.sha }}
+          restore-keys: nuitka-${{ runner.os }}-${{ hashFiles('requirements*.txt') }}-
 
       - name: Chạy test
         run: python -m pytest -q
 
-      - name: Dựng file .exe
-        # giao diện web (HTML/Bootstrap) nằm trong app/web/static: đóng kèm vào file .exe.
-        # Kèm thông tin phiên bản (tên app, mô tả) và không nén UPX: Windows ít cảnh báo nhầm hơn.
+      - name: Kiểm tra mã (code thừa, import không dùng…)
+        run: python -m ruff check app tests
+
+      - name: Dựng file .exe (Nuitka)
+        # Nuitka dịch mã Python sang C rồi biên dịch (MSVC có sẵn trên máy dựng): ít bị phần mềm diệt virus
+        # nhận nhầm. Tùy chọn dựng (một file, giao diện web đóng kèm, tên app…) ghi ở đầu run_app.py.
         run: |
-          python packaging/make_version_file.py build/version_info.txt
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          # mã bản dựng: lần đầu mở một bản .exe mới, app bắt thiết lập lại (nơi đặt file, sổ, danh sách)
+          # mã bản dựng: lần đầu mở một bản .exe mới, app bắt thiết lập lại (sổ, danh sách)
           python -c "import os; open('app/_build.py', 'w').write('BUILD = %r\n' % os.environ['GITHUB_SHA'][:7])"
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          pyinstaller --noconfirm --onefile --windowed --noupx --name DiemDanhBanTru --version-file build/version_info.txt --add-data "app/web/static;app/web/static" run_app.py
+          $v = python -c "import app; print(app.__version__)"
+          python -m nuitka run_app.py --file-version=$v --product-version=$v
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Kiểm tra thông tin phiên bản trong file .exe
         shell: pwsh
@@ -85,7 +89,7 @@ jobs:
             else
               gh release create ban-moi-nhat dist/DiemDanhBanTru.exe \
                 --target "$GITHUB_SHA" --prerelease \
-                --title "Điểm danh bán trú — bản mới nhất" --notes "$notes" || uploaded
+                --title "Điểm danh bán trú, bản mới nhất" --notes "$notes" || uploaded
             fi
           }
           for i in 1 2 3 4; do

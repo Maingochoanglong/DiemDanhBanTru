@@ -1,0 +1,117 @@
+# CLAUDE.md: đọc trước khi sửa mã
+
+App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao diện chạy trong trình duyệt, máy chủ Python chạy trên chính máy đó (127.0.0.1). Người dùng nói tiếng Việt: trả lời, chú thích, thông báo, commit đều viết **tiếng Việt**.
+
+## Luật viết mã (áp dụng cho cả backend lẫn frontend)
+
+1. **Có sẵn thì dùng, không viết lại.** Thứ tự ưu tiên:
+   - hàm đã có trong repo (tìm bằng grep trước khi viết);
+   - thành phần / tính năng có sẵn của thư viện đang dùng: FastAPI, openpyxl, xlrd (backend); Vue 3, PrimeVue 4 (frontend);
+   - chỉ khi cả hai đều không có mới viết mới, và viết ngắn nhất có thể.
+
+   Ví dụ đã áp dụng:
+   - Hộp hỏi dùng `DynamicDialog` + `ask()` (`js/dialogs.js`), không tự dựng hộp thoại.
+   - Bảng dùng `DataTable`; thông báo dùng `Toast`.
+   - Ghi Excel an toàn dùng chung `excel/files.py:safe_save` (sổ chính lẫn sổ tạm).
+   - Chặn tên miền lạ dùng `TrustedHostMiddleware` của FastAPI.
+2. **Thêm thư viện mới chỉ khi thật cần.** Frontend phải là bản dựng sẵn đóng kèm trong `app/web/static/vendor/` (không cần Node, không có bước build, chạy không cần mạng). Không dùng PrimeVue 5 trở lên: bản 5 đổi sang giấy phép thương mại.
+3. **Bỏ code thừa ngay khi bỏ tính năng**: hàm, API, thành phần Vue, lớp CSS, test, chữ trong tài liệu. Các công cụ giữ việc này:
+   - `tests/test_static.py` báo lỗi khi có hàm Python mà giao diện không gọi, hoặc thành phần đăng ký mà không dùng;
+   - `ruff check` (luật trong `pyproject.toml`: import / biến / tham số không dùng, mã cũ bị comment, cấu trúc thừa);
+   - `python -m vulture app --min-confidence 60` giúp tìm hàm chết. Lưu ý vulture báo nhầm các hàm của `Api` (giao diện gọi theo tên) và thuộc tính openpyxl.
+4. **Mã dễ đọc cho người và AI**:
+   - mỗi file một việc, có docstring/chú thích đầu file nói file đó làm gì;
+   - tên hàm rõ nghĩa; mỗi trang / hộp thoại là một file trong `js/components/`;
+   - không viết lớp trừu tượng "để dành". Sửa chỗ nào thì sửa đúng file của việc đó (xem bản đồ dưới).
+5. **Chỉ đọc / ghi 4 file**: CaiDat.txt, file danh sách, sổ đang chọn (CaiDat.txt) và sổ tạm của sổ đó. Không file nhật ký, không file phụ khi ghi (`files.safe_save` dựng file trong bộ nhớ rồi ghi đè 1 lần), không tự mở / liệt kê file khác trong thư mục, không lưu gì ở trình duyệt (localStorage…). `tests/test_rules.py` theo dõi mọi lần mở / xóa / đổi tên file / liệt kê thư mục bằng audit hook trong cả một ngày làm việc.
+   - **Mọi thứ nằm trong thư mục chứa .exe**: không dùng `%APPDATA%`, `%TEMP%`, thư mục người dùng (gỡ app = xóa thư mục). Bản .exe Nuitka giải nén vào thư mục con cạnh nó (`--onefile-tempdir-spec={PROGRAM_BASE}_…` ở `run_app.py`), thoát thì tự xóa. `test_rules.test_nothing_outside_exe_folder` kiểm tra.
+6. **Không viết cứng giá trị**: mọi giá trị cố định đặt tên trong `app/config.py` (người dùng cần đổi thì thêm khóa vào `settings.KEYS`, đọc ở CaiDat.txt). JavaScript lấy qua `CONFIG` (`js/api.js` ← `/config.js`). `tests/test_rules.py` báo lỗi khi chuỗi / số cổng của config bị viết lại ở file khác, hoặc có số thực trần ngoài config.
+7. **Dữ liệu thật của học sinh không bao giờ vào repo.** `.gitignore` chặn `*.xls`, `*.xlsx`, `CaiDat.txt`. Test chỉ dùng tên bịa (`tests/conftest.py`). File thật người dùng gửi chỉ để trong thư mục tạm của phiên.
+8. **Giao diện theo [USER_STORIES.md](USER_STORIES.md)** (giáo vụ làm gì hằng ngày / thỉnh thoảng / hiếm khi).
+   - Thêm nút, trang, hộp thoại, bộ lọc: phải chỉ ra story nào cần. Không có story thì không thêm.
+   - Hai cách làm cùng một việc thì bỏ một. Việc hiếm không đặt ngang hàng việc hằng ngày (vd. **Đặt lại** là nút chữ nhỏ).
+   - Sửa giao diện xong thì cập nhật cột "Trên app" của USER_STORIES.md.
+9. **Giao diện theo hệ lưới** (đầu `static/app.css`):
+   - mỗi khu vực (thanh bên, thanh ngày, phần đầu trang, bảng, thanh lưu, từng hộp thoại) là một lưới CSS riêng;
+   - khoảng cách chỉ dùng biến `--s1`…`--s6` (4, 8, 12, 16, 24 px) làm `gap` / `padding`; không đặt margin cho từng chữ / nút;
+   - hàng trên hàng dưới cùng loại thì chung cột (vd. "Cần xem" và "Chưa báo": cột nhãn `--label-w`, nút mã lớp rộng `--chip-w`;
+     các dòng file ở Cài đặt dùng `subgrid`); mép trái nội dung mọi khu vực cùng lề `--s3`;
+   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` / `.inline-end` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại).
+10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
+    `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
+
+## App chỉ làm việc với 3 file (+ sổ tạm)
+
+| File | Ai sửa | Mã đọc/ghi |
+|---|---|---|
+| **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App đọc; file vừa sửa thì đọc lại ngay ở lần gọi kế tiếp (`Workspace.sync_list`). App chỉ ghi 3 cột lịch khi giáo vụ bấm **Lưu lịch** (trang Học sinh). | `excel/roster_import.py:load_list`, `excel/roster_schedule.py` |
+| **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
+| **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
+
+Thư mục app = thư mục chứa CaiDat.txt (`Workspace.app_dir`): hộp chọn file mở sẵn ở đây; sổ / danh sách nằm trong đó thì CaiDat.txt
+ghi đường dẫn tương đối (`settings.PATH_KEYS`), chép cả thư mục đi nơi khác vẫn chạy.
+
+- **Cột của file danh sách:** Lớp · Họ tên · Ngày sinh · Bán trú (Có/Không, hoặc chữ đỏ) · Tên gọi khác · Ăn ghép · Lớp tính BT (tùy chọn)
+  · **Ăn từ** · **Cắt từ** · **Cắt thứ 6** · Ghi chú.
+  - 3 cột lịch bán trú (ngày / x) do hộp Lịch bán trú ghi (`config.SCHEDULE_COLUMNS`); thiếu cột thì app thêm vào cuối bảng.
+  - Ghi chú chỉ là chữ tự do: app hiện ra, không đọc lịch từ đây.
+  - Sheet **Nhóm ăn** (tùy chọn) quy định bảng suất ăn của tờ ngày mới.
+- **Mã học sinh** = `lớp|họ tên|ngày sinh`: không đổi giữa các lần đọc file.
+- **Sổ tạm** `… tamthoi.xlsx` trong thư mục app, cạnh CaiDat.txt (`excel/tamthoi.py`, `Workspace.app_dir`):
+  - ghi **ngay sau mỗi thao tác**: `Api.state()` gọi `Workspace.autosave()`;
+  - khi bấm Lưu: ghi sổ tạm, ghi sheet vào sổ, rồi xóa sổ tạm;
+  - mất điện thì lần mở sau app hỏi khôi phục.
+- **Không có** file dữ liệu riêng, nhật ký, thư mục sao lưu. Sổ tự nhớ các sheet app đã lưu bằng một thuộc tính ẩn của file (`sobook.saved_sheets`), để mở lại ngày mà lớp nào cũng đủ vẫn là "đã báo".
+- Ngày đang mở còn thay đổi chưa lưu thì không cho đổi sổ / file danh sách (`Api._unsaved_error`).
+
+## Bản đồ mã nguồn
+
+```
+run_app.py                điểm khởi chạy; đầu file có các tùy chọn dựng .exe bằng Nuitka ("# nuitka-project:")
+app/main.py               main(), --selftest (CI chạy trên file .exe; Excel thử trong bộ nhớ), lỗi nặng hiện hộp thông báo
+app/config.py             MỌI giá trị cố định (cổng, tên file, thời gian chờ, ngưỡng, lịch học…); phần UI gửi qua /config.js
+app/settings.py           CaiDat.txt
+app/service.py            Workspace: điều phối (mở ngày, lưu, sổ tạm, sổ tháng mới, bảng suất ăn theo Nhóm ăn)
+app/core/                 xử lý thuần, không đụng file / giao diện
+  models.py               Student, ClassInfo, Roster (tra theo lớp, tên ghi sổ)
+  day.py                  DayState: 1 ngày điểm danh (vắng, đã báo, ghi chú, sĩ số, undo)
+  matcher.py, names.py, parser.py, text.py, search.py   so khớp / chuẩn hóa tên tiếng Việt
+  meals.py                bảng suất ăn, ăn ghép
+app/excel/                đọc/ghi Excel
+  roster_import.py        đọc file danh sách (cả 3 cột lịch) + sheet Nhóm ăn
+  roster_schedule.py      ghi 3 cột lịch của một em (hộp Lịch bán trú)
+  sobook.py               sổ tháng: tìm hàng lớp, sao chép sheet, ghi ngày, dựng bảng suất ăn
+  tamthoi.py              sổ tạm
+  files.py                safe_save, is_locked, open_file/open_folder
+app/web/
+  api.py                  Api: mọi hàm giao diện gọi (POST /api/<tên hàm>, tham số là mảng JSON)
+  server.py               FastAPI + uvicorn (luồng riêng), chặn trang web lạ, /ping, /config.js
+  run.py                  mở trình duyệt, hộp chọn file tkinter ở luồng chính, thoát khi đóng thẻ, BrowserApi.quit
+  static/index.html       nạp vendor/ rồi js/main.js
+  static/app.css          bố cục + màu trạng thái lớp (dùng biến màu --p-* của theme PrimeVue)
+  static/js/main.js       khởi động Vue + PrimeVue (theme Aura, chữ tiếng Việt, đăng ký thành phần)
+  static/js/api.js        api(name, ...args), conn (máy chủ đã tắt)
+  static/js/store.js      trạng thái chung + thao tác dùng nhiều nơi (lưu, đổi ngày, mở lớp, chọn file, thoát)
+  static/js/dialogs.js    ask / info / toast / openDialog (PrimeVue DialogService, ToastService)
+  static/js/util.js       so khớp tên khi gõ, nhặt tên trong tin Zalo dán vào (namesIn), ngày
+  static/js/components/   App (khung), TopBar, DiemDanhPage, ClassDialog, ResolveDialog,
+                          SuatAnPage, HocSinhPage, ScheduleDialog, CaiDatPage, SetupDialog, AskBody
+tests/                    pytest, dữ liệu bịa; conftest.write_list / make_workspace dựng đủ 3 file;
+                          test_js_names.py chạy util.js bằng Node (máy không có Node thì bỏ qua)
+```
+
+Thêm một thao tác mới thì:
+1. thêm hàm công khai trong `Api` (`api.py`), trả về dict JSON (thường kèm `"state": self.state()`);
+2. giao diện gọi `api("ten_ham", ...)`;
+3. thêm test trong `tests/test_web_api.py`.
+
+## Kiểm tra trước khi commit
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest -q
+python -m ruff check app tests
+python -m app.web.server 8765 <đường dẫn CaiDat.txt>   # chạy thử giao diện: http://127.0.0.1:8765 (API: /docs)
+```
+
+Sửa giao diện thì chạy thử bằng Playwright (Chromium có sẵn) và xem ảnh chụp. CI (`.github/workflows/build-windows.yml`) chạy test, ruff, dựng `.exe` bằng **Nuitka** trên Windows (`python -m nuitka run_app.py`, tùy chọn ở đầu `run_app.py`) và chạy `--selftest`. Bản Nuitka: thư mục chứa `.exe` lấy từ `__compiled__.containing_dir` (`settings.default_path`); giao diện đóng kèm nằm cạnh mã đã dịch (`server.static_dir`).

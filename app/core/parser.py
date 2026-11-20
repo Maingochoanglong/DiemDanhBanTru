@@ -15,7 +15,7 @@ _COUNT = re.compile(r"(?<!\d)(\d{1,3})\s*/\s*(\d{1,3})(?!\d)")
 _LOP_WORD = re.compile(r"(?i)(?<!\w)l[ớo]p(?!\w)")
 _HOC_SINH = re.compile(r"(?i)(?<!\w)h[ọo]c\s+sinh(?!\w)")
 _ABBR = re.compile(r"(?<![^\W\d_])([^\W\d_])\.\s*(?=[^\W\d_])")
-_SPLIT = re.compile(r"[,;:()\[\]{}\n\r/+.!?…\-–—]|\s+(?:và|va|vs)\s+", re.IGNORECASE)
+_SPLIT = re.compile(r"[,;:()\[\]{}\n\r/+.!?…\-\u2013\u2014]|\s+(?:và|va|vs)\s+", re.IGNORECASE)  # (gạch ngang, gạch dài trong ô sổ)
 
 STOP = {
     "vắng", "nghỉ", "nghĩ", "em", "hs", "các", "gồm", "có", "không", "phép", "đủ",

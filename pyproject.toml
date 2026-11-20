@@ -12,4 +12,8 @@ line-length = 130
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["F", "E9", "B", "UP"]
+# F: import / biến không dùng; ARG: tham số không dùng; ERA: mã cũ bị comment; PIE: cấu trúc thừa
+select = ["F", "E9", "B", "UP", "ARG", "ERA", "PIE"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG"]  # hàm giả trong test nhận đủ tham số như hàm thật

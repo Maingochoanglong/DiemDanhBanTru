@@ -2,14 +2,17 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-build/
 dist/
-*.spec
 .venv/
 venv/
 
 # Không đưa dữ liệu thật của học sinh lên GitHub
 *.xls
 *.xlsx
-SaoLuu/
 app/_build.py
+
+# cài đặt của app khi chạy từ mã nguồn (cạnh run_app.py)
+CaiDat.txt
+
+# Nuitka: bộ nhớ đệm dịch (CI); file dựng nằm trong dist/
+.nuitka-cache/

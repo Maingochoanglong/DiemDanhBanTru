@@ -54,3 +54,35 @@ def make_roster() -> Roster:
 @pytest.fixture
 def roster() -> Roster:
     return make_roster()
+
+
+def write_list(path, roster: Roster, groups=None):
+    """Ghi danh sách học sinh ra file Excel như file giáo vụ dùng (3 cột lịch bán trú: Ăn từ, Cắt từ, Cắt thứ 6).
+    groups: các dòng sheet Nhóm ăn [(tên dòng, các lớp, mã ghép lẻ)]."""
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Lớp", "Họ tên", "Ngày sinh", "Bán trú", "Tên gọi khác", "Ăn ghép", "Ăn từ", "Cắt từ", "Cắt thứ 6", "Ghi chú"])
+    for s in roster.students:
+        bt = s.ban_tru and not s.bt_tu  # có ngày "Ăn từ" là tự tính ăn bán trú từ ngày đó
+        ws.append([s.lop, s.ho_ten, s.ngay_sinh, "Có" if bt else "Không", s.ten_ghi_so, s.an_ghep,
+                   s.bt_tu, s.cat_tu, "x" if s.cat_thu6 else None, s.ghi_chu])
+    if groups is not None:
+        g = wb.create_sheet("Nhóm ăn")
+        g.append(["Tên dòng", "Các lớp ăn chung", "Mã ghép lẻ"])
+        for row in groups:
+            g.append(list(row))
+    wb.save(path)
+    return path
+
+
+def make_workspace(tmp_path, roster: Roster, book=None, groups=None):
+    """Workspace dùng đúng 3 file: CaiDat.txt, file danh sách học sinh, sổ điểm danh."""
+    from app.service import Workspace
+
+    ws = Workspace(tmp_path / "CaiDat.txt")
+    ws.set_list(write_list(tmp_path / "DanhSach.xlsx", roster, groups))
+    if book is not None:
+        ws.set_book(book)
+    return ws

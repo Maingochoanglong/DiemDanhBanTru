@@ -6,6 +6,7 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 
+from .. import config
 from .names import compute_display_names
 from .text import class_sort_key, clean_spaces, fold
 
@@ -47,7 +48,7 @@ class Student:
 
     def auto_absent_reason(self, day: dt.date) -> str:
         """Lý do vắng tự động trong ngày, '' nếu không có."""
-        if self.cat_thu6 and day.weekday() == 4:
+        if self.cat_thu6 and day.weekday() == config.FRIDAY:
             return "cắt thứ 6"
         return ""
 
@@ -76,11 +77,6 @@ class Roster:
     _n: int = field(default=-1, repr=False, compare=False)
 
     # ----- truy vấn -----
-    def invalidate(self) -> None:
-        """Gọi sau khi thêm/bớt em hoặc đổi lớp của em (các bảng tra nhanh được dựng lại)."""
-        self._display = None
-        self._by_class = self._by_id = None
-
     def _index(self) -> dict[str, list[Student]]:
         """Bảng tra em theo lớp tính bán trú (dựng 1 lần; thêm/bớt em thì tự dựng lại)."""
         if self._by_class is None or self._n != len(self.students):
@@ -88,6 +84,7 @@ class Roster:
             for s in self.students:
                 idx.setdefault(s.lop_tinh, []).append(s)
             self._by_class, self._by_id, self._n = idx, {s.id: s for s in self.students}, len(self.students)
+            self._display = None
         return self._by_class
 
     def class_codes(self) -> list[str]:
@@ -113,6 +110,7 @@ class Roster:
     def display_name(self, s: Student) -> str:
         if s.ten_ghi_so:
             return s.aliases()[0] if s.aliases() else s.ten_ghi_so
+        self._index()  # danh sách đổi số em thì tính lại tên ghi sổ
         if self._display is None:
             self._display = self._compute_display()
         return self._display.get(s.id, s.ho_ten)
@@ -131,17 +129,3 @@ class Roster:
         """Sắp theo thứ tự trong danh sách trường (thứ tự lúc nhập)."""
         pos = {s.id: i for i, s in enumerate(self.students)}
         return sorted(items, key=lambda s: pos.get(s.id, 10**9))
-
-    def ghep_codes(self) -> dict[str, list[Student]]:
-        out: dict[str, list[Student]] = {}
-        for s in self.students:
-            if s.ban_tru and s.an_ghep:
-                out.setdefault(s.an_ghep, []).append(s)
-        return out
-
-    def next_id(self) -> str:
-        n = 0
-        for s in self.students:
-            if s.id.startswith("HS") and s.id[2:].isdigit():
-                n = max(n, int(s.id[2:]))
-        return f"HS{n + 1:04d}"
