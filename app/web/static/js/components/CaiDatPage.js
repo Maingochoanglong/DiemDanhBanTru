@@ -29,24 +29,26 @@ export default {
     <Card>
       <template #title>3 file app làm việc</template>
       <template #subtitle>
-        <div class="row-gap flex-wrap">
+        <div class="settings-head">
           <span>Thư mục app: <b class="text-break">{{ s.app_dir }}</b> (file .exe, {{ fileName(s.settings_file || "") }}, sổ tạm). Gỡ app: xóa thư mục này.</span>
           <Button label="Mở thư mục" icon="pi pi-folder-open" severity="secondary" outlined size="small" @click="openPath('settings_folder')" />
         </div>
       </template>
       <template #content>
-        <div v-for="f in files" :key="f.key" class="file-row">
-          <i :class="['pi', f.icon, 'file-icon']"></i>
-          <div class="grow min-w-0">
-            <div class="text-muted small">{{ f.label }}</div>
-            <div class="fw-semibold text-truncate" :title="s[f.key]">{{ s[f.key] ? fileName(s[f.key]) : "" }}<span v-if="!s[f.key]" class="text-muted fw-normal">chưa có</span></div>
-            <div v-if="f.help" class="text-muted small" v-html="f.help"></div>
-            <Message v-for="e in f.errors" severity="warn" size="small" class="mt-1">{{ e }}</Message>
-            <Message v-if="outside(f.key)" severity="info" size="small" class="mt-1">File này nằm ngoài thư mục app. Nên chép vào thư mục app rồi chọn lại, để mọi file nằm chung một chỗ.</Message>
-          </div>
-          <div class="row-gap">
-            <Button v-for="b in f.buttons" :key="b.label" :label="b.label" :icon="'pi ' + b.icon" :severity="b.open ? 'secondary' : undefined"
-              :outlined="!!b.open" class="text-nowrap" @click="click(b)" />
+        <div class="files">
+          <div v-for="f in files" :key="f.key" class="file-row">
+            <i :class="['pi', f.icon, 'file-icon']"></i>
+            <div class="stack">
+              <div class="text-muted small">{{ f.label }}</div>
+              <div class="fw-semibold text-truncate" :title="s[f.key]">{{ s[f.key] ? fileName(s[f.key]) : "" }}<span v-if="!s[f.key]" class="text-muted fw-normal">chưa có</span></div>
+              <div v-if="f.help" class="text-muted small" v-html="f.help"></div>
+              <Message v-for="e in f.errors" severity="warn" size="small">{{ e }}</Message>
+              <Message v-if="outside(f.key)" severity="info" size="small">File này nằm ngoài thư mục app. Nên chép vào thư mục app rồi chọn lại, để mọi file nằm chung một chỗ.</Message>
+            </div>
+            <div class="inline-end">
+              <Button v-for="b in f.buttons" :key="b.label" :label="b.label" :icon="'pi ' + b.icon" :severity="b.open ? 'secondary' : undefined"
+                :outlined="!!b.open" class="text-nowrap" @click="click(b)" />
+            </div>
           </div>
         </div>
       </template>

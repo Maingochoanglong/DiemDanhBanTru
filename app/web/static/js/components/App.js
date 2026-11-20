@@ -61,7 +61,7 @@ export default {
         <Button :icon="sideMin ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'" text rounded severity="secondary"
           :title="sideMin ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'" @click="toggleSide" />
       </div>
-      <Menu :model="nav" class="nav">
+      <Menu :model="nav">
         <template #item="{ item, props }">
           <a v-bind="props.action" :class="['nav-link', { active: store.page === item.page }]" :title="item.label">
             <i :class="item.icon"></i><span class="lbl">{{ item.label }}</span></a>
@@ -81,7 +81,7 @@ export default {
   <DynamicDialog />
   <Toast position="top-center" />  <!-- không che nút Lưu ở góc dưới -->
   <Dialog :visible="conn.gone" modal :closable="false" :closeOnEscape="false" :draggable="false" :header="conn.quit ? 'Đã thoát app' : 'App đã tắt'">
-    <div class="text-center"><i class="pi pi-power-off gone-icon"></i>
-      <p class="text-muted mb-0">Có thể đóng thẻ trình duyệt này.<br>Muốn dùng tiếp: mở lại <b>DiemDanhBanTru.exe</b>.</p></div>
+    <div class="gone"><i class="pi pi-power-off gone-icon"></i>
+      <p class="text-muted">Có thể đóng thẻ trình duyệt này.<br>Muốn dùng tiếp: mở lại <b>DiemDanhBanTru.exe</b>.</p></div>
   </Dialog>`,
 };

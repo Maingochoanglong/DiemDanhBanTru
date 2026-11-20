@@ -27,7 +27,7 @@ export default {
     function gotoUnresolved() { if (S.value.unresolved) openClass(S.value.need_look[0]); }
     async function reset() {
       const k = await ask("Đặt lại điểm danh ngày này?", `<p>Mọi lớp về <b>chưa báo</b>, bỏ hết tên vắng đã chọn. Ghi chú và sĩ số giữ nguyên.</p>
-        <p class="text-muted mb-0">Dùng khi sheet trong sổ đã tạo sẵn nên app hiểu nhầm là các lớp đã điểm danh. Sổ chỉ thay đổi khi bấm <b>Lưu vào sổ</b>; bấm <b>Hoàn tác</b> nếu nhầm.</p>`,
+        <p class="text-muted">Dùng khi sheet trong sổ đã tạo sẵn nên app hiểu nhầm là các lớp đã điểm danh. Sổ chỉ thay đổi khi bấm <b>Lưu vào sổ</b>; bấm <b>Hoàn tác</b> nếu nhầm.</p>`,
       [{ key: "ok", label: "Đặt lại", severity: "danger", outlined: false }, { key: "no", label: "Thôi" }], { icon: "pi-refresh" });
       if (k === "ok") handle(await api("reset_day"));
     }
@@ -39,38 +39,37 @@ export default {
   },
   template: /* html */`
   <section class="page" id="page-dd">
-    <Message v-if="S.hint" severity="warn" :icon="S.hint_month ? 'pi pi-calendar-plus' : 'pi pi-cog'" class="clickable" @click="hintClick">{{ S.hint }}</Message>
-    <div v-if="S.info.length" class="text-muted small"><i class="pi pi-info-circle me-1"></i>{{ S.info.join(" · ") }}</div>
-
-    <div v-if="S.need_look.length" class="row-gap flex-wrap">
-      <span class="text-danger fw-semibold"><i class="pi pi-exclamation-triangle me-1"></i>Cần xem ({{ S.need_look.length }}):</span>
-      <Button v-for="c in S.need_look.slice(0, shown)" :key="c" :label="c" size="small" severity="danger" outlined class="py-0" @click="openClass(c)" />
-      <span v-if="S.need_look.length > shown" class="text-muted small">và {{ S.need_look.length - shown }} lớp khác</span>
-      <span class="text-muted small">(xem chữ đỏ ở cột Ghi chú)</span>
-    </div>
-    <div class="row-gap flex-wrap">
-      <span v-if="!S.unreported.length && rows.length" class="text-success small"><i class="pi pi-check-circle me-1"></i>Các lớp đều đã báo</span>
-      <template v-else>
-        <span class="text-muted"><i class="pi pi-hourglass me-1"></i>Chưa báo ({{ S.unreported.length }}):</span>
-        <Button v-for="c in S.unreported.slice(0, shown)" :key="c" :label="c" size="small" severity="secondary" outlined class="py-0" @click="openClass(c)" />
-        <span v-if="S.unreported.length > shown" class="text-muted small">và {{ S.unreported.length - shown }} lớp khác</span>
+    <div class="page-top notes">
+      <Message v-if="S.hint" severity="warn" :icon="S.hint_month ? 'pi pi-calendar-plus' : 'pi pi-cog'" class="full clickable" @click="hintClick">{{ S.hint }}</Message>
+      <div v-if="S.info.length" class="full label text-muted small"><i class="pi pi-info-circle"></i>{{ S.info.join(" · ") }}</div>
+      <template v-if="S.need_look.length">
+        <span class="label text-danger fw-semibold" title="Lớp có tên trong sổ chưa xác định hoặc sĩ số lệch: xem chữ đỏ ở cột Ghi chú">
+          <i class="pi pi-exclamation-triangle"></i>Cần xem ({{ S.need_look.length }}):</span>
+        <div class="chips">
+          <Button v-for="c in S.need_look.slice(0, shown)" :key="c" :label="c" size="small" severity="danger" outlined @click="openClass(c)" />
+          <span v-if="S.need_look.length > shown" class="more text-muted small">và {{ S.need_look.length - shown }} lớp khác</span>
+        </div>
+      </template>
+      <span v-if="!S.unreported.length && rows.length" class="full label text-success small"><i class="pi pi-check-circle"></i>Các lớp đều đã báo</span>
+      <template v-else-if="S.unreported.length">
+        <span class="label text-muted"><i class="pi pi-hourglass"></i>Chưa báo ({{ S.unreported.length }}):</span>
+        <div class="chips">
+          <Button v-for="c in S.unreported.slice(0, shown)" :key="c" :label="c" size="small" severity="secondary" outlined @click="openClass(c)" />
+          <span v-if="S.unreported.length > shown" class="more text-muted small">và {{ S.unreported.length - shown }} lớp khác</span>
+        </div>
       </template>
     </div>
 
-    <div class="sheet">
+    <div class="sheet box">
       <div class="sheet-head">
         <b v-if="S.totals">Sĩ số {{ S.totals.si }} · Vắng {{ S.totals.vang }} · Hiện diện {{ S.totals.hd }}</b>
         <Tag v-if="meal" :severity="meal.ok ? 'success' : 'danger'" :icon="meal.ok ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'"
           :value="meal.text" class="clickable" @click="store.page = 'sa'" />
-        <span class="legend ms-auto" title="Bấm vào một lớp để chọn em vắng">
-          <span><span class="dot muted"></span>chưa báo</span><span><span class="dot ok"></span>đủ</span>
-          <span><span class="dot warn"></span>có vắng</span><span><span class="dot err"></span>cần xem</span>
-        </span>
       </div>
       <DataTable :value="rows" scrollable scrollHeight="flex" :rowClass="rowClass" class="so" size="small"
         @row-click="e => e.data.kind === 'class' && openClass(e.data.code)">
-        <template #empty><div class="text-center text-muted py-5">Chưa có danh sách học sinh. Vào Cài đặt để chọn file.</div></template>
-        <Column header="Lớp" class="w-lop"><template #body="{ data: r }">
+        <template #empty><div class="text-center text-muted">Chưa có danh sách học sinh. Vào Cài đặt để chọn file.</div></template>
+        <Column header="Lớp"><template #body="{ data: r }">
           <span v-if="r.kind === 'class'" :class="['dot', r.status]"></span>{{ r.code }}
           <span v-if="r.ma" class="text-muted small fw-normal"> ({{ r.ma }})</span></template></Column>
         <Column header="GVCN" class="gv"><template #body="{ data: r }"><div class="cut" :title="r.gvcn">{{ r.gvcn }}</div></template></Column>
@@ -88,7 +87,7 @@ export default {
       </DataTable>
     </div>
 
-    <div class="actionbar">
+    <div class="page-bottom actionbar">
       <span :class="['state', saveState.cls]" @click="gotoUnresolved">
         <i v-if="saveState.icon" :class="['pi', saveState.icon]"></i> {{ saveState.text }}<span v-if="saveState.sub" :class="{ 'text-danger': saveState.subErr }">{{ saveState.sub }}</span>
       </span>

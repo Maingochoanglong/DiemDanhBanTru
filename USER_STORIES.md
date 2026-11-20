@@ -66,6 +66,11 @@ giáo vụ vẫn tự chọn vắng mỗi ngày: app không làm việc này tha
 - Nút phóng to bảng chọn tên: bảng đã gần kín màn hình.
 - Dòng "Sổ ngày …: n tên vắng đã có, đều khớp danh sách": chỉ thêm chữ, không phải làm gì.
 - Đọc lịch từ chữ trong cột Ghi chú ("cắt thứ 6", "ăn từ 3/11"): giáo vụ muốn Ghi chú chỉ là ghi chú; lịch đặt ở hộp Lịch bán trú.
+- Dòng đỏ "n tên chưa rõ trong sổ, bấm để xử lý": trùng hàng **Cần xem** và dòng trạng thái thanh lưu.
+- Dòng TỔNG CỘNG cuối bảng: trùng dòng tổng ở đầu bảng (luôn thấy, không phải cuộn). Chú thích màu dòng: màu đã kèm chấm và chữ "(chưa báo)".
+- "(mới)" trên thanh ngày: trùng dòng "Ngày này chưa có trong sổ".
+- Cài đặt: nút "Thư mục" của sổ (trùng "Mở thư mục"), "Mở file" danh sách (trùng nút ở trang Học sinh), dòng nhắc đóng Excel (app báo đúng lúc gặp).
+- Chân trang Suất ăn khi các lớp ghép đã ghi nhóm đủ.
 - Trước đó: màn duyệt khi nhập danh sách, sửa cách ghép trong app, đọc ghi chú sổ, sao lưu.
 
 ## Không làm (giáo vụ đã nói không cần)

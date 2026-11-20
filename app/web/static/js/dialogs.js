@@ -11,8 +11,8 @@ export function openDialog(comp, { header = "", width = "40rem", data = {}, icon
   return new Promise(resolve => {
     ui.dialog.open(markRaw(comp), {
       props: { header, modal: true, draggable: false, style: { width }, breakpoints: { "960px": "92vw" } },
-      templates: icon || danger ? { header: markRaw({ render: () => h("span", { class: ["p-dialog-title", { "text-danger": danger }] },
-        [icon ? h("i", { class: `pi ${icon} me-2` }) : null, header]) }) } : undefined,
+      templates: icon || danger ? { header: markRaw({ render: () => h("span", { class: ["p-dialog-title dlg-title", { "text-danger": danger }] },
+        [icon ? h("i", { class: `pi ${icon}` }) : null, header]) }) } : undefined,
       data,
       onClose: opt => resolve(opt && opt.data !== undefined ? opt.data : null),
     });

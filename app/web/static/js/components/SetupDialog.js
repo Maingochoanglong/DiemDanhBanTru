@@ -30,19 +30,21 @@ export default {
   },
   template: /* html */`
   <Dialog :visible="!!s" modal :closable="false" :closeOnEscape="false" :draggable="false" header="Thiết lập trước khi điểm danh" class="setup-dialog">
-    <template v-if="s">
+    <div v-if="s" class="stack-3">
       <p class="text-muted">Bản app mới tải về: làm đủ 2 bước dưới đây rồi bấm <b>Bắt đầu điểm danh</b>.<br>
         Nên chép sổ và file danh sách vào thư mục chứa app trước (hộp chọn file mở sẵn thư mục này), để mọi file nằm chung một chỗ.</p>
-      <div v-for="(st, i) in steps" :key="st.key" :class="['setup-step', { done: st.done }]">
-        <div class="num"><i v-if="st.done" class="pi pi-check"></i><template v-else>{{ i + 1 }}</template></div>
-        <div class="grow">
-          <div class="fw-semibold">{{ st.title }}</div><div class="small text-muted">{{ st.desc }}</div>
-          <div v-if="st.value" class="path"><i class="pi pi-check-circle text-success me-1"></i>{{ st.value }}</div>
+      <div class="steps">
+        <div v-for="(st, i) in steps" :key="st.key" :class="['setup-step', { done: st.done }]">
+          <div class="num"><i v-if="st.done" class="pi pi-check"></i><template v-else>{{ i + 1 }}</template></div>
+          <div class="stack">
+            <div><div class="fw-semibold">{{ st.title }}</div><div class="small text-muted">{{ st.desc }}</div></div>
+            <div v-if="st.value" class="path"><i class="pi pi-check-circle text-success"></i> {{ st.value }}</div>
+          </div>
+          <div class="inline-end"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
         </div>
-        <div class="row-gap"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
       </div>
-      <div class="text-danger small mt-2 pre-line">{{ err || missing }}</div>
-    </template>
+      <div v-if="err || missing" class="text-danger small pre-line">{{ err || missing }}</div>
+    </div>
     <template #footer>
       <Button label="Bắt đầu điểm danh" icon="pi pi-check-circle" size="large" :disabled="!s || s.missing.length > 0" @click="finish" />
     </template>

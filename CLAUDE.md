@@ -31,6 +31,14 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - Thêm nút, trang, hộp thoại, bộ lọc: phải chỉ ra story nào cần. Không có story thì không thêm.
    - Hai cách làm cùng một việc thì bỏ một. Việc hiếm không đặt ngang hàng việc hằng ngày (vd. **Đặt lại** là nút chữ nhỏ).
    - Sửa giao diện xong thì cập nhật cột "Trên app" của USER_STORIES.md.
+9. **Giao diện theo hệ lưới** (đầu `static/app.css`):
+   - mỗi khu vực (thanh bên, thanh ngày, phần đầu trang, bảng, thanh lưu, từng hộp thoại) là một lưới CSS riêng;
+   - khoảng cách chỉ dùng biến `--s1`…`--s6` (4, 8, 12, 16, 24 px) làm `gap` / `padding`; không đặt margin cho từng chữ / nút;
+   - hàng trên hàng dưới cùng loại thì chung cột (vd. "Cần xem" và "Chưa báo": cột nhãn `--label-w`, nút mã lớp rộng `--chip-w`;
+     các dòng file ở Cài đặt dùng `subgrid`); mép trái nội dung mọi khu vực cùng lề `--s3`;
+   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` / `.inline-end` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại).
+10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
+    `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
 
 ## App chỉ làm việc với 3 file (+ sổ tạm)
 

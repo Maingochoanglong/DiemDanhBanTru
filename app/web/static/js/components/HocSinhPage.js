@@ -30,14 +30,14 @@ export default {
   },
   template: /* html */`
   <section class="page">
-    <div class="toolbar">
-      <Select v-model="cls" :options="options" placeholder="Tất cả lớp" showClear class="w-11rem" />
-      <IconField><InputIcon class="pi pi-search" /><InputText v-model="q" placeholder="Tìm tên (không cần dấu)" /></IconField>
-      <Checkbox v-model="bt" binary inputId="hsBt" /><label for="hsBt">Chỉ em ăn bán trú</label>
-      <span class="text-muted ms-2">{{ HS.rows.length }} em</span>
-      <Button label="Sửa danh sách" icon="pi pi-external-link" severity="secondary" outlined class="ms-auto" @click="openPath('cdhs_file')" />
+    <div class="page-top toolbar box">
+      <Select v-model="cls" :options="options" placeholder="Tất cả lớp" showClear fluid />
+      <IconField><InputIcon class="pi pi-search" /><InputText v-model="q" placeholder="Tìm tên (không cần dấu)" fluid /></IconField>
+      <label class="inline"><Checkbox v-model="bt" binary /> Chỉ em ăn bán trú</label>
+      <span class="text-muted">{{ HS.rows.length }} em</span>
+      <Button label="Sửa danh sách" icon="pi pi-external-link" severity="secondary" outlined class="end" @click="openPath('cdhs_file')" />
     </div>
-    <div class="sheet">
+    <div class="sheet box">
       <DataTable :value="HS.rows" scrollable scrollHeight="flex" size="small" stripedRows :rowClass="s => s.now ? 'clickable' : 'clickable text-muted'"
         @row-click="e => schedule(e.data)">
         <Column field="lop" header="Lớp" />
@@ -50,7 +50,7 @@ export default {
         <Column field="gc" header="Ghi chú" />
       </DataTable>
     </div>
-    <div class="text-muted small"><b>Bấm vào một em</b> để đặt lịch: bắt đầu ăn từ ngày, thôi ăn từ ngày, cắt thứ 6.
+    <div class="page-bottom text-muted small"><b>Bấm vào một em</b> để đặt lịch: bắt đầu ăn từ ngày, thôi ăn từ ngày, cắt thứ 6.
       Thêm / sửa học sinh: bấm <b>Sửa danh sách</b> (mở file Excel), lưu file là app đọc lại ngay.</div>
   </section>`,
 };

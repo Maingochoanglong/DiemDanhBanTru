@@ -10,8 +10,8 @@ export default {
     return { html, buttons, close, btnProps };
   },
   template: /* html */`
-    <div v-html="html"></div>
+    <div class="ask-body"><div v-html="html"></div>
     <div class="dlg-foot">
       <Button v-for="(b, i) in buttons" :key="b.key ?? i" :label="b.label" v-bind="btnProps(b, i)" :autofocus="i === 0" @click="close(b.key)" />
-    </div>`,
+    </div></div>`,
 };

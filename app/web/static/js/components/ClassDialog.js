@@ -61,29 +61,29 @@ export default {
       <div v-if="cls.D" class="cls-head">
         <div><div class="p-dialog-title">Lớp {{ cls.D.code }}{{ cls.D.ma ? " (" + cls.D.ma + ")" : "" }}</div>
           <div class="text-muted">{{ cls.D.gvcn ? "GVCN " + cls.D.gvcn : "" }}</div></div>
-        <div class="row-gap ms-auto me-3">
+        <div class="inline">
           <Tag severity="secondary" :value="'Sĩ số ' + cls.D.si" /><Tag severity="danger" :value="'Vắng ' + cls.D.vang" />
           <Tag severity="success" :value="'Hiện diện ' + cls.D.hd" />
         </div>
       </div>
     </template>
-    <template v-if="cls.D">
-      <Message v-for="w in cls.D.warnings" severity="error" icon="pi pi-exclamation-triangle" class="mb-2">{{ w }}</Message>
-      <Message v-if="cls.D.pending.length" severity="warn" class="mb-2">
-        <b>Tên trong sổ chưa khớp danh sách.</b> Bấm vào tên để chọn em đúng:
-        <div class="row-gap flex-wrap mt-2">
-          <Button v-for="p in cls.D.pending" :key="p.idx" :label="p.query" icon="pi pi-question-circle" severity="danger" @click="resolve(p)" />
-        </div>
+    <div v-if="cls.D" class="cls-body">
+      <Message v-for="w in cls.D.warnings" severity="error" icon="pi pi-exclamation-triangle">{{ w }}</Message>
+      <Message v-if="cls.D.pending.length" severity="warn">
+        <div class="stack"><span><b>Tên trong sổ chưa khớp danh sách.</b> Bấm vào tên để chọn em đúng:</span>
+          <div class="inline">
+            <Button v-for="p in cls.D.pending" :key="p.idx" :label="p.query" icon="pi pi-question-circle" severity="danger" @click="resolve(p)" />
+          </div></div>
       </Message>
-      <Message v-if="cls.D.not_bt.length" severity="info" class="mb-2">Sổ có ghi tên em <b>không ăn bán trú</b> (theo danh sách hiện nay):
+      <Message v-if="cls.D.not_bt.length" severity="info">Sổ có ghi tên em <b>không ăn bán trú</b> (theo danh sách hiện nay):
         {{ cls.D.not_bt.join(", ") }}. Giữ nguyên như sổ, không phải tên lạ.</Message>
-      <Message v-if="cls.D.extra.length" severity="error" icon="pi pi-exclamation-triangle" class="mb-2">
-        Tên trong sổ chưa xác định: <b>{{ cls.D.extra.join(", ") }}</b>. Bấm chọn đúng em bên dưới (nếu có), rồi bấm
-        <Button label="Xóa các tên này" size="small" severity="danger" outlined class="ms-1" @click="clearExtra" /></Message>
-      <div v-if="cls.D.upcoming.length" class="text-muted small mb-2"><i class="pi pi-calendar"></i> Sắp tới: {{ cls.D.upcoming.join("; ") }}</div>
+      <Message v-if="cls.D.extra.length" severity="error" icon="pi pi-exclamation-triangle">
+        <div class="inline"><span>Tên trong sổ chưa xác định: <b>{{ cls.D.extra.join(", ") }}</b>. Bấm chọn đúng em bên dưới (nếu có), rồi bấm</span>
+          <Button label="Xóa các tên này" size="small" severity="danger" outlined @click="clearExtra" /></div></Message>
+      <div v-if="cls.D.upcoming.length" class="text-muted small"><i class="pi pi-calendar"></i> Sắp tới: {{ cls.D.upcoming.join("; ") }}</div>
 
-      <div class="row-gap mb-3">
-        <IconField class="grow">
+      <div class="search-row">
+        <IconField>
           <InputIcon class="pi pi-search" />
           <InputText id="clsSearch" v-model="q" size="large" fluid autocomplete="off" autofocus
             placeholder="Gõ tên hoặc dán tin Zalo (không cần dấu, nhiều tên cách nhau dấu phẩy)" @paste="paste" @keydown.enter.prevent />
@@ -103,13 +103,13 @@ export default {
         </div>
         <div v-if="!cls.D.names.length" class="text-muted">Lớp này chưa có em nào ăn bán trú trong danh sách.</div>
       </div>
-      <div v-if="view.hint" class="text-muted mt-3"><i class="pi pi-lightbulb me-1"></i>Gõ không cần dấu, vd. <i>gia huy</i>; nhiều tên cách nhau dấu phẩy.</div>
-    </template>
+      <div v-if="view.hint" class="text-muted"><i class="pi pi-lightbulb"></i> Gõ không cần dấu, vd. <i>gia huy</i>; nhiều tên cách nhau dấu phẩy.</div>
+    </div>
     <template #footer>
-      <div class="row-gap w-100">
+      <div class="note-row">
         <label for="clsNote" class="text-nowrap">Ghi chú (cột H):</label>
-        <InputText id="clsNote" v-model="note" class="grow" @change="saveNote" />
-        <Button label="Xong" size="large" class="px-4" @click="cls.open = false" />
+        <InputText id="clsNote" v-model="note" @change="saveNote" />
+        <Button label="Xong" size="large" @click="cls.open = false" />
       </div>
     </template>
   </Dialog>`,

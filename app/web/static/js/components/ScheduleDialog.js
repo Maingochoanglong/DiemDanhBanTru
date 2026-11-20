@@ -13,19 +13,19 @@ export default {
     return { s, btTu, catTu, t6, save, cancel: () => dialogRef.value.close() };
   },
   template: /* html */`
-    <p class="mt-0">Lớp <b>{{ s.lop }}</b> · sinh {{ s.ns }} · hôm nay <b>{{ s.now ? "đang ăn bán trú" : "không ăn bán trú" }}</b></p>
-    <div class="sched-grid">
+    <div class="stack-3">
+    <p>Lớp <b>{{ s.lop }}</b> · sinh {{ s.ns }} · hôm nay <b>{{ s.now ? "đang ăn bán trú" : "không ăn bán trú" }}</b></p>
+    <div class="form-grid">
       <label for="schBt">Bắt đầu ăn bán trú từ ngày</label>
       <DatePicker v-model="btTu" inputId="schBt" showIcon showButtonBar placeholder="(không có)" />
       <label for="schCut">Thôi ăn (cắt) từ ngày</label>
       <DatePicker v-model="catTu" inputId="schCut" showIcon showButtonBar placeholder="(không có)" />
-      <span></span>
-      <label class="row-gap"><Checkbox v-model="t6" binary /> Cắt thứ 6 hàng tuần (thứ 6 app tự tính em vắng)</label>
+      <label class="full inline"><Checkbox v-model="t6" binary /> Cắt thứ 6 hàng tuần (thứ 6 app tự tính em vắng)</label>
     </div>
-    <p class="text-muted small mb-0">Lưu vào file danh sách (cột Ăn từ, Cắt từ, Cắt thứ 6). Cột Ghi chú của em không đổi.
+    <p class="text-muted small">Lưu vào file danh sách (cột Ăn từ, Cắt từ, Cắt thứ 6). Cột Ghi chú của em không đổi.
       Đến ngày đó app tự đổi sĩ số lớp.</p>
     <div class="dlg-foot">
       <Button label="Lưu lịch" icon="pi pi-check" @click="save" />
       <Button label="Hủy" severity="secondary" outlined @click="cancel" />
-    </div>`,
+    </div></div>`,
 };

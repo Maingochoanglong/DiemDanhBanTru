@@ -38,30 +38,30 @@ export default {
   },
   template: /* html */`
   <section class="page">
-    <div v-if="m" class="sheet">
-      <div class="sheet-head">
-        <div class="grow">
-          <template v-if="m.empty"><div class="fs-5 fw-bold">Sổ chưa có bảng suất ăn</div></template>
-          <template v-else>
-            <div :class="['fs-5 fw-bold', m.ok ? 'text-success' : 'text-danger']">
-              <i :class="['pi', m.ok ? 'pi-check-circle' : 'pi-exclamation-triangle']"></i> {{ title }}</div>
-            <div class="small text-muted">{{ m.self ? "Các nhóm " + m.groups_total + " + tự ăn tại lớp " + m.self.meals + " = " + m.total + " suất" : "Các nhóm: " + m.groups_total + " suất" }}</div>
-          </template>
+    <div v-if="m" class="sheet box">
+      <div class="sheet-head split">
+        <div v-if="m.empty" class="fs-5 fw-bold">Sổ chưa có bảng suất ăn</div>
+        <div v-else>
+          <div :class="['fs-5 fw-bold', m.ok ? 'text-success' : 'text-danger']">
+            <i :class="['pi', m.ok ? 'pi-check-circle' : 'pi-exclamation-triangle']"></i> {{ title }}</div>
+          <div class="small text-muted">{{ m.self ? "Các nhóm " + m.groups_total + " + tự ăn tại lớp " + m.self.meals + " = " + m.total + " suất" : "Các nhóm: " + m.groups_total + " suất" }}</div>
         </div>
         <Button label="Sửa cách ghép" icon="pi pi-external-link" severity="secondary" outlined @click="openPath('cdhs_file')"
           title="Mở file danh sách học sinh để sửa sheet Nhóm ăn (lớp nào ăn chung dòng nào trong bảng suất ăn)" />
       </div>
-      <div v-if="!m.empty" class="px-3 pt-2">
-        <Message v-if="m.ask.length" severity="warn" class="mb-2">
-          <div class="mb-1"><b><i class="pi pi-question-circle me-2"></i>Em ăn ghép vắng: chọn nhóm em đó ăn</b>
-            <span class="small text-muted ms-2">chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách</span></div>
-          <div v-for="x in m.ask" :key="x.sid" class="row-gap flex-wrap mb-1">
-            <span class="ask-name"><b>{{ x.name }}</b> <span class="text-muted">lớp {{ x.cls }}</span></span>
-            <Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" severity="contrast" outlined class="py-0" @click="pick(x.sid, g)" />
+      <div v-if="!m.empty && (m.ask.length || m.warnings.length || m.note)" class="sheet-notes">
+        <Message v-if="m.ask.length" severity="warn">
+          <div class="ask-grid">
+            <div class="full"><b><i class="pi pi-question-circle"></i> Em ăn ghép vắng: chọn nhóm em đó ăn</b>
+              <span class="small text-muted"> (chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách)</span></div>
+            <template v-for="x in m.ask" :key="x.sid">
+              <span><b>{{ x.name }}</b> <span class="text-muted">lớp {{ x.cls }}</span></span>
+              <div class="inline"><Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" severity="contrast" outlined @click="pick(x.sid, g)" /></div>
+            </template>
           </div>
         </Message>
-        <Message v-for="w in m.warnings" severity="error" icon="pi pi-exclamation-triangle" class="mb-2">{{ w }}</Message>
-        <Message v-if="m.note" severity="info" class="mb-2">{{ m.note }}</Message>
+        <Message v-for="w in m.warnings" severity="error" icon="pi pi-exclamation-triangle">{{ w }}</Message>
+        <Message v-if="m.note" severity="info">{{ m.note }}</Message>
       </div>
       <DataTable v-if="!m.empty" :value="rows" dataKey="k" scrollable scrollHeight="flex" :rowClass="rowClass" size="small" class="meal">
         <Column header="Suất" class="text-center w-suat" headerClass="center"><template #body="{ data: l }">
@@ -69,11 +69,11 @@ export default {
         <Column field="label" header="Tên ghép" class="fw-semibold w-label" />
         <Column header="Gồm"><template #body="{ data: l }">{{ l.gom }}
           <span v-if="l.absent && l.absent.length" class="text-danger">; vắng {{ l.absent.length }}:
-            <template v-for="(x, i) in l.absent" :key="x.sid">{{ i ? ", " : "" }}<a v-if="x.picked" href="#" class="link-danger"
+            <template v-for="(x, i) in l.absent" :key="x.sid">{{ i ? ", " : "" }}<a v-if="x.picked" href="#" class="text-danger"
               title="Bấm để chọn lại nhóm" @click.prevent="pick(x.sid, '')">{{ x.name }}</a><template v-else>{{ x.name }}</template></template>
           </span></template></Column>
       </DataTable>
-      <div v-if="m.empty" class="p-3 text-muted">Sheet mẫu của sổ không có bảng suất ăn bên dưới bảng điểm danh.</div>
+      <div v-else class="sheet-notes text-muted">Sheet mẫu của sổ không có bảng suất ăn bên dưới bảng điểm danh.</div>
       <div v-if="missing.length" class="sheet-foot small">
         <span v-for="g in missing" :key="g.code"><i class="pi pi-sitemap"></i> Lớp ghép <b>{{ g.code }}</b>:
           mới ghi nhóm <b class="text-warn">{{ g.done }}/{{ g.n }} em</b>, <a href="#" @click.prevent="students(g.code)">xem các em</a></span>

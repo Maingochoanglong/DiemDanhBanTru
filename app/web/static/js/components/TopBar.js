@@ -20,9 +20,9 @@ export default {
     return { S, text, cal, step, typed, picked, book, openBook, dateOf, today: () => open(isoOf(new Date())) };
   },
   template: /* html */`
-  <div class="topbar">
+  <div class="topbar box">
     <Button icon="pi pi-chevron-left" severity="secondary" outlined title="Ngày học trước" @click="step(-1)" />
-    <InputGroup class="w-auto">
+    <InputGroup>
       <InputText id="dayInput" v-model="text" size="large" placeholder="dd/mm/yyyy" title="Gõ ngày rồi bấm Enter" @change="typed" /><!-- change: cả khi bấm Enter lẫn khi rời ô -->
       <Button icon="pi pi-calendar" severity="secondary" outlined title="Chọn ngày trên lịch" @click="cal.toggle($event)" />
     </InputGroup>
@@ -30,7 +30,7 @@ export default {
     <Button icon="pi pi-chevron-right" severity="secondary" outlined title="Ngày học sau" @click="step(1)" />
     <Button label="Hôm nay" icon="pi pi-calendar-clock" outlined @click="today" />
     <span class="weekday">{{ S.weekday }}</span>
-    <span class="book ms-auto" :title="S.book">{{ book }}</span>
-    <Button label="Mở sổ Excel" icon="pi pi-file-excel" severity="success" outlined @click="openBook" />
+    <span class="book" :title="S.book">{{ book }}</span>
+    <Button label="Mở sổ Excel" icon="pi pi-file-excel" severity="success" outlined class="end" @click="openBook" />
   </div>`,
 };
