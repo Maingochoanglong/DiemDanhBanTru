@@ -52,7 +52,7 @@ export async function gotoDay(fn) {
     const n = r.need_month;
     const k = await ask("Sổ tháng mới", `Sổ đang chọn <b>${esc(n.prev)}</b> không phải sổ tháng ${n.month}/${n.year}.<br><br>
       Tạo sổ tháng ${n.month} từ sheet cuối của sổ này (giữ nguyên mẫu, chữ ký, ghi chú), hoặc chọn file sổ tháng ${n.month} có sẵn.`,
-      [{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn…", severity: undefined, outlined: true },
+      [{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn", severity: undefined, outlined: true },
         { key: "later", label: "Để sau" }]);
     if (k === "new") handle(await api("create_month_book", n.target));
     else if (k === "pick") handle(await api("choose_book"));

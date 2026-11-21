@@ -48,7 +48,8 @@ ul { padding-left: var(--s6); display: grid; gap: var(--s2); }
 .p-dialog .p-dialog-content { padding: 0 var(--s6) var(--s4); }
 .p-dialog .p-dialog-footer { padding: var(--s3) var(--s6) var(--s4); gap: var(--s2); }
 .dlg-title { display: inline-grid; grid-auto-flow: column; align-items: center; gap: var(--s2); }
-.ask-body, .ask-body > div:first-child { display: grid; gap: var(--s4); }
+.ask-body { display: grid; gap: var(--s4); }
+.ask-msg { display: grid; gap: var(--s3); }  /* chỉ chứa khối (đoạn, danh sách): AskBody bọc chữ trơn thành đoạn */
 
 /* khung app: [thanh bên | nội dung] */
 .app { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: 100vh; }

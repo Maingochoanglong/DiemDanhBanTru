@@ -5,6 +5,7 @@
 2. Không viết cứng: giá trị trong app/config.py không được viết lại ở file khác (Python và JavaScript).
 3. Mọi thứ của app nằm trong thư mục chứa .exe: không %APPDATA%, %TEMP%, thư mục người dùng.
 4. Chữ giao diện, thông báo, tài liệu không dùng gạch dài, gạch ngắn, dấu trừ.
+5. Chữ giao diện không dùng dấu ba chấm.
 """
 
 import ast
@@ -159,3 +160,22 @@ def test_no_long_dashes_in_ui_and_docs():
     bad = [f"{p.relative_to(root)}:{i}" for p in files
            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1) if re.search("[—–−]", line)]
     assert not bad, f"Có gạch dài / gạch ngắn / dấu trừ: {bad}"
+
+
+def _ui_strings():
+    """Chữ người dùng thấy: chuỗi trong JavaScript (bỏ dòng chú thích) và chuỗi trong mã Python (bỏ docstring, chú thích)."""
+    out = []
+    for p in (ROOT / "web" / "static" / "js").rglob("*.js"):
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            code = re.sub(r"^\s*//.*$|\s//\s.*$", "", line)
+            out += [(f"{p.name}:{i}", s) for s in re.findall(r"\"([^\"]*)\"|`([^`]*)`|>([^<>]+)<", code) for s in s if s]
+    for p in ROOT.rglob("*.py"):
+        out += [(f"{p.name}:{n.lineno}", n.value) for n in _code_strings(ast.parse(p.read_text(encoding="utf-8")))
+                if isinstance(n.value, str)]
+    return out
+
+
+def test_no_ellipsis_in_ui_text():
+    """Nút, thông báo, giải thích không dùng dấu ba chấm (… hoặc ...): ghi đủ chữ. Bộ đọc ô sổ viết \\u2026 trong regex."""
+    bad = [f"{where}: {s[:60]!r}" for where, s in _ui_strings() if "…" in s or "..." in s.replace("../", "")]
+    assert not bad, f"Có dấu ba chấm trong chữ giao diện: {bad}"

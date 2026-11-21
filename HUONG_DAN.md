@@ -56,7 +56,7 @@ Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh file .exe, có k
 - **Ăn từ / Cắt từ / Cắt thứ 6**: lịch bán trú của em (mục 4). Không cần tự gõ: đặt trên app ở trang **Học sinh** (bấm vào em), app ghi vào 3 cột này. File chưa có các cột này thì app tự thêm vào cuối bảng.
 - **Ghi chú**: chữ tự do, chỉ để ghi chú (app hiện ra ở trang Học sinh, không đọc lịch từ đây).
 
-**Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**: **chọn sổ điểm danh** của tháng đang làm, **chọn file danh sách học sinh**, rồi bấm **Bắt đầu điểm danh**. Mở lại cùng bản thì không hỏi nữa. Đổi file sau này: trang **Cài đặt** → **Chọn sổ khác…** / **Chọn file khác…**.
+**Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**: **chọn sổ điểm danh** của tháng đang làm, **chọn file danh sách học sinh**, rồi bấm **Bắt đầu điểm danh**. Mở lại cùng bản thì không hỏi nữa. Đổi file sau này: trang **Cài đặt** → **Chọn sổ khác** / **Chọn file khác**.
 
 ## 3. Mỗi sáng
 
@@ -145,7 +145,7 @@ Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và c�
 Trang **Học sinh**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác**, ăn ghép, **Lịch** (ăn từ…, cắt từ…, cắt thứ 6) và **Ghi chú**. **Bấm vào một em** để đặt lịch (mục 4).
 
 - Muốn **thêm, sửa, xóa học sinh**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. Quay lại app là thấy ngay.
-- Đổi sang file danh sách khác: **Cài đặt → Chọn file khác…**.
+- Đổi sang file danh sách khác: **Cài đặt → Chọn file khác**.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 

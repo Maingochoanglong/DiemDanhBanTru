@@ -12,9 +12,9 @@ export default {
       const x = s.value;
       return [
         { key: "book", title: "Sổ điểm danh tháng (Excel)", desc: "Chọn file sổ của tháng đang điểm danh.", value: x.book,
-          buttons: [{ label: "Chọn sổ…", outlined: x.book_done, run: () => step(chooseBook) }] },
+          buttons: [{ label: "Chọn sổ", outlined: x.book_done, run: () => step(chooseBook) }] },
         { key: "list", title: "Danh sách học sinh (Excel)", desc: "Chọn file danh sách học sinh.", value: x.list ? `${x.list} (${x.n} học sinh)` : "",
-          buttons: [{ label: "Chọn file…", outlined: x.list_done, run: () => step(chooseList) }] },
+          buttons: [{ label: "Chọn file", outlined: x.list_done, run: () => step(chooseList) }] },
       ].map(st => ({ ...st, done: x[st.key + "_done"] }));
     });
     async function step(fn) { await fn(); store.setup = await api("setup_info"); }
