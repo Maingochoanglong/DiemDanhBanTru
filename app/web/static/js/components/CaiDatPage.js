@@ -41,7 +41,7 @@ export default {
               <Message v-for="e in f.errors" severity="warn" size="small">{{ e }}</Message>
               <Message v-if="outside(f.key)" severity="info" size="small">File này nằm ngoài thư mục app. Nên chép vào thư mục app rồi chọn lại, để mọi file nằm chung một chỗ.</Message>
             </div>
-            <div class="btn-col">
+            <div :class="['btn-col', f.buttons[0].open ? 'open' : 'pick']">
               <Button v-for="b in f.buttons" :key="b.label" :label="b.label" :icon="'pi ' + b.icon" :severity="b.open ? 'secondary' : undefined"
                 :outlined="!!b.open" class="text-nowrap" @click="click(b)" />
             </div>

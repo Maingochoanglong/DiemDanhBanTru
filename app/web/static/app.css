@@ -10,7 +10,6 @@
   --side-w: 192px;
   --chip-w: 4.75rem;  /* nút mã lớp (1D15): rộng bằng nhau để các hàng thẳng cột */
   --label-w: 9.5rem;  /* cột nhãn của phần đầu trang Điểm danh */
-  --act-w: 15rem;  /* cột nút bên phải bảng chọn tên (Lớp này đủ, Xong) */
   --radius: 10px;
   --bg: #f4f6f9;
   --line: var(--p-content-border-color);
@@ -41,10 +40,10 @@ ul { padding-left: var(--s6); display: grid; gap: var(--s2); }
 .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); align-content: start; }            /* các hàng chồng nhau */
 .stack-3 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); align-content: start; }
 .inline { display: grid; grid-auto-flow: column; justify-content: start; align-items: center; gap: var(--s2); }  /* một hàng nút / chữ */
-/* nút cùng nhóm rộng bằng nhau (bằng nút dài nhất): cột 1fr trong lưới rộng vừa nội dung */
-.same-w { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: var(--s2); width: max-content; }
-.dlg-foot { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--s2); width: max-content; max-width: 100%; justify-self: end; padding-top: var(--s2); }
-.dlg-foot .p-button-label { white-space: normal; }  /* hộp hẹp: chữ nút xuống dòng, không tràn ra ngoài hộp; nút vẫn bằng nhau */
+/* nút rộng theo chữ của nó; chỉ các nút cùng loại (các lựa chọn thay nhau cho một việc, vd. 2 nút chọn file) mới rộng bằng nhau */
+.same-w { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: var(--s2); }  /* nhóm nút cùng loại: bằng nút dài nhất */
+.dlg-foot { display: grid; grid-auto-flow: column; justify-content: end; align-items: center; gap: var(--s2); padding-top: var(--s2); }
+.dlg-foot .p-button-label { white-space: normal; }  /* hộp hẹp: chữ nút xuống dòng, không tràn ra ngoài hộp */
 .btn-col { display: grid; }  /* ô chứa nút trong một cột chung: nút rộng bằng cột */
 
 /* hộp thoại (PrimeVue): lề theo lưới */
@@ -152,7 +151,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .dot.err { background: var(--st-err-b); }
 
 /* thanh lưu: [trạng thái ............] [Đặt lại] [Hoàn tác] [Lưu vào sổ] */
-.actionbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--s2); }
+.actionbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--s2); }
 .actionbar .p-button:not(.p-button-text) { padding: var(--s2) var(--s4); font-weight: 600; }
 .actionbar .state { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .actionbar .state.dirty { color: #b35c00; }
@@ -173,8 +172,8 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .cls-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3); flex: 1; }
 .cls-head .p-tag { font-size: 1rem; }
 .cls-body { display: grid; gap: var(--s3); align-content: start; }
-.search-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--act-w); gap: var(--s2); }
-.note-row { display: grid; grid-template-columns: auto minmax(0, 1fr) var(--act-w); align-items: center; gap: var(--s2); width: 100%; }
+.search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); }
+.note-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s2); width: 100%; }
 .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: var(--s2); }
 .names .nm.p-togglebutton { justify-content: stretch; text-align: left; font-size: 1.08rem; padding: var(--s2) var(--s3); min-height: 44px; line-height: 1.2;
                             border: 1px solid var(--p-surface-300); background: #fff; color: var(--p-text-color); border-radius: var(--s2); }
@@ -210,8 +209,11 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .toolbar > .end { grid-column: -2; }
 .toolbar > label, .toolbar > span, .toolbar .p-button { white-space: nowrap; }
 
-/* cài đặt: thư mục app và mọi dòng file chung 3 cột [biểu tượng] [tên, giải thích] [nút] (subgrid): nút rộng bằng nhau */
-.files { display: grid; grid-template-columns: var(--s6) minmax(0, 1fr) max-content; column-gap: var(--s4); }
+/* cài đặt: thư mục app và mọi dòng file chung cột (subgrid) [biểu tượng] [tên, giải thích] [nút]; cột nút chia 2 để
+   nút cùng loại rộng bằng nhau: "Chọn … khác" chiếm cả 2 cột, "Mở …" chỉ cột cuối (hẹp hơn, thẳng mép phải) */
+.files { display: grid; grid-template-columns: var(--s6) minmax(0, 1fr) auto max-content; column-gap: var(--s4); }
+.file-row > .btn-col.pick { grid-column: 3 / 5; }
+.file-row > .btn-col.open { grid-column: 4; }
 .file-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .file-row > .stack { gap: var(--s1); min-width: 0; }
 .file-icon { font-size: 1.5rem; color: var(--muted); }

@@ -37,8 +37,10 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - hàng trên hàng dưới cùng loại thì chung cột (vd. "Cần xem" và "Chưa báo": cột nhãn `--label-w`, nút mã lớp rộng `--chip-w`;
      các dòng file ở Cài đặt dùng `subgrid`); mép trái nội dung mọi khu vực cùng lề `--s3`;
    - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` (một hàng chữ / nút);
-   - **nút cùng nhóm hoặc cùng cột rộng bằng nhau** (bằng nút dài nhất): `.same-w` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại),
-     `.btn-col` (nút trong cột chung, vd. Cài đặt, Thiết lập), `.chips` (nút mã lớp / nhóm); không để nút rộng theo độ dài chữ của riêng nó.
+   - **nút cùng loại rộng bằng nhau, nút khác loại rộng theo chữ**. Cùng loại = các lựa chọn thay nhau cho một việc
+     (2 nút chọn file; "Lưu, giữ sĩ số…" / "Lưu, dùng sĩ số…"; "Tạo sổ tháng mới" / "Chọn file sổ có sẵn"; nút mã lớp, nút nhóm).
+     Khác loại thì không ép (Lưu vào sổ / Hoàn tác; Khôi phục / Bỏ bản lưu tạm; Hủy, Để sau, Xong).
+     Cách làm: `.same-w` (bọc nhóm cùng loại; `ask()` nhận mảng con), `.chips`, cột nút chung (Thiết lập, Cài đặt: "Chọn … khác" một cỡ, "Mở …" một cỡ).
 10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
     `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
 

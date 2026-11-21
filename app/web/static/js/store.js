@@ -52,7 +52,7 @@ export async function gotoDay(fn) {
     const n = r.need_month;
     const k = await ask("Sổ tháng mới", `Sổ đang chọn <b>${esc(n.prev)}</b> không phải sổ tháng ${n.month}/${n.year}.<br><br>
       Tạo sổ tháng ${n.month} từ sheet cuối của sổ này (giữ nguyên mẫu, chữ ký, ghi chú), hoặc chọn file sổ tháng ${n.month} có sẵn.`,
-      [{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn", severity: undefined, outlined: true },
+      [[{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn", severity: undefined, outlined: true }],
         { key: "later", label: "Để sau" }]);
     if (k === "new") handle(await api("create_month_book", n.target));
     else if (k === "pick") handle(await api("choose_book"));
@@ -85,11 +85,11 @@ export async function doSave() {
   let choice = null;
   if (items.length) {
     const btns = ck.conflicts?.length
-      ? [{ key: "keep", label: "Lưu, giữ sĩ số như sổ" }, { key: "list", label: "Lưu, dùng sĩ số theo danh sách", severity: undefined }]
+      ? [[{ key: "keep", label: "Lưu, giữ sĩ số như sổ" }, { key: "list", label: "Lưu, dùng sĩ số theo danh sách", severity: undefined }]]
       : [{ key: "go", label: "Vẫn lưu" }];
     if (ck.meal) btns.push({ key: "see", label: "Xem trang Suất ăn" });
     btns.push({ key: "stay", label: "Hủy" });
-    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "54rem" });  // đủ rộng cho 3 nút bằng nhau trên một hàng
+    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "54rem" });  // đủ rộng cho các nút trên một hàng
     if (k === "see") { store.page = "sa"; return false; }
     if (!["go", "keep", "list"].includes(k)) return false;
     if (k !== "go") choice = k;
@@ -98,7 +98,7 @@ export async function doSave() {
   if (r.blocked) return showBlocked(r.blocked);
   if (r.conflicts) {  // hiếm: sĩ số đổi giữa lúc hỏi và lúc lưu
     choice = await ask("Sĩ số khác nhau", `<p>Ghi sĩ số nào vào sổ?</p><ul>${r.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`,
-      [{ key: "keep", label: "Giữ sĩ số như trong sổ" }, { key: "list", label: "Dùng sĩ số theo danh sách", severity: undefined }, { key: null, label: "Hủy" }]);
+      [[{ key: "keep", label: "Giữ sĩ số như trong sổ" }, { key: "list", label: "Dùng sĩ số theo danh sách", severity: undefined }], { key: null, label: "Hủy" }]);
     if (!choice) return false;
     r = await api("save", choice);
   }

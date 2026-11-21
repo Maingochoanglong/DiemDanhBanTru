@@ -19,7 +19,8 @@ export function openDialog(comp, { header = "", width = "40rem", data = {}, icon
   });
 }
 
-// buttons = [{key, label, severity, outlined}] → trả về key (null nếu đóng hộp)
+// buttons = [{key, label, severity, outlined}] → trả về key (null nếu đóng hộp).
+// Mảng con = các lựa chọn cùng loại (thay nhau cho một việc): rộng bằng nhau; nút khác rộng theo chữ.
 export const ask = (title, html, buttons, opts = {}) =>
   openDialog(AskBody, { header: title, width: opts.width || "34rem", icon: opts.icon, danger: opts.danger, data: { html, buttons } });
 
