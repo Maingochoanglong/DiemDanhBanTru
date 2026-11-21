@@ -41,7 +41,12 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
      (2 nút chọn file; "Lưu, giữ sĩ số…" / "Lưu, dùng sĩ số…"; "Tạo sổ tháng mới" / "Chọn file sổ có sẵn"; nút mã lớp, nút nhóm).
      Khác loại thì không ép (Lưu vào sổ / Hoàn tác; Khôi phục / Bỏ bản lưu tạm; Hủy, Để sau, Xong).
      Cách làm: `.same-w` (bọc nhóm cùng loại; `ask()` nhận mảng con), `.chips`, cột nút chung (Thiết lập, Cài đặt: "Chọn … khác" một cỡ, "Mở …" một cỡ).
-10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
+10. **Màu theo ý nghĩa, giống nhau ở mọi khu vực** (bảng màu đầu `static/app.css`, chỉ lấy màu PrimeVue `--p-*`):
+    xám = chưa báo / phụ; xanh lá = xong, khớp; cam = vắng; vàng = nhắc việc chưa xong (không chặn);
+    đỏ = sai, cần xem, chặn lưu, nút xóa bỏ dữ liệu; xanh dương = việc chính, trang đang mở.
+    Trạng thái lớp (`Api._status`): `todo` · `done` · `absent` · `error`. Không viết mã màu ngoài `:root`;
+    `test_rules.test_colors_only_from_meaning_palette` kiểm tra.
+11. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
     `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
 
 ## App chỉ làm việc với 3 file (+ sổ tạm)

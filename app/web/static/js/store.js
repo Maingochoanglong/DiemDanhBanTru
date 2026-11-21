@@ -61,7 +61,7 @@ export async function gotoDay(fn) {
 
 async function showBlocked(b) {  // còn tên chưa rõ: chưa lưu được, đưa tới lớp cần xử lý
   await ask("Chưa lưu được", `<p class="text-danger fw-bold">Còn ${b.n} tên chưa rõ nên chưa lưu được.</p>
-    <ul>${b.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay", severity: "danger" }],
+    <ul>${b.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay" }],
   { icon: "pi-exclamation-triangle", danger: true });
   store.page = "dd";
   if (b.code) openClass(b.code);

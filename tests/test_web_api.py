@@ -31,7 +31,7 @@ def test_state_has_book_columns_and_is_json(api):
     assert st["date_text"] == "29/10/2026" and st["weekday"] == "Thứ 5"
     row = next(r for r in st["rows"] if r.get("code") == "1D15")
     assert {"gvcn", "si", "vang", "hd", "ten", "note", "status"} <= set(row)
-    assert row["status"] == "muted" and not row["reported"]
+    assert row["status"] == "todo" and not row["reported"]
     assert any(r["kind"] == "khoi" for r in st["rows"])
     assert st["hint"] == ""
 
@@ -40,7 +40,7 @@ def test_click_names_then_save(api):
     sid = sid_of(api, "1D15", "Lâm Quốc Tuấn Anh")
     r = api.set_absent("1D15", sid, True)
     row = next(x for x in r["state"]["rows"] if x.get("code") == "1D15")
-    assert row["vang"] == 1 and row["ten"] == "Tuấn Anh" and row["status"] == "warn"
+    assert row["vang"] == 1 and row["ten"] == "Tuấn Anh" and row["status"] == "absent"
     assert r["detail"]["vang"] == 1 and next(n for n in r["detail"]["names"] if n["id"] == sid)["absent"]
     assert r["state"]["dirty"]
     r = api.set_absent("1D15", sid, False)
@@ -67,7 +67,7 @@ def test_day_change_asks_when_unsaved(api):
 
 def test_mark_full_note_undo(api):
     r = api.mark_full("2D17")
-    assert next(x for x in r["state"]["rows"] if x.get("code") == "2D17")["status"] == "ok"
+    assert next(x for x in r["state"]["rows"] if x.get("code") == "2D17")["status"] == "done"
     r = api.set_note("2D17", "  ghi  chú ")
     assert r["detail"]["note"] == "ghi chú"
     r = api.undo()
@@ -158,7 +158,7 @@ def test_restore_after_power_loss(api, tmp_path):
     row = next(x for x in st["rows"] if x.get("code") == "1D15")
     assert row["vang"] == 1 and row["ten"] == "Tuấn Anh"
     row = next(x for x in st["rows"] if x.get("code") == "2D17")
-    assert row["status"] == "ok" and row["note"] == "ghi chú tạm"
+    assert row["status"] == "done" and row["note"] == "ghi chú tạm"
     assert temp.exists()  # vẫn giữ cho tới khi lưu vào sổ
 
     # mở lại lần nữa và chọn bỏ bản lưu tạm
@@ -250,7 +250,7 @@ def test_friday_class_with_only_auto_absent_is_still_unreported(api):
     kid.cat_thu6 = True
     api.open_day("2026-10-30", True)  # thứ 6
     row = next(r for r in api.state()["rows"] if r.get("code") == "4D19")
-    assert not row["reported"] and row["status"] == "muted" and row["auto"] == "Thảo Mi" and row["ten"] == ""
+    assert not row["reported"] and row["status"] == "todo" and row["auto"] == "Thảo Mi" and row["ten"] == ""
     ck = api.save_check()
     assert "4D19" in ck["unreported"] and ck["unreported_auto"] == ["4D19"]
 

@@ -74,7 +74,7 @@ export default {
           <span v-if="r.ma" class="text-muted small fw-normal"> ({{ r.ma }})</span></template></Column>
         <Column header="GVCN" class="gv"><template #body="{ data: r }"><div class="cut" :title="r.gvcn">{{ r.gvcn }}</div></template></Column>
         <Column field="si" header="Sĩ số" class="num" />
-        <Column header="Vắng" class="num fw-bold"><template #body="{ data: r }">{{ r.vang || 0 }}</template></Column>
+        <Column header="Vắng" class="num fw-bold vang"><template #body="{ data: r }">{{ r.vang || 0 }}</template></Column>
         <Column field="hd" header="Hiện diện" class="num" />
         <Column header="Tên học sinh vắng" class="ten"><template #body="{ data: r }">
           <template v-if="r.kind === 'class'">

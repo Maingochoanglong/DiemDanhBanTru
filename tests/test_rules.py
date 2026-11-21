@@ -179,3 +179,21 @@ def test_no_ellipsis_in_ui_text():
     """Nút, thông báo, giải thích không dùng dấu ba chấm (… hoặc ...): ghi đủ chữ. Bộ đọc ô sổ viết \\u2026 trong regex."""
     bad = [f"{where}: {s[:60]!r}" for where, s in _ui_strings() if "…" in s or "..." in s.replace("../", "")]
     assert not bad, f"Có dấu ba chấm trong chữ giao diện: {bad}"
+
+
+# ---------------------------------------------------------------- 5. màu theo ý nghĩa
+def test_colors_only_from_meaning_palette():
+    """Màu chỉ đặt một chỗ: biến ở :root đầu app.css (lấy từ bảng màu PrimeVue), mỗi màu một nghĩa (xem chú thích đầu app.css).
+    Không viết mã màu (#abc, rgb()) ở chỗ khác; nút / thẻ chỉ dùng các severity có nghĩa trong bảng."""
+    static = ROOT / "web" / "static"
+    css = (static / "app.css").read_text(encoding="utf-8")
+    body = css[css.index("}", css.index(":root")):]  # sau khối :root
+    color = r"#[0-9a-fA-F]{3,8}\b|rgba?\("
+    bad = [f"app.css: {m}" for m in re.findall(color, body)]
+    bad += [f"{p.name}: {m}" for p in (static / "js").rglob("*.js") for m in re.findall(color, p.read_text(encoding="utf-8"))]
+    assert not bad, f"Mã màu viết ngoài bảng màu ở đầu app.css: {bad}"
+    allowed = {"secondary", "success", "warn", "danger", "error", "info"}  # contrast, help: không có nghĩa trong bảng
+    js = "".join(p.read_text(encoding="utf-8") for p in (static / "js").rglob("*.js"))
+    used = set(re.findall(r"""(?<!:)severity[=:]\s*["']([a-z]+)["'](?! in )""", js))  # severity="danger", severity: "danger"
+    used |= {w for expr in re.findall(r':severity="([^"]*)"', js) for w in re.findall(r"'([a-z]+)'", expr)}  # :severity="x ? 'a' : 'b'"
+    assert used <= allowed, f"Màu nút / thẻ không có trong bảng ý nghĩa: {used - allowed}"
