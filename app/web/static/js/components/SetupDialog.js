@@ -40,7 +40,7 @@ export default {
             <div><div class="fw-semibold">{{ st.title }}</div><div class="small text-muted">{{ st.desc }}</div></div>
             <div v-if="st.value" class="path"><i class="pi pi-check-circle text-success"></i> {{ st.value }}</div>
           </div>
-          <div class="inline-end"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
+          <div class="btn-col"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
         </div>
       </div>
       <div v-if="err || missing" class="text-danger small pre-line">{{ err || missing }}</div>

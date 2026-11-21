@@ -56,7 +56,7 @@ export default {
               <span class="small text-muted"> (chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách)</span></div>
             <template v-for="x in m.ask" :key="x.sid">
               <span><b>{{ x.name }}</b> <span class="text-muted">lớp {{ x.cls }}</span></span>
-              <div class="inline"><Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" severity="contrast" outlined @click="pick(x.sid, g)" /></div>
+              <div class="chips wide"><Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" severity="contrast" outlined @click="pick(x.sid, g)" /></div>
             </template>
           </div>
         </Message>

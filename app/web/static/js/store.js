@@ -89,7 +89,7 @@ export async function doSave() {
       : [{ key: "go", label: "Vẫn lưu" }];
     if (ck.meal) btns.push({ key: "see", label: "Xem trang Suất ăn" });
     btns.push({ key: "stay", label: "Hủy" });
-    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "42rem" });
+    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "54rem" });  // đủ rộng cho 3 nút bằng nhau trên một hàng
     if (k === "see") { store.page = "sa"; return false; }
     if (!["go", "keep", "list"].includes(k)) return false;
     if (k !== "go") choice = k;

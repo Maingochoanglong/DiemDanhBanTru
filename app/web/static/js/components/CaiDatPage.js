@@ -8,6 +8,8 @@ export default {
     onActivated(loadSettings);
     const s = computed(() => store.settings || {});
     const files = computed(() => [
+      { key: "app_dir", icon: "pi-folder", label: "Thư mục app (file .exe, file cài đặt, sổ tạm). Gỡ app: xóa thư mục này.", full: true,
+        buttons: [{ label: "Mở thư mục", icon: "pi-folder-open", open: "settings_folder" }] },
       { key: "so_file", icon: "pi-book", label: "Sổ điểm danh tháng", help: "Lưu vào sổ: app ghi sheet của ngày rồi xóa sổ tạm (sổ tạm nằm trong thư mục app, ghi sau mỗi thao tác).",
         buttons: [{ label: "Chọn sổ khác", icon: "pi-upload", run: chooseBook }] },
       { key: "cdhs_file", icon: "pi-file-excel", label: `Danh sách học sinh (Excel)${s.value.n ? `: ${s.value.n} học sinh` : ""}`,
@@ -22,30 +24,24 @@ export default {
     const outside = key => (s.value.outside || []).includes(key);
     const click = b => b.open ? openPath(b.open) : b.run();
     const fileName = p => p.split(/[\\/]/).pop();
-    return { s, files, click, fileName, outside, openPath };
+    return { s, files, click, fileName, outside };
   },
   template: /* html */`
   <section class="page">
     <Card>
       <template #title>3 file app làm việc</template>
-      <template #subtitle>
-        <div class="settings-head">
-          <span>Thư mục app: <b class="text-break">{{ s.app_dir }}</b> (file .exe, {{ fileName(s.settings_file || "") }}, sổ tạm). Gỡ app: xóa thư mục này.</span>
-          <Button label="Mở thư mục" icon="pi pi-folder-open" severity="secondary" outlined size="small" @click="openPath('settings_folder')" />
-        </div>
-      </template>
       <template #content>
         <div class="files">
           <div v-for="f in files" :key="f.key" class="file-row">
             <i :class="['pi', f.icon, 'file-icon']"></i>
             <div class="stack">
               <div class="text-muted small">{{ f.label }}</div>
-              <div class="fw-semibold text-truncate" :title="s[f.key]">{{ s[f.key] ? fileName(s[f.key]) : "" }}<span v-if="!s[f.key]" class="text-muted fw-normal">chưa có</span></div>
+              <div :class="['fw-semibold', f.full ? 'text-break' : 'text-truncate']" :title="s[f.key]">{{ s[f.key] ? (f.full ? s[f.key] : fileName(s[f.key])) : "" }}<span v-if="!s[f.key]" class="text-muted fw-normal">chưa có</span></div>
               <div v-if="f.help" class="text-muted small" v-html="f.help"></div>
               <Message v-for="e in f.errors" severity="warn" size="small">{{ e }}</Message>
               <Message v-if="outside(f.key)" severity="info" size="small">File này nằm ngoài thư mục app. Nên chép vào thư mục app rồi chọn lại, để mọi file nằm chung một chỗ.</Message>
             </div>
-            <div class="inline-end">
+            <div class="btn-col">
               <Button v-for="b in f.buttons" :key="b.label" :label="b.label" :icon="'pi ' + b.icon" :severity="b.open ? 'secondary' : undefined"
                 :outlined="!!b.open" class="text-nowrap" @click="click(b)" />
             </div>

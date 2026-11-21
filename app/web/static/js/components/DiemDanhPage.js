@@ -93,8 +93,10 @@ export default {
       </span>
       <Button label="Đặt lại" icon="pi pi-refresh" severity="secondary" text size="small" @click="reset"
         title='Mọi lớp về "chưa báo", bỏ hết tên vắng đã chọn (dùng khi sheet trong sổ đã tạo sẵn)' />
-      <Button label="Hoàn tác" icon="pi pi-undo" severity="secondary" outlined @click="undo" />
-      <Button label="Lưu vào sổ" icon="pi pi-save" :disabled="!S.book" @click="doSave" />
+      <div class="same-w">
+        <Button label="Hoàn tác" icon="pi pi-undo" severity="secondary" outlined @click="undo" />
+        <Button label="Lưu vào sổ" icon="pi pi-save" :disabled="!S.book" @click="doSave" />
+      </div>
     </div>
   </section>`,
 };

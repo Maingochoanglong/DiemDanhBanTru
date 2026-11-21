@@ -10,6 +10,7 @@
   --side-w: 192px;
   --chip-w: 4.75rem;  /* nút mã lớp (1D15): rộng bằng nhau để các hàng thẳng cột */
   --label-w: 9.5rem;  /* cột nhãn của phần đầu trang Điểm danh */
+  --act-w: 15rem;  /* cột nút bên phải bảng chọn tên (Lớp này đủ, Xong) */
   --radius: 10px;
   --bg: #f4f6f9;
   --line: var(--p-content-border-color);
@@ -37,18 +38,21 @@ ul { padding-left: var(--s6); display: grid; gap: var(--s2); }
 .clickable { cursor: pointer; }
 
 /* lưới dùng chung */
-.stack { display: grid; gap: var(--s2); align-content: start; }            /* các hàng chồng nhau */
-.stack-3 { display: grid; gap: var(--s3); align-content: start; }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); align-content: start; }            /* các hàng chồng nhau */
+.stack-3 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); align-content: start; }
 .inline { display: grid; grid-auto-flow: column; justify-content: start; align-items: center; gap: var(--s2); }  /* một hàng nút / chữ */
-.inline-end { display: grid; grid-auto-flow: column; justify-content: end; align-items: center; gap: var(--s2); }
-.dlg-foot { display: grid; grid-auto-flow: column; justify-content: end; gap: var(--s2); padding-top: var(--s2); }
+/* nút cùng nhóm rộng bằng nhau (bằng nút dài nhất): cột 1fr trong lưới rộng vừa nội dung */
+.same-w { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: var(--s2); width: max-content; }
+.dlg-foot { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--s2); width: max-content; max-width: 100%; justify-self: end; padding-top: var(--s2); }
+.dlg-foot .p-button-label { white-space: normal; }  /* hộp hẹp: chữ nút xuống dòng, không tràn ra ngoài hộp; nút vẫn bằng nhau */
+.btn-col { display: grid; }  /* ô chứa nút trong một cột chung: nút rộng bằng cột */
 
 /* hộp thoại (PrimeVue): lề theo lưới */
 .p-dialog .p-dialog-header { padding: var(--s4) var(--s6); gap: var(--s3); }
 .p-dialog .p-dialog-content { padding: 0 var(--s6) var(--s4); }
 .p-dialog .p-dialog-footer { padding: var(--s3) var(--s6) var(--s4); gap: var(--s2); }
 .dlg-title { display: inline-grid; grid-auto-flow: column; align-items: center; gap: var(--s2); }
-.ask-body { display: grid; gap: var(--s4); }
+.ask-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }  /* cột bằng bề rộng hộp: hàng nút không nở hộp ra */
 .ask-msg { display: grid; gap: var(--s3); }  /* chỉ chứa khối (đoạn, danh sách): AskBody bọc chữ trơn thành đoạn */
 
 /* khung app: [thanh bên | nội dung] */
@@ -148,7 +152,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .dot.err { background: var(--st-err-b); }
 
 /* thanh lưu: [trạng thái ............] [Đặt lại] [Hoàn tác] [Lưu vào sổ] */
-.actionbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--s2); }
+.actionbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--s2); }
 .actionbar .p-button:not(.p-button-text) { padding: var(--s2) var(--s4); font-weight: 600; }
 .actionbar .state { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .actionbar .state.dirty { color: #b35c00; }
@@ -161,6 +165,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .meal tr.gap > td { padding: 0; height: var(--s3); background: var(--p-surface-50); }
 .ask-grid { display: grid; grid-template-columns: 14rem minmax(0, 1fr); align-items: center; gap: var(--s2) var(--s3); }
 .ask-grid > .full { grid-column: 1 / -1; }
+.chips.wide { --chip-w: 7.5rem; }  /* nút Nhóm 1.2… rộng bằng nhau, thẳng cột giữa các em */
 
 /* bảng chọn tên của 1 lớp */
 .cls-dialog { width: min(1180px, 96vw); }
@@ -168,8 +173,8 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .cls-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3); flex: 1; }
 .cls-head .p-tag { font-size: 1rem; }
 .cls-body { display: grid; gap: var(--s3); align-content: start; }
-.search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); }
-.note-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s2); width: 100%; }
+.search-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--act-w); gap: var(--s2); }
+.note-row { display: grid; grid-template-columns: auto minmax(0, 1fr) var(--act-w); align-items: center; gap: var(--s2); width: 100%; }
 .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: var(--s2); }
 .names .nm.p-togglebutton { justify-content: stretch; text-align: left; font-size: 1.08rem; padding: var(--s2) var(--s3); min-height: 44px; line-height: 1.2;
                             border: 1px solid var(--p-surface-300); background: #fff; color: var(--p-text-color); border-radius: var(--s2); }
@@ -205,8 +210,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .toolbar > .end { grid-column: -2; }
 .toolbar > label, .toolbar > span, .toolbar .p-button { white-space: nowrap; }
 
-/* cài đặt: mọi dòng file chung 3 cột [biểu tượng] [tên file, giải thích] [nút] (subgrid) */
-.settings-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3); }
+/* cài đặt: thư mục app và mọi dòng file chung 3 cột [biểu tượng] [tên, giải thích] [nút] (subgrid): nút rộng bằng nhau */
 .files { display: grid; grid-template-columns: var(--s6) minmax(0, 1fr) max-content; column-gap: var(--s4); }
 .file-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .file-row > .stack { gap: var(--s1); min-width: 0; }
@@ -216,7 +220,8 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 /* thiết lập lần đầu: mọi bước cùng 3 cột cố định [số] [nội dung] [nút] nên thẳng hàng */
 .setup-dialog { width: min(760px, 96vw); }
 .steps { display: grid; gap: var(--s3); }
-.setup-step { display: grid; grid-template-columns: 36px minmax(0, 1fr) 9rem; align-items: center; gap: var(--s4); border: 1px solid var(--line);
+.setup-step { display: grid; grid-template-columns: 36px minmax(0, 1fr) 9rem;  /* cột nút cố định: nút các bước rộng bằng nhau */
+              align-items: center; gap: var(--s4); border: 1px solid var(--line);
               border-radius: var(--s2); padding: var(--s3) var(--s4); }
 .setup-step.done { border-color: var(--p-green-500); background: #f0faf3; }
 .setup-step .num { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--p-surface-200); }

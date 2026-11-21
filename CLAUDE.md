@@ -36,7 +36,9 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - khoảng cách chỉ dùng biến `--s1`…`--s6` (4, 8, 12, 16, 24 px) làm `gap` / `padding`; không đặt margin cho từng chữ / nút;
    - hàng trên hàng dưới cùng loại thì chung cột (vd. "Cần xem" và "Chưa báo": cột nhãn `--label-w`, nút mã lớp rộng `--chip-w`;
      các dòng file ở Cài đặt dùng `subgrid`); mép trái nội dung mọi khu vực cùng lề `--s3`;
-   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` / `.inline-end` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại).
+   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` (một hàng chữ / nút);
+   - **nút cùng nhóm hoặc cùng cột rộng bằng nhau** (bằng nút dài nhất): `.same-w` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại),
+     `.btn-col` (nút trong cột chung, vd. Cài đặt, Thiết lập), `.chips` (nút mã lớp / nhóm); không để nút rộng theo độ dài chữ của riêng nó.
 10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
     `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
 
