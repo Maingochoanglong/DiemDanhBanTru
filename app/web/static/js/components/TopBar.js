@@ -28,9 +28,9 @@ export default {
     </InputGroup>
     <Popover ref="cal"><DatePicker :modelValue="dateOf(S.date)" inline @update:modelValue="picked" /></Popover>
     <Button icon="pi pi-chevron-right" severity="secondary" outlined title="Ngày học sau" @click="step(1)" />
-    <Button label="Hôm nay" icon="pi pi-calendar-clock" outlined @click="today" />
+    <Button label="Hôm nay" icon="pi pi-calendar-clock" severity="secondary" outlined @click="today" />
     <span class="weekday">{{ S.weekday }}</span>
     <span class="book" :title="S.book">{{ book }}</span>
-    <Button label="Mở sổ Excel" icon="pi pi-file-excel" severity="success" outlined class="end" @click="openBook" />
+    <Button label="Mở sổ Excel" icon="pi pi-file-excel" severity="secondary" outlined class="end" @click="openBook" />
   </div>`,
 };

@@ -12,9 +12,9 @@ export default {
       const x = s.value;
       return [
         { key: "book", title: "Sổ điểm danh tháng (Excel)", desc: "Chọn file sổ của tháng đang điểm danh.", value: x.book,
-          buttons: [{ label: "Chọn sổ…", outlined: x.book_done, run: () => step(chooseBook) }] },
+          buttons: [{ label: "Chọn sổ", outlined: x.book_done, run: () => step(chooseBook) }] },
         { key: "list", title: "Danh sách học sinh (Excel)", desc: "Chọn file danh sách học sinh.", value: x.list ? `${x.list} (${x.n} học sinh)` : "",
-          buttons: [{ label: "Chọn file…", outlined: x.list_done, run: () => step(chooseList) }] },
+          buttons: [{ label: "Chọn file", outlined: x.list_done, run: () => step(chooseList) }] },
       ].map(st => ({ ...st, done: x[st.key + "_done"] }));
     });
     async function step(fn) { await fn(); store.setup = await api("setup_info"); }
@@ -40,7 +40,7 @@ export default {
             <div><div class="fw-semibold">{{ st.title }}</div><div class="small text-muted">{{ st.desc }}</div></div>
             <div v-if="st.value" class="path"><i class="pi pi-check-circle text-success"></i> {{ st.value }}</div>
           </div>
-          <div class="inline-end"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
+          <div class="btn-col"><Button v-for="b in st.buttons" :key="b.label" :label="b.label" :outlined="b.outlined" @click="b.run" /></div>
         </div>
       </div>
       <div v-if="err || missing" class="text-danger small pre-line">{{ err || missing }}</div>

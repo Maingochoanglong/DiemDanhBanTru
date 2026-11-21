@@ -56,7 +56,7 @@ export default {
               <span class="small text-muted"> (chỉ cho ngày này; muốn app tự biết thì ghi cột <b>Ăn ghép</b> trong file Excel danh sách)</span></div>
             <template v-for="x in m.ask" :key="x.sid">
               <span><b>{{ x.name }}</b> <span class="text-muted">lớp {{ x.cls }}</span></span>
-              <div class="inline"><Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" severity="contrast" outlined @click="pick(x.sid, g)" /></div>
+              <div class="chips wide"><Button v-for="g in x.groups" :key="g" :label="'Nhóm ' + g" size="small" outlined @click="pick(x.sid, g)" /></div>
             </template>
           </div>
         </Message>
@@ -65,18 +65,18 @@ export default {
       </div>
       <DataTable v-if="!m.empty" :value="rows" dataKey="k" scrollable scrollHeight="flex" :rowClass="rowClass" size="small" class="meal">
         <Column header="Suất" class="text-center w-suat" headerClass="center"><template #body="{ data: l }">
-          <b v-if="!l.gap" :class="{ 'text-danger': !l.self }">{{ l.meals }}</b></template></Column>
+          <b v-if="!l.gap">{{ l.meals }}</b></template></Column>
         <Column field="label" header="Tên ghép" class="fw-semibold w-label" />
         <Column header="Gồm"><template #body="{ data: l }">{{ l.gom }}
-          <span v-if="l.absent && l.absent.length" class="text-danger">; vắng {{ l.absent.length }}:
-            <template v-for="(x, i) in l.absent" :key="x.sid">{{ i ? ", " : "" }}<a v-if="x.picked" href="#" class="text-danger"
+          <span v-if="l.absent && l.absent.length" class="text-absent">; vắng {{ l.absent.length }}:
+            <template v-for="(x, i) in l.absent" :key="x.sid">{{ i ? ", " : "" }}<a v-if="x.picked" href="#" class="text-absent"
               title="Bấm để chọn lại nhóm" @click.prevent="pick(x.sid, '')">{{ x.name }}</a><template v-else>{{ x.name }}</template></template>
           </span></template></Column>
       </DataTable>
       <div v-else class="sheet-notes text-muted">Sheet mẫu của sổ không có bảng suất ăn bên dưới bảng điểm danh.</div>
       <div v-if="missing.length" class="sheet-foot small">
         <span v-for="g in missing" :key="g.code"><i class="pi pi-sitemap"></i> Lớp ghép <b>{{ g.code }}</b>:
-          mới ghi nhóm <b class="text-warn">{{ g.done }}/{{ g.n }} em</b>, <a href="#" @click.prevent="students(g.code)">xem các em</a></span>
+          mới ghi nhóm <b class="text-remind">{{ g.done }}/{{ g.n }} em</b>, <a href="#" @click.prevent="students(g.code)">xem các em</a></span>
         <span class="text-muted">Ghi nhóm ở cột <b>Ăn ghép</b> trong file danh sách.</span>
       </div>
     </div>
