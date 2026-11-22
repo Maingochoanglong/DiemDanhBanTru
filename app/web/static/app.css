@@ -173,6 +173,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .meal .w-suat { width: 90px; text-align: center; }
 .meal th.center .p-datatable-column-header-content { justify-content: center; }
 .meal .w-label { width: 220px; }
+.meal tr.absent-row > td { background: var(--c-absent-bg); }  /* dòng có em ghép vắng: cam như lớp có em vắng */
 .meal tr.gap > td { padding: 0; height: var(--s3); background: var(--p-surface-50); }
 .ask-grid { display: grid; grid-template-columns: 14rem minmax(0, 1fr); align-items: center; gap: var(--s2) var(--s3); }
 .ask-grid > .full { grid-column: 1 / -1; }

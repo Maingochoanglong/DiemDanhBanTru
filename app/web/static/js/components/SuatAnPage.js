@@ -30,7 +30,7 @@ export default {
       return m.value.ok ? `Tổng suất ${m.value.total} = hiện diện ${m.value.present}`
         : `${d[0].toUpperCase() + d.slice(1)}: tổng suất ${m.value.total}, hiện diện ${m.value.present}`;
     });
-    const rowClass = r => r.gap ? "gap" : r.self ? "text-muted" : r.m ? "warn-row" : "";
+    const rowClass = r => r.gap ? "gap" : r.self ? "text-muted" : r.m ? "absent-row" : ""  // dòng có em ghép vắng;
     async function pick(sid, g) { const r = await api("pick_ghep", sid, g); store.S = r.state; load(); }
     function students(code) { store.hsPreset = code; store.page = "hs"; }
     const missing = computed(() => (m.value?.ghep || []).filter(g => g.done < g.n));  // lớp ghép còn em chưa ghi nhóm
