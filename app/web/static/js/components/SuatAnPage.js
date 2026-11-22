@@ -46,8 +46,8 @@ export default {
             <i :class="['pi', m.ok ? 'pi-check-circle' : 'pi-exclamation-triangle']"></i> {{ title }}</div>
           <div class="small text-muted">{{ m.self ? "Các nhóm " + m.groups_total + " + tự ăn tại lớp " + m.self.meals + " = " + m.total + " suất" : "Các nhóm: " + m.groups_total + " suất" }}</div>
         </div>
-        <Button label="Sửa cách ghép" icon="pi pi-external-link" severity="secondary" outlined @click="openPath('cdhs_file')"
-          title="Mở file danh sách học sinh để sửa sheet Nhóm ăn (lớp nào ăn chung dòng nào trong bảng suất ăn)" />
+        <Button label="Sửa cột Ăn ghép" icon="pi pi-external-link" severity="secondary" outlined @click="openPath('cdhs_file')"
+          title="Mở file danh sách học sinh: cột Ăn ghép (em ăn nhóm nào), sheet Nhóm ăn. Thêm / bỏ dòng suất ăn thì sửa trong sổ (Mở sổ Excel)." />
       </div>
       <div v-if="!m.empty && (m.ask.length || m.warnings.length || m.note)" class="sheet-notes">
         <Message v-if="m.ask.length" severity="warn">

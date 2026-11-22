@@ -400,7 +400,7 @@ class Api:
         msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Đã xóa sổ tạm."
         if ws.saved_fixes:
             msg += " Đã sửa công thức bảng suất ăn: " + "; ".join(ws.saved_fixes) + "."
-        return {"ok": msg, "state": self.state()}
+        return {"ok": msg, "fixed": bool(ws.saved_fixes), "state": self.state()}
 
     def open_book(self) -> dict:
         if self._ws.book_path:
