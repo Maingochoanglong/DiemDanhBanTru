@@ -41,7 +41,7 @@ ul { padding-left: var(--s6); display: grid; gap: var(--s2); }
 /* chữ */
 .text-muted { color: var(--muted) !important; } .text-danger { color: var(--c-error) !important; }
 .text-success { color: var(--c-done) !important; } .text-remind { color: var(--c-remind) !important; } .text-absent { color: var(--c-absent) !important; }
-.small { font-size: .85em; } .fs-5 { font-size: 1.2rem; }
+.small { font-size: .9em; } .fs-5 { font-size: 1.2rem; }
 .fw-bold { font-weight: 700; } .fw-semibold { font-weight: 600; } .fw-normal { font-weight: 400; } .fst-italic { font-style: italic; }
 .text-center { text-align: center; } .text-nowrap { white-space: nowrap; } .pre-line { white-space: pre-line; }
 .text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .text-break { overflow-wrap: anywhere; }

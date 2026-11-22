@@ -122,7 +122,7 @@ Lớp ghép là lớp không có hàng riêng trong bảng suất ăn: các em c
 
 ### Đổi cách ghép (đầu năm học, hoặc giữa năm)
 
-Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và cột **Tên ghép** (dòng trống cách nhóm giữ nguyên). Cách ghép khai báo ở sheet **Nhóm ăn** trong file Excel danh sách (nút **Sửa cách ghép** mở file đó):
+Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và cột **Tên ghép** (dòng trống cách nhóm giữ nguyên). Cách ghép khai báo ở sheet **Nhóm ăn** trong file Excel danh sách (nút **Sửa cột Ăn ghép** mở file đó):
 
 | Tên dòng (in ở sổ) | Các lớp ăn chung | Mã ghép lẻ |
 |---|---|---|

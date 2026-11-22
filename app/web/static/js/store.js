@@ -1,5 +1,5 @@
 // Trạng thái chung của giao diện và các thao tác dùng ở nhiều trang. Mọi xử lý sổ nằm ở Python (app/web/api.py).
-import { api, conn, IS_APP } from "./api.js";
+import { api, CONFIG, conn, IS_APP } from "./api.js";
 import { ask, info, SAVE_CHOICES, toast } from "./dialogs.js";
 import { esc, mealDiff } from "./util.js";
 
@@ -73,7 +73,9 @@ export async function doSave() {
   const ck = await api("save_check");
   if (ck.blocked) return showBlocked(ck.blocked);
   const items = [];
-  if (ck.unreported?.length) items.push(`<li><b>${ck.unreported.length} lớp chưa báo</b>: ${esc(ck.unreported.join(", "))}.
+  const shown = CONFIG.unreported_shown;  // như hàng Chưa báo: mã đầy đủ đã có trên trang, ở đây chỉ nhắc
+  const codes = ck.unreported?.length > shown ? `${ck.unreported.slice(0, shown).join(", ")} và ${ck.unreported.length - shown} lớp khác` : ck.unreported?.join(", ");
+  if (ck.unreported?.length) items.push(`<li><b>${ck.unreported.length} lớp chưa báo</b>: ${esc(codes)}.
     Lưu bây giờ thì các lớp này coi như <b>không em nào vắng</b>` +
     `${ck.unreported_auto?.length ? ` (trừ các em cắt thứ 6 ở lớp ${esc(ck.unreported_auto.join(", "))})` : ""}.</li>`);
   if (ck.extra?.length) items.push(`<li><b class="text-danger">Tên chưa xác định</b> (lưu nguyên chữ như đang ghi, không tính là em nào):
@@ -111,7 +113,7 @@ export async function doSave() {
   }
   if (r.error) { info("Lỗi khi lưu", r.error); return false; }
   store.S = r.state;
-  toast(r.ok);
+  toast(r.ok, "success", r.fixed);  // app vừa sửa công thức bảng suất ăn: giữ thông báo cho giáo vụ đọc
   return true;
 }
 

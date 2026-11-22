@@ -26,8 +26,9 @@ export const ask = (title, html, buttons, opts = {}) =>
 
 export const info = (title, msg) => ask(title, `<div class="pre-line">${esc(msg)}</div>`, [{ key: "ok", label: "Đóng" }]);
 
-export function toast(msg, severity = "success") {
-  if (msg) ui.toast.add({ severity, summary: msg, life: severity === "error" ? CONFIG.toast_life_error : CONFIG.toast_life });
+// keep: thông báo không tự tắt (giáo vụ cần đọc kỹ, vd. app vừa sửa công thức trong sổ), bấm dấu x để đóng
+export function toast(msg, severity = "success", keep = false) {
+  if (msg) ui.toast.add({ severity, summary: msg, life: keep ? undefined : severity === "error" ? CONFIG.toast_life_error : CONFIG.toast_life });
 }
 
 // 3 lựa chọn hay dùng khi còn thay đổi chưa lưu
