@@ -62,14 +62,14 @@ export default {
         <div><div class="p-dialog-title">Lớp {{ cls.D.code }}{{ cls.D.ma ? " (" + cls.D.ma + ")" : "" }}</div>
           <div class="text-muted">{{ cls.D.gvcn ? "GVCN " + cls.D.gvcn : "" }}</div></div>
         <div class="inline">
-          <Tag severity="secondary" :value="'Sĩ số ' + cls.D.si" /><Tag severity="danger" :value="'Vắng ' + cls.D.vang" />
-          <Tag severity="success" :value="'Hiện diện ' + cls.D.hd" />
+          <Tag severity="secondary" :value="'Sĩ số ' + cls.D.si" /><Tag :severity="cls.D.vang ? 'warn' : 'secondary'" :value="'Vắng ' + cls.D.vang" />
+          <Tag severity="secondary" :value="'Hiện diện ' + cls.D.hd" />
         </div>
       </div>
     </template>
     <div v-if="cls.D" class="cls-body">
       <Message v-for="w in cls.D.warnings" severity="error" icon="pi pi-exclamation-triangle">{{ w }}</Message>
-      <Message v-if="cls.D.pending.length" severity="warn">
+      <Message v-if="cls.D.pending.length" severity="error">
         <div class="stack"><span><b>Tên trong sổ chưa khớp danh sách.</b> Bấm vào tên để chọn em đúng:</span>
           <div class="inline">
             <Button v-for="p in cls.D.pending" :key="p.idx" :label="p.query" icon="pi pi-question-circle" severity="danger" @click="resolve(p)" />

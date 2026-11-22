@@ -52,7 +52,7 @@ export async function gotoDay(fn) {
     const n = r.need_month;
     const k = await ask("Sổ tháng mới", `Sổ đang chọn <b>${esc(n.prev)}</b> không phải sổ tháng ${n.month}/${n.year}.<br><br>
       Tạo sổ tháng ${n.month} từ sheet cuối của sổ này (giữ nguyên mẫu, chữ ký, ghi chú), hoặc chọn file sổ tháng ${n.month} có sẵn.`,
-      [{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn…", severity: undefined, outlined: true },
+      [[{ key: "new", label: "Tạo sổ tháng mới" }, { key: "pick", label: "Chọn file sổ có sẵn", severity: undefined, outlined: true }],
         { key: "later", label: "Để sau" }]);
     if (k === "new") handle(await api("create_month_book", n.target));
     else if (k === "pick") handle(await api("choose_book"));
@@ -61,7 +61,7 @@ export async function gotoDay(fn) {
 
 async function showBlocked(b) {  // còn tên chưa rõ: chưa lưu được, đưa tới lớp cần xử lý
   await ask("Chưa lưu được", `<p class="text-danger fw-bold">Còn ${b.n} tên chưa rõ nên chưa lưu được.</p>
-    <ul>${b.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay", severity: "danger" }],
+    <ul>${b.lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`, [{ key: "fix", label: "Xử lý ngay" }],
   { icon: "pi-exclamation-triangle", danger: true });
   store.page = "dd";
   if (b.code) openClass(b.code);
@@ -80,16 +80,18 @@ export async function doSave() {
     <ul>${ck.extra.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   if (ck.meal) items.push(`<li><b class="text-danger">Suất ăn ${mealDiff(ck.meal)}</b> (tổng suất ${ck.meal.total}, hiện diện ${ck.meal.present})` +
     `${ck.meal.ask ? `: ${ck.meal.ask} em ăn ghép vắng chưa chọn nhóm` : ""}. Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch.</li>`);
+  if (ck.meal_fixes?.length) items.push(`<li><b class="text-remind">Bảng suất ăn trong sổ chưa đúng công thức</b>: khi lưu, app sửa
+    <ul>${ck.meal_fixes.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   if (ck.conflicts?.length) items.push(`<li><b>Sĩ số khác nhau</b> giữa danh sách bán trú và sổ (có thể do thêm/cắt em chưa cập nhật):
     <ul>${ck.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   let choice = null;
   if (items.length) {
     const btns = ck.conflicts?.length
-      ? [{ key: "keep", label: "Lưu, giữ sĩ số như sổ" }, { key: "list", label: "Lưu, dùng sĩ số theo danh sách", severity: undefined }]
+      ? [[{ key: "keep", label: "Lưu, giữ sĩ số như sổ" }, { key: "list", label: "Lưu, dùng sĩ số theo danh sách", severity: undefined }]]
       : [{ key: "go", label: "Vẫn lưu" }];
     if (ck.meal) btns.push({ key: "see", label: "Xem trang Suất ăn" });
     btns.push({ key: "stay", label: "Hủy" });
-    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "42rem" });
+    const k = await ask("Kiểm tra trước khi lưu", `<ul>${items.join("")}</ul>`, btns, { icon: "pi-clipboard", width: "54rem" });  // đủ rộng cho các nút trên một hàng
     if (k === "see") { store.page = "sa"; return false; }
     if (!["go", "keep", "list"].includes(k)) return false;
     if (k !== "go") choice = k;
@@ -98,7 +100,7 @@ export async function doSave() {
   if (r.blocked) return showBlocked(r.blocked);
   if (r.conflicts) {  // hiếm: sĩ số đổi giữa lúc hỏi và lúc lưu
     choice = await ask("Sĩ số khác nhau", `<p>Ghi sĩ số nào vào sổ?</p><ul>${r.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`,
-      [{ key: "keep", label: "Giữ sĩ số như trong sổ" }, { key: "list", label: "Dùng sĩ số theo danh sách", severity: undefined }, { key: null, label: "Hủy" }]);
+      [[{ key: "keep", label: "Giữ sĩ số như trong sổ" }, { key: "list", label: "Dùng sĩ số theo danh sách", severity: undefined }], { key: null, label: "Hủy" }]);
     if (!choice) return false;
     r = await api("save", choice);
   }

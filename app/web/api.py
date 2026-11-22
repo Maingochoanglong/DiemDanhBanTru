@@ -159,17 +159,19 @@ class Api:
         return not self._ws.book_path and bool(so) and Path(so).exists()
 
     def _status(self, code: str) -> str:
+        """Trạng thái lớp, mỗi trạng thái một màu (app.css): todo chưa báo, done đủ, absent có em vắng, error cần xem."""
         st = self._ws.state
         c = st.cd(code)
         n = st.absent_count(code)
         if c.extra or any(p[0] == code for p in st.pending) or st.class_warnings(code):
-            return "err"
+            return "error"
         if not c.reported:  # chưa báo (có thể đã có em nghỉ thứ 6 tự tính vắng)
-            return "muted"
-        return "warn" if n else "ok"
+            return "todo"
+        return "absent" if n else "done"
 
     def state(self) -> dict:
         self._ws.sync_list()  # file danh sách vừa sửa bằng Excel: dùng ngay
+        self._ws.sync_book()  # sổ vừa sửa bằng Excel (vd. thêm dòng suất ghép): dùng ngay
         ws, st = self._ws, self._ws.state
         ws.autosave()  # mọi thao tác đều trả về state(): có thay đổi mới thì ghi ngay vào sổ tạm
         bp = ws.book_path
@@ -216,7 +218,7 @@ class Api:
             out["meal"] = {"total": m.total_meals, "present": m.total_present, "ok": m.balanced, "ask": len(m.ask)}
         out["unresolved"] = ws.unresolved_count()
         out["unreported"] = st.unreported()
-        out["need_look"] = [code for code in st.classes if self._status(code) == "err"]  # lớp chữ đỏ: hiện thành nút ở đầu trang
+        out["need_look"] = [code for code in st.classes if self._status(code) == "error"]  # lớp chữ đỏ: hiện thành nút ở đầu trang
         changes = st.scheduled_changes()
         if changes:
             out["info"].append(f"{len(changes)} em thêm/cắt bán trú từ hôm nay, sĩ số đã tự đổi")
@@ -366,7 +368,8 @@ class Api:
             return {"blocked": blocked}
         out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines(),
                "unreported_auto": [c for c in st.unreported() if st.absent_count(c)],
-               "extra": [f"Lớp {code}: {', '.join(st.cd(code).extra)}" for code in st.classes if st.cd(code).extra]}
+               "extra": [f"Lớp {code}: {', '.join(st.cd(code).extra)}" for code in st.classes if st.cd(code).extra],
+               "meal_fixes": ws.meal_fixes}
         if not ws.layout.is_empty:
             m = ws.meals()
             if not m.balanced:
@@ -395,6 +398,8 @@ class Api:
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không lưu được:\n{e}"}
         msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Đã xóa sổ tạm."
+        if ws.saved_fixes:
+            msg += " Đã sửa công thức bảng suất ăn: " + "; ".join(ws.saved_fixes) + "."
         return {"ok": msg, "state": self.state()}
 
     def open_book(self) -> dict:
@@ -406,6 +411,7 @@ class Api:
     # ================================================================== suất ăn
     def meals(self) -> dict:
         self._ws.sync_list()  # vừa sửa cột Ăn ghép / sheet Nhóm ăn bằng Excel: trang Suất ăn hiện ngay
+        self._ws.sync_book()  # vừa thêm / bỏ dòng suất ăn trong sổ: trang Suất ăn hiện ngay
         ws, st = self._ws, self._ws.state
         layout = ws.layout
         if st is None or layout.is_empty:

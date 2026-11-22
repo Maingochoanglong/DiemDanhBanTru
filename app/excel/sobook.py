@@ -18,7 +18,7 @@ from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
 from ..core.day import DayState
-from ..core.meals import MealGroup, MealLayout, MealRow, MealSummary
+from ..core.meals import CODE_RE, MealGroup, MealLayout, MealRow, MealSummary
 from ..core.text import clean_spaces, fmt_date, fold, norm_class
 from .. import config
 from .files import safe_save
@@ -173,8 +173,10 @@ def analyze_meals(ws: Worksheet, info: SheetInfo) -> MealLayout:
     meal_letter = get_column_letter(meal_col)
     sum_re = re.compile(rf"SUM\(\s*\$?{meal_letter}\$?\d+\s*:\s*\$?{meal_letter}\$?\d+\s*\)")
     for cell, _, _ in formula_cells:
-        if cell.column != meal_col and sum_re.search(str(cell.value).upper()):
+        found = sum_re.search(str(cell.value).upper()) if cell.column != meal_col else None
+        if found:
             layout.sum_cell = cell.coordinate
+            layout.sum_rows = tuple(int(x) for x in re.findall(r"\d+", found.group()))
             used_rows.append(cell.row)
             break
     # ô tổng cộng (vd. G72 =G69+G70) cũng nằm trong vùng in
@@ -259,6 +261,8 @@ def plan_meal_table(info: SheetInfo, groups: list[MealGroup], split: set[str], o
     layout = MealLayout(rows, [c for c in info.class_rows if c not in grouped and c not in ghep], ghep)
     layout.o_values = {c: o_counts.get(c, 0) for c in codes}
     layout.sum_cell, layout.self_cell, layout.total_cell = old.sum_cell, old.self_cell, old.total_cell
+    if old.sum_cell:  # write_meal_table ghi =SUM(dòng đầu bảng cũ : dòng cuối bảng mới)
+        layout.sum_rows = (first, max([r.row for r in rows] or [first]))
     m = re.match(r"([A-Z]+)(\d+):([A-Z]+)(\d+)", old.area or "")
     if m:  # vùng in: như bảng cũ, kéo tới dòng cuối của bảng mới (và các ô tổng nằm dưới bảng, nếu có)
         old_end, old_last = int(m.group(4)), max(x.row for x in old.rows)
@@ -266,6 +270,50 @@ def plan_meal_table(info: SheetInfo, groups: list[MealGroup], split: set[str], o
         summary = [int(re.search(r"\d+", a).group()) for a in (old.sum_cell, old.self_cell, old.total_cell) if a]
         layout.area = f"{m.group(1)}{m.group(2)}:{m.group(3)}{max([r.row for r in rows] + summary + tail)}"
     return layout
+
+
+def groups_from_layout(layout: MealLayout, list_codes: set[str]) -> list[MealGroup]:
+    """Bảng suất ăn đang có trong sổ (giáo vụ tự thêm / bỏ dòng bằng Excel) viết lại thành các nhóm như sheet Nhóm ăn,
+    để dựng lại cùng chỗ nhưng đúng công thức. Dòng trống giữ thành nhóm trống (giữ cách dòng như sổ).
+    Dòng nhận em ghép lẻ: dòng đã có ô O, hoặc nhãn có mã x.y mà danh sách có em ghi Ăn ghép x.y (`list_codes`)."""
+    if layout.is_empty:
+        return []
+    by_row = {r.row: r for r in layout.rows}
+    out = []
+    for r in range(min(by_row), max(by_row) + 1):
+        mr = by_row.get(r)
+        if mr is None:
+            out.append(MealGroup(""))
+            continue
+        code = mr.code or ""
+        m = CODE_RE.search(mr.label)
+        if not code and m and f"{m.group(1)}.{m.group(2)}" in list_codes:
+            code = f"{m.group(1)}.{m.group(2)}"
+        out.append(MealGroup(mr.label, list(mr.classes), code))
+    return out
+
+
+def meal_fixes(old: MealLayout, plan: MealLayout) -> list[str]:
+    """Những chỗ bảng suất ăn trong sổ (`old`) khác bảng đúng công thức (`plan`), viết thành câu dễ hiểu.
+    Rỗng = sổ đã đúng, không cần ghi lại bảng."""
+    out = []
+    olds, news = {r.row: r for r in old.rows}, {r.row: r for r in plan.rows}
+    for row in sorted(set(olds) | set(news)):
+        a, b = olds.get(row), news.get(row)
+        if b is None:
+            out.append(f"Dòng {row}: bỏ {a.label}")
+        elif a is None or (a.label, sorted(a.classes)) != (b.label, sorted(b.classes)):
+            out.append(f"Dòng {row}: {b.label}" + (f" ({', '.join(b.classes)})" if b.classes else ""))
+        elif b.code and not a.code:
+            out.append(f"Dòng {row} ({b.label}): thêm ô nhận em ghép lẻ {b.l_cell} ={b.o_cell}-{b.m_cell}, {b.o_cell}")
+    if old.self_cell and set(old.self_classes) != set(plan.self_classes):
+        add = [c for c in plan.self_classes if c not in old.self_classes]
+        drop = [c for c in old.self_classes if c not in plan.self_classes]
+        parts = ([f"thêm {', '.join(add)}"] if add else []) + ([f"bỏ {', '.join(drop)}"] if drop else [])
+        out.append(f"Ô {old.self_cell} (ăn tại lớp): {'; '.join(parts)}")
+    if old.sum_cell and plan.sum_rows and old.sum_rows != plan.sum_rows:
+        out.append(f"Ô {old.sum_cell} (cộng các nhóm): cộng dòng {plan.sum_rows[0]} tới dòng {plan.sum_rows[1]}")
+    return out
 
 
 def write_meal_table(ws: Worksheet, info: SheetInfo, plan: MealLayout) -> None:

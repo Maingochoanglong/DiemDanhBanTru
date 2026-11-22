@@ -36,8 +36,17 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
    - khoảng cách chỉ dùng biến `--s1`…`--s6` (4, 8, 12, 16, 24 px) làm `gap` / `padding`; không đặt margin cho từng chữ / nút;
    - hàng trên hàng dưới cùng loại thì chung cột (vd. "Cần xem" và "Chưa báo": cột nhãn `--label-w`, nút mã lớp rộng `--chip-w`;
      các dòng file ở Cài đặt dùng `subgrid`); mép trái nội dung mọi khu vực cùng lề `--s3`;
-   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` / `.inline-end` (một hàng nút), `.dlg-foot` (nút cuối hộp thoại).
-10. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
+   - lưới dùng chung: `.stack` (hàng chồng nhau), `.inline` (một hàng chữ / nút);
+   - **nút cùng loại rộng bằng nhau, nút khác loại rộng theo chữ**. Cùng loại = các lựa chọn thay nhau cho một việc
+     (2 nút chọn file; "Lưu, giữ sĩ số…" / "Lưu, dùng sĩ số…"; "Tạo sổ tháng mới" / "Chọn file sổ có sẵn"; nút mã lớp, nút nhóm).
+     Khác loại thì không ép (Lưu vào sổ / Hoàn tác; Khôi phục / Bỏ bản lưu tạm; Hủy, Để sau, Xong).
+     Cách làm: `.same-w` (bọc nhóm cùng loại; `ask()` nhận mảng con), `.chips`, cột nút chung (Thiết lập, Cài đặt: "Chọn … khác" một cỡ, "Mở …" một cỡ).
+10. **Màu theo ý nghĩa, giống nhau ở mọi khu vực** (bảng màu đầu `static/app.css`, chỉ lấy màu PrimeVue `--p-*`):
+    xám = chưa báo / phụ; xanh lá = xong, khớp; cam = vắng; vàng = nhắc việc chưa xong (không chặn);
+    đỏ = sai, cần xem, chặn lưu, nút xóa bỏ dữ liệu; xanh dương = việc chính, trang đang mở.
+    Trạng thái lớp (`Api._status`): `todo` · `done` · `absent` · `error`. Không viết mã màu ngoài `:root`;
+    `test_rules.test_colors_only_from_meaning_palette` kiểm tra.
+11. **Chữ không dùng gạch dài, gạch ngắn, dấu trừ** (U+2014, U+2013, U+2212): dùng dấu hai chấm, phẩy, chấm, ngoặc.
     `test_rules.test_no_long_dashes_in_ui_and_docs` kiểm tra mã app và tài liệu.
 
 ## App chỉ làm việc với 3 file (+ sổ tạm)
@@ -45,7 +54,7 @@ App Windows (file .exe) giúp giáo vụ làm sổ điểm danh bán trú. Giao 
 | File | Ai sửa | Mã đọc/ghi |
 |---|---|---|
 | **Danh sách học sinh** (Excel, .xlsx/.xls) | giáo vụ, bằng Excel. App đọc; file vừa sửa thì đọc lại ngay ở lần gọi kế tiếp (`Workspace.sync_list`). App chỉ ghi 3 cột lịch khi giáo vụ bấm **Lưu lịch** (trang Học sinh). | `excel/roster_import.py:load_list`, `excel/roster_schedule.py` |
-| **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu | `excel/sobook.py` |
+| **Sổ điểm danh tháng** (Excel, mỗi ngày 1 sheet, mỗi tháng 1 file) | app ghi sheet của ngày khi bấm Lưu; giáo vụ có thể tự thêm / bỏ dòng suất ăn, app viết lại công thức bảng suất ăn của sheet đang lưu cho đúng (`Workspace._prepare_sheet`) | `excel/sobook.py` |
 | **CaiDat.txt** (cạnh file .exe; chạy từ mã nguồn thì ở gốc repo) | app, hoặc giáo vụ sửa bằng Notepad | `settings.py` |
 
 Thư mục app = thư mục chứa CaiDat.txt (`Workspace.app_dir`): hộp chọn file mở sẵn ở đây; sổ / danh sách nằm trong đó thì CaiDat.txt
@@ -63,6 +72,9 @@ ghi đường dẫn tương đối (`settings.PATH_KEYS`), chép cả thư mục
   - mất điện thì lần mở sau app hỏi khôi phục.
 - **Không có** file dữ liệu riêng, nhật ký, thư mục sao lưu. Sổ tự nhớ các sheet app đã lưu bằng một thuộc tính ẩn của file (`sobook.saved_sheets`), để mở lại ngày mà lớp nào cũng đủ vẫn là "đã báo".
 - Ngày đang mở còn thay đổi chưa lưu thì không cho đổi sổ / file danh sách (`Api._unsaved_error`).
+- **Bảng suất ăn**: sổ là nơi giáo vụ nói ý mình (tên dòng cột J, lớp nào ở dòng nào qua công thức cột I); app đọc
+  (`sobook.analyze_meals` rồi `groups_from_layout`), dựng bảng đúng công thức (`plan_meal_table`), so (`meal_fixes`) và chỉ ghi lại khi khác
+  (`write_meal_table`). Tờ ngày mới có sheet Nhóm ăn thì dựng theo sheet đó. Sổ sửa lúc app đang mở: `Workspace.sync_book`.
 
 ## Bản đồ mã nguồn
 
@@ -71,7 +83,7 @@ run_app.py                điểm khởi chạy; đầu file có các tùy chọ
 app/main.py               main(), --selftest (CI chạy trên file .exe; Excel thử trong bộ nhớ), lỗi nặng hiện hộp thông báo
 app/config.py             MỌI giá trị cố định (cổng, tên file, thời gian chờ, ngưỡng, lịch học…); phần UI gửi qua /config.js
 app/settings.py           CaiDat.txt
-app/service.py            Workspace: điều phối (mở ngày, lưu, sổ tạm, sổ tháng mới, bảng suất ăn theo Nhóm ăn)
+app/service.py            Workspace: điều phối (mở ngày, lưu, sổ tạm, sổ tháng mới, bảng suất ăn đúng công thức, sync_book)
 app/core/                 xử lý thuần, không đụng file / giao diện
   models.py               Student, ClassInfo, Roster (tra theo lớp, tên ghi sổ)
   day.py                  DayState: 1 ngày điểm danh (vắng, đã báo, ghi chú, sĩ số, undo)

@@ -56,7 +56,7 @@ Ngoài ra chỉ có **sổ tạm** (mục 8): file nhỏ cạnh file .exe, có k
 - **Ăn từ / Cắt từ / Cắt thứ 6**: lịch bán trú của em (mục 4). Không cần tự gõ: đặt trên app ở trang **Học sinh** (bấm vào em), app ghi vào 3 cột này. File chưa có các cột này thì app tự thêm vào cuối bảng.
 - **Ghi chú**: chữ tự do, chỉ để ghi chú (app hiện ra ở trang Học sinh, không đọc lịch từ đây).
 
-**Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**: **chọn sổ điểm danh** của tháng đang làm, **chọn file danh sách học sinh**, rồi bấm **Bắt đầu điểm danh**. Mở lại cùng bản thì không hỏi nữa. Đổi file sau này: trang **Cài đặt** → **Chọn sổ khác…** / **Chọn file khác…**.
+**Mỗi lần tải bản app mới về**, lần đầu mở app hiện màn **Thiết lập trước khi điểm danh**: **chọn sổ điểm danh** của tháng đang làm, **chọn file danh sách học sinh**, rồi bấm **Bắt đầu điểm danh**. Mở lại cùng bản thì không hỏi nữa. Đổi file sau này: trang **Cài đặt** → **Chọn sổ khác** / **Chọn file khác**.
 
 ## 3. Mỗi sáng
 
@@ -138,14 +138,25 @@ Trang **Suất ăn** trình bày như bảng trong sổ: cột **Suất** và c�
 - Lớp không có ở sheet và không có em ghi **Ăn ghép** = **ăn tại lớp**.
 - Sửa xong lưu file Excel. Sheet ghi sai (lớp không có, một lớp ở 2 dòng, mã trùng…) thì trang **Cài đặt** báo lỗi và app giữ bảng suất ăn như sổ.
 - **Từ tờ ngày mới** (kể cả tờ đầu tháng của sổ tháng mới), app tự dựng bảng suất ăn theo sheet này: dòng, nhãn, công thức, ô số em ghép, ô cộng các nhóm, ô cộng các lớp ăn tại lớp, vùng in. **Các tờ đã có trong sổ giữ nguyên.** Trang **Suất ăn** ghi rõ khi bảng của ngày đang mở khác sheet Nhóm ăn.
-- File danh sách không có sheet Nhóm ăn thì app giữ bảng suất ăn như sổ (như trước).
+- File danh sách không có sheet Nhóm ăn thì app theo bảng suất ăn trong sổ (mục dưới).
+
+### Thêm / bỏ suất ăn, suất ghép ngay trong sổ
+
+Không dùng sheet Nhóm ăn thì sửa thẳng bảng suất ăn trong sổ bằng Excel (sửa ở tờ của ngày đang làm; tờ ngày mới chép từ tờ trước nên mang theo):
+
+- **Thêm một dòng**: cột **I** ghi công thức cộng ô Hiện diện (cột F) của các lớp ăn ở dòng đó, vd. `=F13+F14`; cột **J** ghi tên dòng, vd. *2D16 ghép 2D17*. Dòng đặt ở đâu trong bảng cũng được (cả dòng trống cách nhóm).
+- **Thêm suất nhận em ghép lẻ**: tên dòng bắt đầu bằng mã, vd. *1.5 ghép*, rồi ghi mã *1.5* ở cột **Ăn ghép** của các em ăn ở đó (file danh sách).
+- **Bỏ một dòng**: xóa nội dung dòng đó. Em ăn ghép ở dòng đó thì đổi cột **Ăn ghép** sang nhóm mới.
+- Các ô còn lại **app tự sửa khi bấm Lưu vào sổ**: ô cộng các nhóm (vd. `G69 =SUM(I69:I81)` cộng đủ mọi dòng), ô ăn tại lớp (`G70`: bỏ lớp đã có dòng riêng, thêm lớp không còn dòng nào), ô nhận em ghép lẻ (`L =O-M`, số em ghép ở cột O). Hộp **Kiểm tra trước khi lưu** và trang **Suất ăn** ghi rõ ô nào sẽ sửa; lưu xong app báo đã sửa gì. Chỉ sửa tờ đang lưu, các tờ trước giữ nguyên.
+- Sửa sổ lúc app đang mở: app đọc lại ngay ở thao tác kế tiếp (tên vắng đang chọn giữ nguyên).
+- Cột **Ăn ghép** ghi mã mà sổ chưa có dòng đó (vd. *4.5*): trang **Suất ăn** báo đỏ, app không tự thêm dòng.
 
 ## 6. Học sinh
 
 Trang **Học sinh**: tìm em, lọc theo lớp, xem em nào ăn bán trú, **tên gọi khác**, ăn ghép, **Lịch** (ăn từ…, cắt từ…, cắt thứ 6) và **Ghi chú**. **Bấm vào một em** để đặt lịch (mục 4).
 
 - Muốn **thêm, sửa, xóa học sinh**: sửa **file Excel danh sách** (nút **Sửa danh sách** mở file), lưu lại. Quay lại app là thấy ngay.
-- Đổi sang file danh sách khác: **Cài đặt → Chọn file khác…**.
+- Đổi sang file danh sách khác: **Cài đặt → Chọn file khác**.
 
 Lớp có sĩ số theo danh sách khác sĩ số trong sổ được tô đỏ ở bảng điểm danh. Khi lưu, nếu còn lệch, app hỏi: **giữ sĩ số như trong sổ** hay **dùng sĩ số theo danh sách**.
 

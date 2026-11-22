@@ -211,7 +211,7 @@ def test_old_sheet_name_of_kid_no_longer_boarding(ws):
     assert st.absent_names("4D21") == ["Vũ Khoa"]  # giữ như sổ khi lưu lại
     api = Api(ws)
     row = next(r for r in api.state()["rows"] if r.get("code") == "4D21")
-    assert row["status"] != "err" and row["not_bt"] == "Vũ Khoa"
+    assert row["status"] != "error" and row["not_bt"] == "Vũ Khoa"
     assert api.class_detail("4D21")["not_bt"] == ["Vũ Khoa"]
 
 

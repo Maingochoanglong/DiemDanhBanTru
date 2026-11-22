@@ -5,6 +5,7 @@
 2. Không viết cứng: giá trị trong app/config.py không được viết lại ở file khác (Python và JavaScript).
 3. Mọi thứ của app nằm trong thư mục chứa .exe: không %APPDATA%, %TEMP%, thư mục người dùng.
 4. Chữ giao diện, thông báo, tài liệu không dùng gạch dài, gạch ngắn, dấu trừ.
+5. Chữ giao diện không dùng dấu ba chấm.
 """
 
 import ast
@@ -159,3 +160,40 @@ def test_no_long_dashes_in_ui_and_docs():
     bad = [f"{p.relative_to(root)}:{i}" for p in files
            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1) if re.search("[—–−]", line)]
     assert not bad, f"Có gạch dài / gạch ngắn / dấu trừ: {bad}"
+
+
+def _ui_strings():
+    """Chữ người dùng thấy: chuỗi trong JavaScript (bỏ dòng chú thích) và chuỗi trong mã Python (bỏ docstring, chú thích)."""
+    out = []
+    for p in (ROOT / "web" / "static" / "js").rglob("*.js"):
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            code = re.sub(r"^\s*//.*$|\s//\s.*$", "", line)
+            out += [(f"{p.name}:{i}", s) for s in re.findall(r"\"([^\"]*)\"|`([^`]*)`|>([^<>]+)<", code) for s in s if s]
+    for p in ROOT.rglob("*.py"):
+        out += [(f"{p.name}:{n.lineno}", n.value) for n in _code_strings(ast.parse(p.read_text(encoding="utf-8")))
+                if isinstance(n.value, str)]
+    return out
+
+
+def test_no_ellipsis_in_ui_text():
+    """Nút, thông báo, giải thích không dùng dấu ba chấm (… hoặc ...): ghi đủ chữ. Bộ đọc ô sổ viết \\u2026 trong regex."""
+    bad = [f"{where}: {s[:60]!r}" for where, s in _ui_strings() if "…" in s or "..." in s.replace("../", "")]
+    assert not bad, f"Có dấu ba chấm trong chữ giao diện: {bad}"
+
+
+# ---------------------------------------------------------------- 5. màu theo ý nghĩa
+def test_colors_only_from_meaning_palette():
+    """Màu chỉ đặt một chỗ: biến ở :root đầu app.css (lấy từ bảng màu PrimeVue), mỗi màu một nghĩa (xem chú thích đầu app.css).
+    Không viết mã màu (#abc, rgb()) ở chỗ khác; nút / thẻ chỉ dùng các severity có nghĩa trong bảng."""
+    static = ROOT / "web" / "static"
+    css = (static / "app.css").read_text(encoding="utf-8")
+    body = css[css.index("}", css.index(":root")):]  # sau khối :root
+    color = r"#[0-9a-fA-F]{3,8}\b|rgba?\("
+    bad = [f"app.css: {m}" for m in re.findall(color, body)]
+    bad += [f"{p.name}: {m}" for p in (static / "js").rglob("*.js") for m in re.findall(color, p.read_text(encoding="utf-8"))]
+    assert not bad, f"Mã màu viết ngoài bảng màu ở đầu app.css: {bad}"
+    allowed = {"secondary", "success", "warn", "danger", "error", "info"}  # contrast, help: không có nghĩa trong bảng
+    js = "".join(p.read_text(encoding="utf-8") for p in (static / "js").rglob("*.js"))
+    used = set(re.findall(r"""(?<!:)severity[=:]\s*["']([a-z]+)["'](?! in )""", js))  # severity="danger", severity: "danger"
+    used |= {w for expr in re.findall(r':severity="([^"]*)"', js) for w in re.findall(r"'([a-z]+)'", expr)}  # :severity="x ? 'a' : 'b'"
+    assert used <= allowed, f"Màu nút / thẻ không có trong bảng ý nghĩa: {used - allowed}"

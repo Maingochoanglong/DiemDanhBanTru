@@ -32,8 +32,10 @@ export default {
       </template>
       <div v-if="err" class="text-danger">{{ err }}</div>
       <div class="dlg-foot">
-        <Button label="Chọn em này" @click="done('pick')" />
-        <Button label="Giữ nguyên chữ đã ghi" outlined @click="done('raw')" />
+        <div class="same-w">
+          <Button label="Chọn em này" @click="done('pick')" />
+          <Button label="Giữ nguyên chữ đã ghi" outlined @click="done('raw')" />
+        </div>
         <Button label="Bỏ qua tên này" severity="secondary" outlined @click="done('skip')" />
       </div>
     </div>`,
