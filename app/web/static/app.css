@@ -120,6 +120,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 
 /* khung bảng: [đầu bảng] [bảng] [chân bảng] */
 .sheet { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
+.sheet:has(> .sheet-notes) { grid-template-rows: auto auto minmax(0, 1fr) auto; }  /* có lời báo: bảng vẫn là hàng giãn */
 .sheet > .p-datatable { min-height: 0; }
 .sheet-head { display: grid; grid-auto-flow: column; justify-content: start; align-items: center; gap: var(--s3);
               padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); }

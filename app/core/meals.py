@@ -35,6 +35,7 @@ class MealLayout:
     area: str = ""  # vùng in, vd. G68:O80
     o_values: dict[str, int] = field(default_factory=dict)  # cột O hiện có trong sổ
     sum_cell: str | None = None  # ô cộng các nhóm, vd. G69 =SUM(I69:I80)
+    sum_rows: tuple[int, int] | None = None  # vùng ô đó cộng, vd. (69, 80)
     self_cell: str | None = None  # ô cộng các lớp ăn tại lớp, vd. G70
     total_cell: str | None = None  # ô tổng cộng, vd. G72 =G69+G70
 

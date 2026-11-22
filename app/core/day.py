@@ -255,18 +255,32 @@ class DayState:
                 summary.warnings.append(
                     f"Lớp ghép {code} có {self.si_so(code)} em ăn bán trú nhưng các nhóm {', '.join(codes)} "
                     f"đang tính {o_sum} em ghép. Ghi nhóm cho từng em ở cột Ăn ghép trong file Excel danh sách "
-                    "rồi nhập lại danh sách."
+                    "rồi lưu file."
                 )
             extra = self.cd(code).extra
             if extra:
                 summary.warnings.append(
                     f"Lớp ghép {code} có tên vắng chưa rõ là em nào ({', '.join(extra)}) nên chưa trừ được suất ở nhóm ghép."
                 )
+        summary.warnings += self.unknown_ghep_codes(layout)
         if not summary.balanced and not summary.warnings and not summary.ask:
             summary.warnings.append(
                 f"Tổng suất ăn {summary.total_meals} khác tổng hiện diện {summary.total_present}."
             )
         return summary
+
+    def unknown_ghep_codes(self, layout: MealLayout) -> list[str]:
+        """Em ghi Ăn ghép x.y (file danh sách) mà bảng suất ăn trong sổ không có dòng x.y nhận em ghép lẻ."""
+        if layout.is_empty:
+            return []
+        known = set(layout.ghep_codes())
+        missing: dict[str, list[str]] = {}
+        for code in self.classes:
+            for s in self.roster.boarding(code, self.date):
+                if s.an_ghep and s.an_ghep not in known:
+                    missing.setdefault(s.an_ghep, []).append(f"{self.roster.display_name(s)} lớp {code}")
+        return [f"Cột Ăn ghép ghi {g} cho {len(names)} em ({', '.join(names)}) nhưng bảng suất ăn trong sổ chưa có dòng "
+                f"{g} ghép. Thêm dòng đó trong sổ, hoặc sửa cột Ăn ghép trong file danh sách." for g, names in sorted(missing.items())]
 
     # ---------- kiểm tra ----------
     def class_warnings(self, code: str) -> list[str]:

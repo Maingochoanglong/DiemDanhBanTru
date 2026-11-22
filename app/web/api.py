@@ -171,6 +171,7 @@ class Api:
 
     def state(self) -> dict:
         self._ws.sync_list()  # file danh sách vừa sửa bằng Excel: dùng ngay
+        self._ws.sync_book()  # sổ vừa sửa bằng Excel (vd. thêm dòng suất ghép): dùng ngay
         ws, st = self._ws, self._ws.state
         ws.autosave()  # mọi thao tác đều trả về state(): có thay đổi mới thì ghi ngay vào sổ tạm
         bp = ws.book_path
@@ -367,7 +368,8 @@ class Api:
             return {"blocked": blocked}
         out = {"unreported": st.unreported(), "meal": None, "conflicts": self._conflict_lines(),
                "unreported_auto": [c for c in st.unreported() if st.absent_count(c)],
-               "extra": [f"Lớp {code}: {', '.join(st.cd(code).extra)}" for code in st.classes if st.cd(code).extra]}
+               "extra": [f"Lớp {code}: {', '.join(st.cd(code).extra)}" for code in st.classes if st.cd(code).extra],
+               "meal_fixes": ws.meal_fixes}
         if not ws.layout.is_empty:
             m = ws.meals()
             if not m.balanced:
@@ -396,6 +398,8 @@ class Api:
         except Exception as e:  # noqa: BLE001
             return {"error": f"Không lưu được:\n{e}"}
         msg = ws.warning or f"Đã lưu vào sổ {ws.book_path.name}, sheet {sheet}. Đã xóa sổ tạm."
+        if ws.saved_fixes:
+            msg += " Đã sửa công thức bảng suất ăn: " + "; ".join(ws.saved_fixes) + "."
         return {"ok": msg, "state": self.state()}
 
     def open_book(self) -> dict:
@@ -407,6 +411,7 @@ class Api:
     # ================================================================== suất ăn
     def meals(self) -> dict:
         self._ws.sync_list()  # vừa sửa cột Ăn ghép / sheet Nhóm ăn bằng Excel: trang Suất ăn hiện ngay
+        self._ws.sync_book()  # vừa thêm / bỏ dòng suất ăn trong sổ: trang Suất ăn hiện ngay
         ws, st = self._ws, self._ws.state
         layout = ws.layout
         if st is None or layout.is_empty:

@@ -80,6 +80,8 @@ export async function doSave() {
     <ul>${ck.extra.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   if (ck.meal) items.push(`<li><b class="text-danger">Suất ăn ${mealDiff(ck.meal)}</b> (tổng suất ${ck.meal.total}, hiện diện ${ck.meal.present})` +
     `${ck.meal.ask ? `: ${ck.meal.ask} em ăn ghép vắng chưa chọn nhóm` : ""}. Lưu bây giờ thì bảng suất ăn trong sổ cũng lệch.</li>`);
+  if (ck.meal_fixes?.length) items.push(`<li><b class="text-remind">Bảng suất ăn trong sổ chưa đúng công thức</b>: khi lưu, app sửa
+    <ul>${ck.meal_fixes.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   if (ck.conflicts?.length) items.push(`<li><b>Sĩ số khác nhau</b> giữa danh sách bán trú và sổ (có thể do thêm/cắt em chưa cập nhật):
     <ul>${ck.conflicts.map(l => `<li>${esc(l)}</li>`).join("")}</ul></li>`);
   let choice = null;

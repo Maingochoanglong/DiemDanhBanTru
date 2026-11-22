@@ -43,7 +43,7 @@ giáo vụ vẫn tự chọn vắng mỗi ngày: app không làm việc này tha
 | T1 | làm bù hoặc sửa ngày trước | sổ đủ ngày | lùi / tới ngày, gõ ngày, lịch, **Hôm nay** |
 | T2 | đầu tháng có sổ tháng mới từ sổ tháng trước | giữ mẫu, chữ ký, ghi chú | app hỏi khi mở ngày của tháng chưa có sổ |
 | T3 | đặt lịch: em bắt đầu ăn từ ngày, thôi ăn từ ngày, cắt thứ 6 | không phải nhớ, đến ngày sĩ số tự đổi; Ghi chú chỉ để ghi chú | trang **Học sinh**: bấm vào em → hộp **Lịch bán trú** (ghi vào 3 cột Ăn từ / Cắt từ / Cắt thứ 6 của file danh sách) |
-| T3a | đổi cách ghép ăn, tên gọi khác | sửa ở một chỗ quen thuộc | sửa file danh sách bằng Excel; nút mở file ở trang **Học sinh**, **Suất ăn** |
+| T3a | đổi cách ghép ăn, tên gọi khác; thêm / bỏ suất ăn, suất ghép ngay trong sổ | sửa ở một chỗ quen thuộc, sổ in ra vẫn đúng công thức | sửa file danh sách / sổ bằng Excel; nút mở file ở trang **Học sinh**, **Suất ăn**. App đọc dòng mới, khi lưu tự sửa công thức (ô cộng các nhóm, ô ăn tại lớp, ô em ghép lẻ) và báo đã sửa gì |
 | T3b | có em chuyển đến ăn bán trú: ghi tên em vào file danh sách (lúc app đang mở cũng được) | điểm danh em đó ngay hôm đó | lưu file danh sách trong Excel; mở lớp là thấy em mới, các em đã chọn vắng vẫn giữ; ngày bắt đầu ăn đặt ở hộp **Lịch bán trú** |
 | T4 | tra một em ở lớp nào, có ăn bán trú không | trả lời GVCN | trang **Học sinh** |
 | T5 | em ăn ghép vắng: chọn em đó ăn nhóm nào | suất ăn đúng | trang **Suất ăn** hỏi khi cần |
