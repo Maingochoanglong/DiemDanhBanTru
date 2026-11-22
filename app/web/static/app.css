@@ -128,19 +128,21 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .sheet-head.split { grid-template-columns: minmax(0, 1fr) auto; grid-auto-flow: row; }
 .sheet-notes { display: grid; gap: var(--s2); padding: var(--s3) var(--s3) 0; }
 .sheet-foot { display: grid; grid-auto-flow: column; justify-content: start; gap: var(--s4); padding: var(--s2) var(--s3); border-top: 1px solid var(--line); }
-.p-datatable-thead > tr > th { white-space: nowrap; padding: var(--s2) var(--s3); }
-.p-datatable-tbody > tr > td { padding: var(--s2) var(--s3); }
+/* ô bảng theo lưới (đè khoảng đệm 6px của bảng cỡ nhỏ PrimeVue): chữ cách mép khung --s3 như các khu vực khác */
+.sheet .p-datatable.p-datatable-sm .p-datatable-thead > tr > th { white-space: nowrap; padding: var(--s2) var(--s3); }
+.sheet .p-datatable.p-datatable-sm .p-datatable-tbody > tr > td { padding: var(--s2) var(--s3); }
 .p-message { cursor: inherit; }
 .p-message.clickable { cursor: pointer; }
 
 /* bảng điểm danh giống sổ: viền trái 4px + lề 8px = mép chữ 12px như đầu bảng */
 .so { font-size: 1.02rem; }
 .so tr.cls { cursor: pointer; }
-.so tr.cls > td:first-child { border-left: 4px solid transparent; padding-left: var(--s2); font-weight: 700; white-space: nowrap; }
+.so tr.cls > td:first-child { border-left: 4px solid transparent; font-weight: 700; white-space: nowrap; }
+.sheet .p-datatable.p-datatable-sm .p-datatable-tbody > tr.cls > td:first-child { padding-left: var(--s2); }
 .so tr.cls:hover > td { filter: brightness(.97); }
 .so .num { text-align: center; width: 72px; }
 .so th.num .p-datatable-column-header-content { justify-content: center; }
-.so td.ten { min-width: 430px; overflow-wrap: anywhere; }
+.so td.ten { min-width: 400px; overflow-wrap: anywhere; }
 .so td.gv { white-space: nowrap; }
 .so td.gv .cut { overflow: hidden; text-overflow: ellipsis; }
 .so td.note { color: var(--muted); font-size: .93rem; }
@@ -175,7 +177,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .meal th.center .p-datatable-column-header-content { justify-content: center; }
 .meal .w-label { width: 220px; }
 .meal tr.absent-row > td { background: var(--c-absent-bg); }  /* dòng có em ghép vắng: cam như lớp có em vắng */
-.meal tr.gap > td { padding: 0; height: var(--s3); background: var(--p-surface-50); }
+.sheet .p-datatable.meal .p-datatable-tbody > tr.gap > td { padding: 0; height: var(--s3); background: var(--p-surface-50); }
 .ask-grid { display: grid; grid-template-columns: 14rem minmax(0, 1fr); align-items: center; gap: var(--s2) var(--s3); }
 .ask-grid > .full { grid-column: 1 / -1; }
 .chips.wide { --chip-w: 7.5rem; }  /* nút Nhóm 1.2… rộng bằng nhau, thẳng cột giữa các em */
@@ -231,7 +233,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 .file-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; padding: var(--s3) 0; border-top: 1px solid var(--line); }
 .file-row > .stack { gap: var(--s1); min-width: 0; }
 .file-icon { font-size: 1.5rem; color: var(--muted); }
-.p-card .p-card-body { padding: var(--s4) var(--s6); gap: var(--s2); }
+.p-card .p-card-body { padding: var(--s4) var(--s3); gap: var(--s2); }  /* chữ cách mép khung --s3 như các khu vực khác */
 
 /* thiết lập lần đầu: mọi bước cùng 3 cột cố định [số] [nội dung] [nút] nên thẳng hàng */
 .setup-dialog { width: min(760px, 96vw); }
@@ -249,19 +251,19 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s3); p
 /* màn hẹp hơn 1366px (vd. màn 1920 phóng chữ 150%): tên GVCN được xuống dòng, cột tên vắng vừa, không cuộn ngang */
 @media (max-width: 1365px) {
   .so td.gv .cut { max-width: 150px; }
-  .so td.ten { min-width: 330px; }
+  .so td.ten { min-width: 290px; }
   .so td.note .cut { min-width: 140px; max-width: 240px; }
 }
 /* màn thấp (laptop phóng chữ): dòng bảng thấp lại để thấy nhiều lớp / cả bảng suất ăn */
 @media (max-height: 760px) {
-  .so .p-datatable-tbody > tr > td { padding-block: var(--s1); }
+  .sheet .p-datatable.so .p-datatable-tbody > tr > td { padding-block: var(--s1); }
 }
 /* màn nhỏ (laptop 1366 phóng chữ 125%) */
 @media (max-width: 1200px) {
   :root { --label-w: 8.5rem; }
   body { font-size: 14px; }
   .topbar .book { display: none; }
-  .so td.ten { min-width: 250px; }
+  .so td.ten { min-width: 230px; }
   .so td.gv .cut { max-width: 118px; }
   .so td.note .cut { min-width: 120px; max-width: 200px; }
   .toolbar { grid-template-columns: 9rem minmax(8rem, 18rem) max-content max-content minmax(0, 1fr) max-content; }
